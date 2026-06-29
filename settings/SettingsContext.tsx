@@ -1,0 +1,112 @@
+/**
+ * ============================================================================
+ * Settings Context
+ * ----------------------------------------------------------------------------
+ * Manages application settings such as theme and language.
+ * ============================================================================
+ */
+
+import {
+    createContext,
+    ReactNode,
+    useContext,
+    useMemo,
+    useState,
+} from "react";
+
+import { DEFAULT_LANGUAGE, DEFAULT_THEME } from "../constants/app";
+import { translations, Language } from "../locales";
+import { darkTheme, lightTheme } from "../theme";
+
+export type ThemeMode = "light" | "dark";
+
+interface SettingsContextValue {
+    themeMode: ThemeMode;
+    language: Language;
+
+    theme: typeof lightTheme;
+
+    setThemeMode: (mode: ThemeMode) => void;
+    toggleTheme: () => void;
+
+    setLanguage: (language: Language) => void;
+
+    t: (key: keyof typeof translations.fa) => string;
+}
+
+/**
+ * ============================================================================
+ * Context
+ * ============================================================================
+ */
+
+const SettingsContext = createContext<SettingsContextValue | null>(null);
+
+/**
+ * ============================================================================
+ * Provider
+ * ============================================================================
+ */
+
+interface SettingsProviderProps {
+    children: ReactNode;
+}
+
+export function SettingsProvider({ children }: SettingsProviderProps) {
+    const [themeMode, setThemeMode] = useState<ThemeMode>(DEFAULT_THEME);
+
+    const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
+
+    const theme =
+        themeMode === "light"
+            ? lightTheme
+            : darkTheme;
+
+    const t = (key: keyof typeof translations.fa) =>
+        translations[language][key];
+
+    const value = useMemo(
+        () => ({
+            themeMode,
+            language,
+
+            theme,
+
+            setThemeMode,
+
+            toggleTheme: () =>
+                setThemeMode((current) =>
+                    current === "light" ? "dark" : "light"
+                ),
+
+            setLanguage,
+
+            t,
+        }),
+        [themeMode, language, theme]
+    );
+
+    return (
+        <SettingsContext.Provider value={value}>
+            {children}
+        </SettingsContext.Provider>
+    );
+}
+
+/**
+ * ============================================================================
+ * Hook
+ * ============================================================================
+ */
+
+export function useSettings() {
+    const context = useContext(SettingsContext);
+
+    if (!context) {
+        throw new Error(
+            "useSettings must be used within SettingsProvider."
+        );
+    }
+
+    return context;
+}
