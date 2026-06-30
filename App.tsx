@@ -7,13 +7,13 @@
  * ============================================================================
  */
 
-import EDMSScreen from "./screens/EDMSScreen";
+import AppLayout from "./components/layout/AppLayout";
 import { SettingsProvider } from "./settings/SettingsContext";
 
 export default function App() {
 	return (
 		<SettingsProvider>
-			<EDMSScreen />
+			<AppLayout />
 		</SettingsProvider>
 	);
 }
