@@ -14,8 +14,6 @@ import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
 
-import { useSettings } from "../../settings/SettingsContext";
-
 /**
  * ============================================================================
  * Component
