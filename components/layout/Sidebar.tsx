@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
@@ -19,6 +19,10 @@ import { useSettings } from "../../settings/SettingsContext";
 export default function Sidebar() {
     const { theme } = useSettings();
     const colors = theme.colors;
+
+    const { height } = useWindowDimensions();
+
+    const isShortSidebar = height < 720;
 
     return (
         <View
@@ -33,12 +37,16 @@ export default function Sidebar() {
             * Brand
             * ========================================================================= */}
 
-            <View style={styles.brand}>
+            <View style={[
+                styles.brand,
+                isShortSidebar && styles.compactBrand,
+            ]}>
                 {/* Logo Placeholder */}
 
                 <View
                     style={[
                         styles.logoPlaceholder,
+                        isShortSidebar && styles.compactLogoPlaceholder,
                         {
                             backgroundColor: colors.background,
                             borderColor: colors.border,
@@ -62,6 +70,7 @@ export default function Sidebar() {
                 <Text
                     style={[
                         styles.appTitle,
+                        isShortSidebar && styles.compactAppTitle,
                         {
                             color: colors.text,
                         },
@@ -201,22 +210,11 @@ export default function Sidebar() {
 const styles = StyleSheet.create({
     container: {
         width: spacing.sidebarWidth,
-        padding: spacing.xl,
+        padding: spacing.lg,
 
         borderRadius: radius.lg,
 
         ...shadows.md,
-    },
-
-    /**
-     * ============================================================================
-     * Shared
-     * ============================================================================
-     */
-
-    title: {
-        fontSize: typography.fontSize.xxl,
-        fontWeight: typography.fontWeight.semibold,
     },
 
     /**
@@ -226,7 +224,7 @@ const styles = StyleSheet.create({
      */
 
     brand: {
-        paddingBottom: spacing.xl,
+        paddingBottom: spacing.lg,
     },
 
     logoPlaceholder: {
@@ -275,10 +273,10 @@ const styles = StyleSheet.create({
     },
 
     navigationItem: {
-        fontSize: typography.fontSize.lg,
+        fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.medium,
 
-        paddingVertical: spacing.md,
+        paddingVertical: spacing.sm,
 
         textAlign: "left",
     },
@@ -300,5 +298,26 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.sm,
 
         textAlign: "left",
+    },
+
+    /**
+     * ============================================================================
+     * Compacts
+     * ============================================================================
+     */
+
+    compactBrand: {
+        paddingBottom: spacing.md,
+    },
+
+    compactLogoPlaceholder: {
+        width: 56,
+        height: 56,
+
+        marginBottom: spacing.md,
+    },
+
+    compactAppTitle: {
+        fontSize: typography.fontSize.xxl,
     },
 });

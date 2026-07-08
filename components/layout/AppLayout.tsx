@@ -14,6 +14,8 @@ import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
 
+import { useSettings } from "../../settings/SettingsContext";
+
 /**
  * ============================================================================
  * Component
@@ -21,8 +23,18 @@ import Workspace from "./Workspace";
  */
 
 export default function AppLayout() {
+    const { theme } = useSettings();
+    const colors = theme.colors;
+
     return (
-        <View style={styles.container}>
+        <View
+            style={[
+                styles.container,
+                {
+                    backgroundColor: colors.background,
+                },
+            ]}
+        >
             <Sidebar />
 
             <View style={styles.main}>
@@ -49,5 +61,7 @@ const styles = StyleSheet.create({
         flex: 1,
 
         marginRight: spacing.lg,
+        paddingTop: spacing.sm,
+        paddingLeft: spacing.sm,
     },
 });

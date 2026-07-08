@@ -17,5 +17,5 @@ export const spacing = {
     xxl: 32,
 
     sidebarWidth: 320,
-    toolbarHeight: 72,
+    toolbarHeight: 64,
 } as const;

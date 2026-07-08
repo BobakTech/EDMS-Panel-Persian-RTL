@@ -173,21 +173,22 @@ export default function Toolbar() {
 
 const styles = StyleSheet.create({
     container: {
-        height: spacing.toolbarHeight,
+        minHeight: spacing.toolbarHeight,
 
         flexDirection: "row-reverse",
         alignItems: "center",
+        flexWrap: "wrap",
+        alignContent: "center",
 
         paddingHorizontal: spacing.xl,
+        paddingVertical: spacing.xs,
+
+        columnGap: spacing.lg,
+        rowGap: spacing.md,
 
         borderRadius: radius.lg,
 
         ...shadows.sm,
-    },
-
-    sectionTitle: {
-        fontSize: typography.fontSize.xl,
-        fontWeight: typography.fontWeight.semibold,
     },
 
     /**
@@ -198,6 +199,9 @@ const styles = StyleSheet.create({
 
     search: {
         flex: 1,
+        flexShrink: 1,
+
+        minWidth: 260,
     },
 
     searchInput: {
@@ -212,10 +216,10 @@ const styles = StyleSheet.create({
     },
 
     actions: {
-        width: 220,
-
         flexDirection: "row",
         alignItems: "center",
+        flexShrink: 0,
+
         columnGap: spacing.md,
     },
 
@@ -236,6 +240,7 @@ const styles = StyleSheet.create({
 
         flexDirection: "row-reverse",
         alignItems: "center",
+        flexShrink: 0,
     },
 
     avatar: {

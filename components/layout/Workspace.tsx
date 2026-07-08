@@ -38,6 +38,7 @@ export default function Workspace() {
     const workspacePadding = isCompactWorkspace
         ? spacing.lg
         : spacing.xl;
+    const workspaceTopPadding = spacing.none;
 
     const [viewMode, setViewMode] = useState<WorkspaceViewMode>("grid");
 
@@ -49,7 +50,9 @@ export default function Workspace() {
         <View style={[
             styles.container,
             {
-                padding: workspacePadding,
+                paddingHorizontal: workspacePadding,
+                paddingTop: workspaceTopPadding,
+                paddingBottom: workspacePadding,
                 backgroundColor: colors.background,
             },
         ]}>
