@@ -11,7 +11,10 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
-import { getWorkspaceItemLabel } from "./workspace.helpers";
+import {
+    getWorkspaceItemLabel,
+    getWorkspaceItemUpdatedAtLabel,
+} from "./workspace.helpers";
 
 import type {
     WorkspaceItem,
@@ -53,16 +56,18 @@ export default function WorkspaceItemCard({
     return (
         <Pressable
             accessibilityRole="button"
+            accessibilityLabel={item.name}
             accessibilityState={{
                 selected: isSelected,
             }}
             onPress={() => onPress(item.id)}
-            style={[
+            style={({ pressed }) => [
                 styles.card,
                 isListMode
                     ? styles.listCard
                     : styles.gridCard,
                 !isListMode && isCompact && styles.compactGridCard,
+                pressed && styles.pressedCard,
                 {
                     backgroundColor: isSelected
                         ? colors.background
@@ -91,7 +96,7 @@ export default function WorkspaceItemCard({
                         color: colors.primary,
                     },
                 ]}>
-                    {getWorkspaceItemLabel(item.type)}
+                    {getWorkspaceItemLabel(item)}
                 </Text>
             </View>
 
@@ -120,7 +125,7 @@ export default function WorkspaceItemCard({
                         color: colors.text,
                     },
                 ]}>
-                    {item.updatedAt}
+                    {getWorkspaceItemUpdatedAtLabel(item)}
                 </Text>
             </View>
         </Pressable>
@@ -139,6 +144,10 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.lg,
+    },
+
+    pressedCard: {
+        opacity: 0.72,
     },
 
     gridCard: {

@@ -6,6 +6,7 @@
  * ============================================================================
  */
 
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { spacing } from "../../theme";
@@ -14,7 +15,44 @@ import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
 
+import {
+    getWorkspaceItems,
+    type WorkspaceActionType,
+    type WorkspaceItem,
+    type WorkspacePickedFile,
+} from "../workspace";
+
 import { useSettings } from "../../settings/SettingsContext";
+
+/**
+ * ============================================================================
+ * Helpers
+ * ============================================================================
+ */
+
+function getFileExtension(fileName: string) {
+    const extension = fileName.split(".").pop();
+
+    return extension && extension !== fileName
+        ? extension.toLowerCase()
+        : "file";
+}
+
+function getFileSizeLabel(fileSize?: number) {
+    if (!fileSize) {
+        return "نامشخص";
+    }
+
+    const megaBytes = fileSize / (1024 * 1024);
+
+    if (megaBytes >= 1) {
+        return `${megaBytes.toFixed(1)} MB`;
+    }
+
+    const kiloBytes = fileSize / 1024;
+
+    return `${Math.max(1, Math.round(kiloBytes))} KB`;
+}
 
 /**
  * ============================================================================
@@ -25,6 +63,100 @@ import { useSettings } from "../../settings/SettingsContext";
 export default function AppLayout() {
     const { theme } = useSettings();
     const colors = theme.colors;
+
+    const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>(() =>
+        getWorkspaceItems()
+    );
+
+    const [activeWorkspaceAction, setActiveWorkspaceAction] =
+        useState<WorkspaceActionType | null>(null);
+
+    const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
+
+    function handlePressCreateFolder() {
+        setActiveWorkspaceAction("new-folder");
+    }
+
+    function handleDismissWorkspaceAction() {
+        setActiveWorkspaceAction(null);
+    }
+
+    function handleCreateFolder(folderName: string) {
+        const trimmedFolderName = folderName.trim();
+
+        if (!trimmedFolderName) {
+            return;
+        }
+
+        setWorkspaceItems((currentItems) => {
+            const newWorkspaceFolder: WorkspaceItem = {
+                id: `folder-${Date.now()}`,
+                type: "folder",
+                name: trimmedFolderName,
+                description: "پوشه ایجاد شده در فضای کاری",
+                updatedAt: new Date().toISOString(),
+                status: "active",
+                childrenCount: 0,
+            };
+
+            const firstFileIndex = currentItems.findIndex(
+                (item) => item.type === "file"
+            );
+
+            const insertIndex =
+                firstFileIndex === -1
+                    ? currentItems.length
+                    : firstFileIndex;
+
+            return [
+                ...currentItems.slice(0, insertIndex),
+                newWorkspaceFolder,
+                ...currentItems.slice(insertIndex),
+            ];
+        });
+
+        setActiveWorkspaceAction(null);
+    }
+
+    function handleCreateFile(file: WorkspacePickedFile) {
+        const trimmedFileName = file.name.trim();
+
+        if (!trimmedFileName) {
+            return;
+        }
+
+        setWorkspaceItems((currentItems) => {
+            const newWorkspaceFile: WorkspaceItem = {
+                id: `file-${Date.now()}`,
+                type: "file",
+                name: trimmedFileName,
+                description: "فایل انتخاب شده از دستگاه",
+                updatedAt: new Date().toISOString(),
+                status: "active",
+                extension: getFileExtension(trimmedFileName),
+                sizeLabel: getFileSizeLabel(file.size),
+                mimeType: file.mimeType,
+                localUri: file.uri,
+            };
+
+            const lastFileIndex = currentItems.findLastIndex(
+                (item) => item.type === "file"
+            );
+
+            const insertIndex =
+                lastFileIndex === -1
+                    ? currentItems.length
+                    : lastFileIndex + 1;
+
+            return [
+                ...currentItems.slice(0, insertIndex),
+                newWorkspaceFile,
+                ...currentItems.slice(insertIndex),
+            ];
+        });
+
+        setActiveWorkspaceAction(null);
+    }
 
     return (
         <View
@@ -38,8 +170,20 @@ export default function AppLayout() {
             <Sidebar />
 
             <View style={styles.main}>
-                <Toolbar />
-                <Workspace />
+                <Toolbar
+                    activeAction={activeWorkspaceAction}
+                    searchQuery={workspaceSearchQuery}
+                    onChangeSearchQuery={setWorkspaceSearchQuery}
+                    onPressCreateFolder={handlePressCreateFolder}
+                    onDismissAction={handleDismissWorkspaceAction}
+                    onCreateFolder={handleCreateFolder}
+                    onCreateFile={handleCreateFile}
+                />
+
+                <Workspace
+                    workspaceItems={workspaceItems}
+                    searchQuery={workspaceSearchQuery}
+                />
             </View>
         </View>
     );

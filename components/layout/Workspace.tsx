@@ -6,8 +6,12 @@
  * ============================================================================
  */
 
-import { useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+    StyleSheet,
+    useWindowDimensions,
+    View,
+} from "react-native";
 
 import { radius, shadows, spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -18,9 +22,20 @@ import {
     WorkspaceHeader,
     WorkspaceItemCard,
     WorkspaceViewControls,
-    workspaceItemsMock,
+    type WorkspaceItem,
     type WorkspaceViewMode,
 } from "../workspace";
+
+/**
+ * ============================================================================
+ * Props
+ * ============================================================================
+ */
+
+interface WorkspaceProps {
+    workspaceItems: WorkspaceItem[];
+    searchQuery: string;
+}
 
 /**
  * ============================================================================
@@ -28,7 +43,10 @@ import {
  * ============================================================================
  */
 
-export default function Workspace() {
+export default function Workspace({
+    workspaceItems,
+    searchQuery,
+}: WorkspaceProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
 
@@ -44,7 +62,45 @@ export default function Workspace() {
 
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-    const hasWorkspaceItems = workspaceItemsMock.length > 0;
+    useEffect(() => {
+        setSelectedItemId(null);
+    }, [workspaceItems]);
+
+    function handlePressWorkspaceItem(itemId: string) {
+        setSelectedItemId((currentItemId) =>
+            currentItemId === itemId
+                ? null
+                : itemId
+        );
+    }
+
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+    const visibleWorkspaceItems = normalizedSearchQuery
+        ? workspaceItems.filter((item) =>
+            item.name.toLowerCase().includes(normalizedSearchQuery) ||
+            item.description.toLowerCase().includes(normalizedSearchQuery)
+        )
+        : workspaceItems;
+
+    const isLoadingWorkspaceItems = false;
+    const workspaceErrorMessage: string | null = null;
+
+    const hasWorkspaceItems = visibleWorkspaceItems.length > 0;
+    const hasWorkspaceItemsError = workspaceErrorMessage !== null;
+
+    const shouldShowLoadingState = isLoadingWorkspaceItems;
+    const shouldShowErrorState = !isLoadingWorkspaceItems && hasWorkspaceItemsError;
+
+    const shouldShowWorkspaceItems =
+        !isLoadingWorkspaceItems &&
+        !hasWorkspaceItemsError &&
+        hasWorkspaceItems;
+
+    const shouldShowEmptyState =
+        !isLoadingWorkspaceItems &&
+        !hasWorkspaceItemsError &&
+        !hasWorkspaceItems;
 
     return (
         <View style={[
@@ -87,27 +143,55 @@ export default function Workspace() {
                  * Workspace Content
                  * ========================================================================= */}
                 <View style={styles.workspaceBody}>
-                    {hasWorkspaceItems && (
+                    {shouldShowWorkspaceItems && (
                         <View style={
                             viewMode === "grid"
                                 ? styles.workspaceGrid
                                 : styles.workspaceList
                         }>
-                            {workspaceItemsMock.map((item) => (
+                            {visibleWorkspaceItems.map((item) => (
                                 <WorkspaceItemCard
                                     key={item.id}
                                     item={item}
                                     viewMode={viewMode}
                                     isCompact={isCompactWorkspace}
                                     isSelected={selectedItemId === item.id}
-                                    onPress={setSelectedItemId}
+                                    onPress={handlePressWorkspaceItem}
                                 />
                             ))}
                         </View>
                     )}
 
-                    {!hasWorkspaceItems && (
-                        <WorkspaceEmptyState />
+                    {shouldShowLoadingState && (
+                        <WorkspaceEmptyState
+                            icon="..."
+                            title="در حال بارگذاری اسناد"
+                            description="لطفاً چند لحظه صبر کنید."
+                        />
+                    )}
+
+                    {shouldShowErrorState && (
+                        <WorkspaceEmptyState
+                            icon="!"
+                            title="خطا در دریافت اطلاعات"
+                            description={workspaceErrorMessage ?? "لطفاً دوباره تلاش کنید."}
+                        />
+                    )}
+
+                    {shouldShowEmptyState && (
+                        <WorkspaceEmptyState
+                            icon={normalizedSearchQuery ? "?" : "+"}
+                            title={
+                                normalizedSearchQuery
+                                    ? "نتیجه‌ای پیدا نشد"
+                                    : "هنوز سندی وجود ندارد"
+                            }
+                            description={
+                                normalizedSearchQuery
+                                    ? "عبارت جستجو را تغییر دهید یا بعداً دوباره تلاش کنید."
+                                    : "برای شروع، یک پوشه جدید بسازید یا فایل‌های خود را بارگذاری کنید."
+                            }
+                        />
                     )}
                 </View>
             </View>

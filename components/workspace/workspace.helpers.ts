@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import type { WorkspaceItemType } from "./workspace.types";
+import type { WorkspaceItem } from "./workspace.types";
 
 /**
  * ============================================================================
@@ -14,5 +14,15 @@ import type { WorkspaceItemType } from "./workspace.types";
  * ============================================================================
  */
 
-export const getWorkspaceItemLabel = (type: WorkspaceItemType) =>
-    type === "folder" ? "پوشه" : "PDF";
+export const getWorkspaceItemLabel = (item: WorkspaceItem) => {
+    if (item.type === "folder") {
+        return "پوشه";
+    }
+
+    return item.extension?.toUpperCase() ?? "فایل";
+};
+
+export const getWorkspaceItemUpdatedAtLabel = (item: WorkspaceItem) =>
+    item.type === "folder"
+        ? `${item.childrenCount ?? 0} آیتم`
+        : item.sizeLabel ?? "بدون حجم";

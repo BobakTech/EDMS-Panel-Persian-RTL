@@ -11,13 +11,23 @@ import { StyleSheet, Text, View } from "react-native";
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
+interface WorkspaceEmptyStateProps {
+    title?: string;
+    description?: string;
+    icon?: string;
+}
+
 /**
  * ============================================================================
  * Component
  * ============================================================================
  */
 
-export default function WorkspaceEmptyState() {
+export default function WorkspaceEmptyState({
+    title = "هنوز سندی وجود ندارد",
+    description = "برای شروع، یک پوشه جدید بسازید یا فایل‌های خود را بارگذاری کنید.",
+    icon = "+",
+}: WorkspaceEmptyStateProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
 
@@ -36,7 +46,7 @@ export default function WorkspaceEmptyState() {
                         color: colors.primary,
                     },
                 ]}>
-                    +
+                    {icon}
                 </Text>
             </View>
 
@@ -46,7 +56,7 @@ export default function WorkspaceEmptyState() {
                     color: colors.text,
                 },
             ]}>
-                هنوز سندی وجود ندارد
+                {title}
             </Text>
 
             <Text style={[
@@ -55,7 +65,7 @@ export default function WorkspaceEmptyState() {
                     color: colors.text,
                 },
             ]}>
-                برای شروع، یک پوشه جدید بسازید یا فایل‌های خود را بارگذاری کنید.
+                {description}
             </Text>
         </View>
     );

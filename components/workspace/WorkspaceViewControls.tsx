@@ -44,10 +44,15 @@ export default function WorkspaceViewControls({
         <View style={styles.container}>
             <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="نمایش شبکه‌ای"
                 accessibilityState={{
                     selected: isGridActive,
                 }}
-                onPress={() => onChangeViewMode("grid")}
+                onPress={() => {
+                    if (!isGridActive) {
+                        onChangeViewMode("grid");
+                    }
+                }}
                 style={[
                     styles.button,
                     {
@@ -74,10 +79,15 @@ export default function WorkspaceViewControls({
 
             <Pressable
                 accessibilityRole="button"
+                accessibilityLabel="نمایش فهرستی"
                 accessibilityState={{
                     selected: isListActive,
                 }}
-                onPress={() => onChangeViewMode("list")}
+                onPress={() => {
+                    if (!isListActive) {
+                        onChangeViewMode("list");
+                    }
+                }}
                 style={[
                     styles.button,
                     {
