@@ -22,6 +22,7 @@ import {
     WorkspaceHeader,
     WorkspaceItemCard,
     WorkspaceViewControls,
+    WorkspaceItemDetailsPanel,
     type WorkspaceItem,
     type WorkspaceViewMode,
 } from "../workspace";
@@ -74,6 +75,10 @@ export default function Workspace({
         );
     }
 
+    function handleCloseWorkspaceItemDetails() {
+        setSelectedItemId(null);
+    }
+
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
     const visibleWorkspaceItems = normalizedSearchQuery
@@ -82,6 +87,10 @@ export default function Workspace({
             item.description.toLowerCase().includes(normalizedSearchQuery)
         )
         : workspaceItems;
+
+    const selectedWorkspaceItem = workspaceItems.find(
+        (item) => item.id === selectedItemId
+    );
 
     const isLoadingWorkspaceItems = false;
     const workspaceErrorMessage: string | null = null;
@@ -138,6 +147,13 @@ export default function Workspace({
                         onChangeViewMode={setViewMode}
                     />
                 </WorkspaceHeader>
+
+                {selectedWorkspaceItem && (
+                    <WorkspaceItemDetailsPanel
+                        item={selectedWorkspaceItem}
+                        onClose={handleCloseWorkspaceItemDetails}
+                    />
+                )}
 
                 {/* =========================================================================
                  * Workspace Content

@@ -44,6 +44,18 @@ interface ToolbarProps {
 
 /**
  * ============================================================================
+ * Helpers
+ * ============================================================================
+ */
+
+function wait(milliseconds: number) {
+    return new Promise<void>((resolve) => {
+        setTimeout(resolve, milliseconds);
+    });
+}
+
+/**
+ * ============================================================================
  * Component
  * ============================================================================
  */
@@ -62,12 +74,28 @@ export default function Toolbar({
 
     const [newFolderName, setNewFolderName] = useState("");
 
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+    const [uploadFileName, setUploadFileName] = useState<string | null>(null);
+    const [uploadStatusText, setUploadStatusText] = useState("");
+
+    const isPreparingUpload = uploadProgress !== null;
+
     function handleCreateFolder() {
         onCreateFolder(newFolderName);
         setNewFolderName("");
     }
 
+    function resetUploadProgress() {
+        setUploadProgress(null);
+        setUploadFileName(null);
+        setUploadStatusText("");
+    }
+
     async function handlePickFile() {
+        if (isPreparingUpload) {
+            return;
+        }
+
         onDismissAction();
 
         const result = await DocumentPicker.getDocumentAsync({
@@ -81,12 +109,34 @@ export default function Toolbar({
 
         const selectedFile = result.assets[0];
 
+        setUploadFileName(selectedFile.name);
+        setUploadStatusText("در حال آماده‌سازی فایل...");
+        setUploadProgress(15);
+
+        await wait(250);
+
+        setUploadStatusText("در حال خواندن اطلاعات فایل...");
+        setUploadProgress(55);
+
+        await wait(250);
+
+        setUploadStatusText("در حال افزودن به فضای کاری...");
+        setUploadProgress(90);
+
+        await wait(200);
+
         onCreateFile({
             name: selectedFile.name,
             size: selectedFile.size,
             mimeType: selectedFile.mimeType,
             uri: selectedFile.uri,
         });
+
+        setUploadProgress(100);
+
+        await wait(200);
+
+        resetUploadProgress();
     }
 
     return (
@@ -167,10 +217,12 @@ export default function Toolbar({
                         onPress={handlePickFile}
                         style={[
                             styles.actionButton,
+                            isPreparingUpload && styles.disabledActionButton,
                             {
                                 backgroundColor: colors.primary,
                             },
                         ]}
+                        disabled={isPreparingUpload}
                     >
                         <Text
                             style={[
@@ -293,6 +345,85 @@ export default function Toolbar({
                                 </Text>
                             </Pressable>
                         </View>
+                    </View>
+                )}
+
+                {isPreparingUpload && (
+                    <View
+                        style={[
+                            styles.actionPanel,
+                            {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.primary,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.actionPanelTitle,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            آماده‌سازی فایل
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.actionPanelDescription,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            {uploadStatusText}
+                        </Text>
+
+                        {uploadFileName && (
+                            <Text
+                                style={[
+                                    styles.uploadFileName,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {uploadFileName}
+                            </Text>
+                        )}
+
+                        <View
+                            style={[
+                                styles.uploadProgressTrack,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                        >
+                            <View
+                                style={[
+                                    styles.uploadProgressFill,
+                                    {
+                                        width: `${uploadProgress ?? 0}%`,
+                                        backgroundColor: colors.primary,
+                                    },
+                                ]}
+                            />
+                        </View>
+
+                        <Text
+                            style={[
+                                styles.uploadProgressText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            {uploadProgress ?? 0}٪
+                        </Text>
                     </View>
                 )}
             </View>
@@ -460,6 +591,45 @@ const styles = StyleSheet.create({
     actionPanelSecondaryButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
+    },
+
+    disabledActionButton: {
+        opacity: 0.64,
+    },
+
+    uploadFileName: {
+        marginBottom: spacing.sm,
+
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: "right",
+
+        opacity: 0.72,
+    },
+
+    uploadProgressTrack: {
+        height: 8,
+
+        overflow: "hidden",
+
+        marginBottom: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+    },
+
+    uploadProgressFill: {
+        height: "100%",
+
+        borderRadius: radius.pill,
+    },
+
+    uploadProgressText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "left",
+
+        opacity: 0.72,
     },
 
     actions: {

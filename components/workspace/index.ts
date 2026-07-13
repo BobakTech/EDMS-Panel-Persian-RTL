@@ -29,3 +29,5 @@ export type {
 } from "./workspace.types";
 
 export { getWorkspaceItems } from "./workspace.service";
+
+export { default as WorkspaceItemDetailsPanel } from "./WorkspaceItemDetailsPanel";
