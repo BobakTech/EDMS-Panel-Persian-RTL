@@ -24,6 +24,7 @@ export type {
     WorkspaceItemStatus,
     WorkspaceItemType,
     WorkspaceViewMode,
+    WorkspacePageType,
     WorkspaceActionType,
     WorkspacePickedFile,
 } from "./workspace.types";

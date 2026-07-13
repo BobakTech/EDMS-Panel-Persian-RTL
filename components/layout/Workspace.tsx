@@ -28,6 +28,7 @@ import {
     WorkspaceItemDetailsPanel,
     type WorkspaceItem,
     type WorkspaceViewMode,
+    type WorkspacePageType,
 } from "../workspace";
 
 /**
@@ -41,6 +42,53 @@ interface WorkspaceUndoToast {
     message: string;
 }
 
+interface WorkspacePageContent {
+    breadcrumbLabel: string;
+    title: string;
+    subtitle: string;
+    emptyIcon: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    visibleStatus: WorkspaceItem["status"];
+}
+
+/**
+ * ============================================================================
+ * Helpers
+ * ============================================================================
+ */
+
+function getWorkspacePageContent(pageType: WorkspacePageType): WorkspacePageContent {
+    if (pageType === "archive") {
+        return {
+            breadcrumbLabel: "آرشیو",
+            title: "آرشیو",
+            subtitle: "مشاهده پوشه‌ها و فایل‌های آرشیو شده",
+            emptyIcon: "A",
+            emptyTitle: "آرشیوی وجود ندارد",
+            emptyDescription: "فایل‌ها و پوشه‌هایی که آرشیو می‌شوند در این بخش نمایش داده خواهند شد.",
+            visibleStatus: "archived",
+        };
+    }
+
+    return {
+        breadcrumbLabel: "فضای کاری",
+        title: "فضای کاری",
+        subtitle: "مدیریت پوشه‌ها، فایل‌ها و اسناد سازمانی",
+        emptyIcon: "+",
+        emptyTitle: "هنوز سندی وجود ندارد",
+        emptyDescription: "برای شروع، یک پوشه جدید بسازید یا فایل‌های خود را بارگذاری کنید.",
+        visibleStatus: "active",
+    };
+}
+
+function isWorkspaceItemVisibleOnPage(
+    item: WorkspaceItem,
+    pageType: WorkspacePageType
+) {
+    return item.status === getWorkspacePageContent(pageType).visibleStatus;
+}
+
 /**
  * ============================================================================
  * Props
@@ -48,6 +96,7 @@ interface WorkspaceUndoToast {
  */
 
 interface WorkspaceProps {
+    pageType: WorkspacePageType;
     workspaceItems: WorkspaceItem[];
     searchQuery: string;
     onArchiveItem: (itemId: string) => void;
@@ -62,6 +111,7 @@ interface WorkspaceProps {
  */
 
 export default function Workspace({
+    pageType,
     workspaceItems,
     searchQuery,
     onArchiveItem,
@@ -81,6 +131,8 @@ export default function Workspace({
         : spacing.xl;
     const workspaceTopPadding = spacing.none;
 
+    const pageContent = getWorkspacePageContent(pageType);
+
     const [viewMode, setViewMode] = useState<WorkspaceViewMode>("grid");
 
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -95,13 +147,15 @@ export default function Workspace({
         }
 
         const selectedItemStillVisible = workspaceItems.some(
-            (item) => item.id === selectedItemId && item.status !== "trashed"
+            (item) =>
+                item.id === selectedItemId &&
+                isWorkspaceItemVisibleOnPage(item, pageType)
         );
 
         if (!selectedItemStillVisible) {
             setSelectedItemId(null);
         }
-    }, [selectedItemId, workspaceItems]);
+    }, [pageType, selectedItemId, workspaceItems]);
 
     useEffect(() => {
         return () => {
@@ -125,6 +179,39 @@ export default function Workspace({
 
     function handleRequestDeleteWorkspaceItem(itemId: string) {
         setPendingDeleteItemId(itemId);
+    }
+
+    function handleRestoreArchivedWorkspaceItem(itemId: string) {
+        const archivedItem = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (!archivedItem) {
+            return;
+        }
+
+        onRestoreItem({
+            ...archivedItem,
+            status: "active",
+            updatedAt: new Date().toISOString(),
+        });
+
+        showUndoToast(archivedItem, "آیتم به فضای کاری بازگردانده شد.");
+        setSelectedItemId(null);
+    }
+
+    function handleMoveArchivedWorkspaceItemToTrash(itemId: string) {
+        const archivedItem = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (!archivedItem) {
+            return;
+        }
+
+        onMoveItemToTrash(archivedItem.id);
+        showUndoToast(archivedItem, "آیتم به سطل زباله منتقل شد.");
+        setSelectedItemId(null);
     }
 
     function handleCancelDeleteWorkspaceItem() {
@@ -184,16 +271,16 @@ export default function Workspace({
 
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
-    const activeWorkspaceItems = workspaceItems.filter(
-        (item) => item.status !== "trashed"
+    const pageWorkspaceItems = workspaceItems.filter((item) =>
+        isWorkspaceItemVisibleOnPage(item, pageType)
     );
 
     const visibleWorkspaceItems = normalizedSearchQuery
-        ? activeWorkspaceItems.filter((item) =>
+        ? pageWorkspaceItems.filter((item) =>
             item.name.toLowerCase().includes(normalizedSearchQuery) ||
             item.description.toLowerCase().includes(normalizedSearchQuery)
         )
-        : activeWorkspaceItems;
+        : pageWorkspaceItems;
 
     const selectedWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === selectedItemId
@@ -222,6 +309,29 @@ export default function Workspace({
         !hasWorkspaceItemsError &&
         !hasWorkspaceItems;
 
+    const detailsPrimaryAction =
+        pageType === "archive"
+            ? {
+                label: "بازگردانی",
+                accessibilityLabel: "بازگردانی آیتم از آرشیو",
+                onPress: handleRestoreArchivedWorkspaceItem,
+            }
+            : {
+                label: "حذف / آرشیو",
+                accessibilityLabel: "حذف یا آرشیو آیتم",
+                onPress: handleRequestDeleteWorkspaceItem,
+            };
+
+    const detailsSecondaryAction =
+        pageType === "archive"
+            ? {
+                label: "انتقال به سطل زباله",
+                accessibilityLabel: "انتقال آیتم آرشیوی به سطل زباله",
+                tone: "danger" as const,
+                onPress: handleMoveArchivedWorkspaceItemToTrash,
+            }
+            : undefined;
+
     return (
         <View style={[
             styles.container,
@@ -243,14 +353,14 @@ export default function Workspace({
                 {/* =========================================================================
                 * Breadcrumb
                 * ========================================================================= */}
-                <WorkspaceBreadcrumb items={["خانه", "فضای کاری"]} />
+                <WorkspaceBreadcrumb items={["خانه", pageContent.breadcrumbLabel]} />
 
                 {/* =========================================================================
                 * Workspace Header
                 * ========================================================================= */}
                 <WorkspaceHeader
-                    title="فضای کاری"
-                    subtitle="مدیریت پوشه‌ها، فایل‌ها و اسناد سازمانی"
+                    title={pageContent.title}
+                    subtitle={pageContent.subtitle}
                 >
                     {/* View Controls */}
                     <WorkspaceViewControls
@@ -262,8 +372,9 @@ export default function Workspace({
                 {selectedWorkspaceItem && (
                     <WorkspaceItemDetailsPanel
                         item={selectedWorkspaceItem}
+                        primaryAction={detailsPrimaryAction}
+                        secondaryAction={detailsSecondaryAction}
                         onClose={handleCloseWorkspaceItemDetails}
-                        onRequestDelete={handleRequestDeleteWorkspaceItem}
                     />
                 )}
 
@@ -308,16 +419,16 @@ export default function Workspace({
 
                     {shouldShowEmptyState && (
                         <WorkspaceEmptyState
-                            icon={normalizedSearchQuery ? "?" : "+"}
+                            icon={normalizedSearchQuery ? "?" : pageContent.emptyIcon}
                             title={
                                 normalizedSearchQuery
                                     ? "نتیجه‌ای پیدا نشد"
-                                    : "هنوز سندی وجود ندارد"
+                                    : pageContent.emptyTitle
                             }
                             description={
                                 normalizedSearchQuery
                                     ? "عبارت جستجو را تغییر دهید یا بعداً دوباره تلاش کنید."
-                                    : "برای شروع، یک پوشه جدید بسازید یا فایل‌های خود را بارگذاری کنید."
+                                    : pageContent.emptyDescription
                             }
                         />
                     )}
@@ -326,7 +437,7 @@ export default function Workspace({
 
             <Modal
                 transparent
-                visible={pendingDeleteItemId !== null}
+                visible={pageType === "workspace" && pendingDeleteItemId !== null}
                 animationType="fade"
                 onRequestClose={handleCancelDeleteWorkspaceItem}
             >

@@ -6,9 +6,29 @@
  * ============================================================================
  */
 
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+    Pressable,
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
+} from "react-native";
+
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+
+import type { WorkspacePageType } from "../workspace";
+
+/**
+ * ============================================================================
+ * Props
+ * ============================================================================
+ */
+
+interface SidebarProps {
+    activePage: WorkspacePageType;
+    onChangePage: (page: WorkspacePageType) => void;
+}
 
 /**
  * ============================================================================
@@ -16,7 +36,10 @@ import { useSettings } from "../../settings/SettingsContext";
  * ============================================================================
  */
 
-export default function Sidebar() {
+export default function Sidebar({
+    activePage,
+    onChangePage,
+}: SidebarProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
 
@@ -98,8 +121,6 @@ export default function Sidebar() {
             * ========================================================================= */}
 
             <View style={styles.navigation}>
-                {/* Navigation Items */}
-
                 {/* Dashboard */}
 
                 <Text
@@ -115,16 +136,31 @@ export default function Sidebar() {
 
                 {/* My Documents */}
 
-                <Text
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="نمایش اسناد من"
+                    onPress={() => onChangePage("workspace")}
                     style={[
-                        styles.navigationItem,
-                        {
-                            color: colors.text,
+                        styles.navigationButton,
+                        activePage === "workspace" && {
+                            backgroundColor: colors.background,
                         },
                     ]}
                 >
-                    My Documents
-                </Text>
+                    <Text
+                        style={[
+                            styles.navigationItem,
+                            {
+                                color:
+                                    activePage === "workspace"
+                                        ? colors.primary
+                                        : colors.text,
+                            },
+                        ]}
+                    >
+                        My Documents
+                    </Text>
+                </Pressable>
 
                 {/* Shared Documents */}
 
@@ -141,16 +177,31 @@ export default function Sidebar() {
 
                 {/* Archive */}
 
-                <Text
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="نمایش آرشیو"
+                    onPress={() => onChangePage("archive")}
                     style={[
-                        styles.navigationItem,
-                        {
-                            color: colors.text,
+                        styles.navigationButton,
+                        activePage === "archive" && {
+                            backgroundColor: colors.background,
                         },
                     ]}
                 >
-                    Archive
-                </Text>
+                    <Text
+                        style={[
+                            styles.navigationItem,
+                            {
+                                color:
+                                    activePage === "archive"
+                                        ? colors.primary
+                                        : colors.text,
+                            },
+                        ]}
+                    >
+                        Archive
+                    </Text>
+                </Pressable>
             </View>
 
             {/* =========================================================================
@@ -270,6 +321,10 @@ const styles = StyleSheet.create({
 
     navigation: {
         flex: 1,
+    },
+
+    navigationButton: {
+        borderRadius: radius.md,
     },
 
     navigationItem: {

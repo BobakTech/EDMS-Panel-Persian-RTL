@@ -17,6 +17,7 @@ import Workspace from "./Workspace";
 
 import {
     getWorkspaceItems,
+    type WorkspacePageType,
     type WorkspaceActionType,
     type WorkspaceItem,
     type WorkspaceItemStatus,
@@ -74,11 +75,19 @@ export default function AppLayout() {
 
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
 
+    const [activeWorkspacePage, setActiveWorkspacePage] =
+        useState<WorkspacePageType>("workspace");
+
     function handlePressCreateFolder() {
         setActiveWorkspaceAction("new-folder");
     }
 
     function handleDismissWorkspaceAction() {
+        setActiveWorkspaceAction(null);
+    }
+
+    function handleChangeWorkspacePage(page: WorkspacePageType) {
+        setActiveWorkspacePage(page);
         setActiveWorkspaceAction(null);
     }
 
@@ -206,7 +215,10 @@ export default function AppLayout() {
                 },
             ]}
         >
-            <Sidebar />
+            <Sidebar
+                activePage={activeWorkspacePage}
+                onChangePage={handleChangeWorkspacePage}
+            />
 
             <View style={styles.main}>
                 <Toolbar
@@ -220,6 +232,7 @@ export default function AppLayout() {
                 />
 
                 <Workspace
+                    pageType={activeWorkspacePage}
                     workspaceItems={workspaceItems}
                     searchQuery={workspaceSearchQuery}
                     onArchiveItem={handleArchiveWorkspaceItem}

@@ -20,14 +20,30 @@ import type { WorkspaceItem } from "./workspace.types";
 
 /**
  * ============================================================================
+ * Types
+ * ============================================================================
+ */
+
+type WorkspaceItemDetailsActionTone = "primary" | "danger";
+
+interface WorkspaceItemDetailsAction {
+    label: string;
+    accessibilityLabel: string;
+    tone?: WorkspaceItemDetailsActionTone;
+    onPress: (itemId: string) => void;
+}
+
+/**
+ * ============================================================================
  * Props
  * ============================================================================
  */
 
 interface WorkspaceItemDetailsPanelProps {
     item: WorkspaceItem;
+    primaryAction: WorkspaceItemDetailsAction;
+    secondaryAction?: WorkspaceItemDetailsAction;
     onClose: () => void;
-    onRequestDelete: (itemId: string) => void;
 }
 
 /**
@@ -56,11 +72,20 @@ function getWorkspaceItemStatusLabel(item: WorkspaceItem) {
 
 export default function WorkspaceItemDetailsPanel({
     item,
+    primaryAction,
+    secondaryAction,
     onClose,
-    onRequestDelete,
 }: WorkspaceItemDetailsPanelProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
+
+    const dangerColor = "#DC2626";
+
+    function getActionColor(action: WorkspaceItemDetailsAction) {
+        return action.tone === "danger"
+            ? dangerColor
+            : colors.primary;
+    }
 
     return (
         <View
@@ -131,29 +156,55 @@ export default function WorkspaceItemDetailsPanel({
                 </View>
             </View>
 
-            {/* Delete / Archive Action */}
+            {/* Primary Item Action */}
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="حذف یا آرشیو آیتم"
-                onPress={() => onRequestDelete(item.id)}
+                accessibilityLabel={primaryAction.accessibilityLabel}
+                onPress={() => primaryAction.onPress(item.id)}
                 style={[
-                    styles.deleteButton,
+                    styles.actionButton,
                     {
-                        borderColor: colors.primary,
+                        borderColor: getActionColor(primaryAction),
                     },
                 ]}
             >
                 <Text
                     style={[
-                        styles.deleteButtonText,
+                        styles.actionButtonText,
                         {
-                            color: colors.primary,
+                            color: getActionColor(primaryAction),
                         },
                     ]}
                 >
-                    حذف / آرشیو
+                    {primaryAction.label}
                 </Text>
             </Pressable>
+
+            {/* Secondary Item Action */}
+            {secondaryAction && (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={secondaryAction.accessibilityLabel}
+                    onPress={() => secondaryAction.onPress(item.id)}
+                    style={[
+                        styles.actionButton,
+                        {
+                            borderColor: getActionColor(secondaryAction),
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.actionButtonText,
+                            {
+                                color: getActionColor(secondaryAction),
+                            },
+                        ]}
+                    >
+                        {secondaryAction.label}
+                    </Text>
+                </Pressable>
+            )}
 
             {/* Close Details Action */}
             <Pressable
@@ -245,7 +296,7 @@ const styles = StyleSheet.create({
         opacity: 0.64,
     },
 
-    deleteButton: {
+    actionButton: {
         marginRight: spacing.md,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
@@ -254,7 +305,7 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
     },
 
-    deleteButtonText: {
+    actionButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },

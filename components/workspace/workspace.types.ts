@@ -8,6 +8,8 @@
 
 export type WorkspaceViewMode = "grid" | "list";
 
+export type WorkspacePageType = "workspace" | "archive";
+
 export type WorkspaceItemType = "folder" | "file";
 
 export type WorkspaceItemStatus = "active" | "archived" | "trashed";
