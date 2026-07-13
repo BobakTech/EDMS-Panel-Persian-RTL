@@ -363,6 +363,7 @@ export default function Workspace({
                         </Text>
 
                         <View style={styles.modalActions}>
+                            {/* Move to Trash Action */}
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel="انتقال به سطل زباله"
@@ -386,15 +387,16 @@ export default function Workspace({
                                 </Text>
                             </Pressable>
 
+                            {/* Archive Action */}
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel="آرشیو آیتم"
                                 onPress={handleArchivePendingWorkspaceItem}
-                                style={styles.modalCancelButton}
+                                style={styles.modalTextButton}
                             >
                                 <Text
                                     style={[
-                                        styles.modalSecondaryButtonText,
+                                        styles.modalTextButtonText,
                                         {
                                             color: colors.primary,
                                         },
@@ -404,20 +406,19 @@ export default function Workspace({
                                 </Text>
                             </Pressable>
 
+                            {/* Spacer pushes Cancel to the opposite side */}
+                            <View style={styles.modalActionSpacer} />
+
+                            {/* Cancel Action */}
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel="لغو عملیات"
                                 onPress={handleCancelDeleteWorkspaceItem}
-                                style={[
-                                    styles.modalSecondaryButton,
-                                    {
-                                        borderColor: colors.border,
-                                    },
-                                ]}
+                                style={styles.modalTextButton}
                             >
                                 <Text
                                     style={[
-                                        styles.modalSecondaryButtonText,
+                                        styles.modalTextButtonText,
                                         {
                                             color: colors.text,
                                         },
@@ -563,16 +564,12 @@ const styles = StyleSheet.create({
     modalActions: {
         flexDirection: "row-reverse",
         alignItems: "center",
-        flexWrap: "wrap",
 
         gap: spacing.sm,
     },
 
-    modalCancelButton: {
-        marginRight: spacing.lg,
-
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
+    modalActionSpacer: {
+        flex: 1,
     },
 
     modalDangerButton: {
@@ -587,15 +584,12 @@ const styles = StyleSheet.create({
         fontWeight: typography.fontWeight.semibold,
     },
 
-    modalSecondaryButton: {
+    modalTextButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
     },
 
-    modalSecondaryButtonText: {
+    modalTextButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
