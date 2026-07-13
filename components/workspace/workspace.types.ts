@@ -10,7 +10,7 @@ export type WorkspaceViewMode = "grid" | "list";
 
 export type WorkspaceItemType = "folder" | "file";
 
-export type WorkspaceItemStatus = "active" | "archived";
+export type WorkspaceItemStatus = "active" | "archived" | "trashed";
 
 export interface WorkspaceItem {
     id: string;

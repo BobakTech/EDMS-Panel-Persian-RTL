@@ -19,6 +19,7 @@ import {
     getWorkspaceItems,
     type WorkspaceActionType,
     type WorkspaceItem,
+    type WorkspaceItemStatus,
     type WorkspacePickedFile,
 } from "../workspace";
 
@@ -158,6 +159,44 @@ export default function AppLayout() {
         setActiveWorkspaceAction(null);
     }
 
+    function handleArchiveWorkspaceItem(itemId: string) {
+        setWorkspaceItems((currentItems) =>
+            currentItems.map((item) =>
+                item.id === itemId
+                    ? {
+                        ...item,
+                        status: "archived",
+                        updatedAt: new Date().toISOString(),
+                    }
+                    : item
+            )
+        );
+    }
+
+    function handleMoveWorkspaceItemToTrash(itemId: string) {
+        setWorkspaceItems((currentItems) =>
+            currentItems.map((item) =>
+                item.id === itemId
+                    ? {
+                        ...item,
+                        status: "trashed",
+                        updatedAt: new Date().toISOString(),
+                    }
+                    : item
+            )
+        );
+    }
+
+    function handleRestoreWorkspaceItem(restoredItem: WorkspaceItem) {
+        setWorkspaceItems((currentItems) =>
+            currentItems.map((item) =>
+                item.id === restoredItem.id
+                    ? restoredItem
+                    : item
+            )
+        );
+    }
+
     return (
         <View
             style={[
@@ -183,6 +222,9 @@ export default function AppLayout() {
                 <Workspace
                     workspaceItems={workspaceItems}
                     searchQuery={workspaceSearchQuery}
+                    onArchiveItem={handleArchiveWorkspaceItem}
+                    onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
+                    onRestoreItem={handleRestoreWorkspaceItem}
                 />
             </View>
         </View>

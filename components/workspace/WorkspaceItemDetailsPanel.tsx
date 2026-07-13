@@ -2,7 +2,7 @@
  * ============================================================================
  * Workspace Item Details Panel
  * ----------------------------------------------------------------------------
- * Displays metadata and quick information for the selected workspace item.
+ * Displays metadata and quick actions for the selected workspace item.
  * ============================================================================
  */
 
@@ -27,6 +27,25 @@ import type { WorkspaceItem } from "./workspace.types";
 interface WorkspaceItemDetailsPanelProps {
     item: WorkspaceItem;
     onClose: () => void;
+    onRequestDelete: (itemId: string) => void;
+}
+
+/**
+ * ============================================================================
+ * Helpers
+ * ============================================================================
+ */
+
+function getWorkspaceItemStatusLabel(item: WorkspaceItem) {
+    if (item.status === "archived") {
+        return "آرشیو";
+    }
+
+    if (item.status === "trashed") {
+        return "سطل زباله";
+    }
+
+    return "فعال";
 }
 
 /**
@@ -38,6 +57,7 @@ interface WorkspaceItemDetailsPanelProps {
 export default function WorkspaceItemDetailsPanel({
     item,
     onClose,
+    onRequestDelete,
 }: WorkspaceItemDetailsPanelProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -95,7 +115,7 @@ export default function WorkspaceItemDetailsPanel({
                             },
                         ]}
                     >
-                        وضعیت: {item.status === "active" ? "فعال" : "آرشیو"}
+                        وضعیت: {getWorkspaceItemStatusLabel(item)}
                     </Text>
 
                     <Text
@@ -111,6 +131,31 @@ export default function WorkspaceItemDetailsPanel({
                 </View>
             </View>
 
+            {/* Delete / Archive Action */}
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="حذف یا آرشیو آیتم"
+                onPress={() => onRequestDelete(item.id)}
+                style={[
+                    styles.deleteButton,
+                    {
+                        borderColor: colors.primary,
+                    },
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.deleteButtonText,
+                        {
+                            color: colors.primary,
+                        },
+                    ]}
+                >
+                    حذف / آرشیو
+                </Text>
+            </Pressable>
+
+            {/* Close Details Action */}
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="بستن جزئیات"
@@ -198,6 +243,20 @@ const styles = StyleSheet.create({
         fontWeight: typography.fontWeight.medium,
 
         opacity: 0.64,
+    },
+
+    deleteButton: {
+        marginRight: spacing.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    deleteButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
     },
 
     closeButton: {
