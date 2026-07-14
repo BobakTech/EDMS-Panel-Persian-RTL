@@ -19,6 +19,8 @@ import { useSettings } from "../../settings/SettingsContext";
 
 import type { WorkspacePageType } from "../workspace";
 
+import type { ProjectInfo } from "../project";
+
 /**
  * ============================================================================
  * Props
@@ -27,6 +29,9 @@ import type { WorkspacePageType } from "../workspace";
 
 interface SidebarProps {
     activePage: WorkspacePageType;
+    projectInfo: ProjectInfo | null;
+    isProjectInfoLoading: boolean;
+    projectInfoError: string | null;
     onChangePage: (page: WorkspacePageType) => void;
 }
 
@@ -38,6 +43,9 @@ interface SidebarProps {
 
 export default function Sidebar({
     activePage,
+    projectInfo,
+    isProjectInfoLoading,
+    projectInfoError,
     onChangePage,
 }: SidebarProps) {
     const { theme } = useSettings();
@@ -46,6 +54,12 @@ export default function Sidebar({
     const { height } = useWindowDimensions();
 
     const isShortSidebar = height < 720;
+
+    const projectSubtitle = isProjectInfoLoading
+        ? "Loading project info..."
+        : projectInfo
+            ? `${projectInfo.projectName}${projectInfo.projectCode ? ` · ${projectInfo.projectCode}` : ""}`
+            : projectInfoError ?? "Enterprise Document Management System";
 
     return (
         <View
@@ -112,7 +126,7 @@ export default function Sidebar({
                         },
                     ]}
                 >
-                    Enterprise Document Management System
+                    {projectSubtitle}
                 </Text>
             </View>
 

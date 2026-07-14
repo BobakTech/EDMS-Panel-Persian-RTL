@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { spacing } from "../../theme";
@@ -23,6 +23,8 @@ import {
     type WorkspaceItemStatus,
     type WorkspacePickedFile,
 } from "../workspace";
+
+import { getProjectInfo, type ProjectInfo } from "../project";
 
 import { useSettings } from "../../settings/SettingsContext";
 
@@ -74,6 +76,47 @@ export default function AppLayout() {
         useState<WorkspaceActionType | null>(null);
 
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
+
+    const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
+    const [isProjectInfoLoading, setIsProjectInfoLoading] = useState(true);
+    const [projectInfoError, setProjectInfoError] = useState<string | null>(null);
+
+    /**
+     * ============================================================================
+     * Project Info Loading
+     * ============================================================================
+     */
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadProjectInfo() {
+            try {
+                setIsProjectInfoLoading(true);
+                setProjectInfoError(null);
+
+                const loadedProjectInfo = await getProjectInfo();
+
+                if (isMounted) {
+                    setProjectInfo(loadedProjectInfo);
+                }
+            } catch {
+                if (isMounted) {
+                    setProjectInfoError("Project info unavailable.");
+                }
+            } finally {
+                if (isMounted) {
+                    setIsProjectInfoLoading(false);
+                }
+            }
+        }
+
+        loadProjectInfo();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const [activeWorkspacePage, setActiveWorkspacePage] =
         useState<WorkspacePageType>("workspace");
@@ -217,6 +260,9 @@ export default function AppLayout() {
         >
             <Sidebar
                 activePage={activeWorkspacePage}
+                projectInfo={projectInfo}
+                isProjectInfoLoading={isProjectInfoLoading}
+                projectInfoError={projectInfoError}
                 onChangePage={handleChangeWorkspacePage}
             />
 
