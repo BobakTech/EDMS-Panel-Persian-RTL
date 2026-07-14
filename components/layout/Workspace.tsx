@@ -71,6 +71,18 @@ function getWorkspacePageContent(pageType: WorkspacePageType): WorkspacePageCont
         };
     }
 
+    if (pageType === "trash") {
+        return {
+            breadcrumbLabel: "سطل زباله",
+            title: "سطل زباله",
+            subtitle: "مشاهده فایل‌ها و پوشه‌های حذف‌شده",
+            emptyIcon: "T",
+            emptyTitle: "سطل زباله خالی است",
+            emptyDescription: "فایل‌ها و پوشه‌هایی که حذف می‌شوند در این بخش نمایش داده خواهند شد.",
+            visibleStatus: "trashed",
+        };
+    }
+
     return {
         breadcrumbLabel: "فضای کاری",
         title: "فضای کاری",
@@ -214,6 +226,25 @@ export default function Workspace({
         setSelectedItemId(null);
     }
 
+    function handleRestoreTrashedWorkspaceItem(itemId: string) {
+        const trashedItem = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (!trashedItem) {
+            return;
+        }
+
+        onRestoreItem({
+            ...trashedItem,
+            status: "active",
+            updatedAt: new Date().toISOString(),
+        });
+
+        showUndoToast(trashedItem, "آیتم از سطل زباله بازگردانده شد.");
+        setSelectedItemId(null);
+    }
+
     function handleCancelDeleteWorkspaceItem() {
         setPendingDeleteItemId(null);
     }
@@ -316,11 +347,17 @@ export default function Workspace({
                 accessibilityLabel: "بازگردانی آیتم از آرشیو",
                 onPress: handleRestoreArchivedWorkspaceItem,
             }
-            : {
-                label: "حذف / آرشیو",
-                accessibilityLabel: "حذف یا آرشیو آیتم",
-                onPress: handleRequestDeleteWorkspaceItem,
-            };
+            : pageType === "trash"
+                ? {
+                    label: "بازگردانی",
+                    accessibilityLabel: "بازگردانی آیتم از سطل زباله",
+                    onPress: handleRestoreTrashedWorkspaceItem,
+                }
+                : {
+                    label: "حذف / آرشیو",
+                    accessibilityLabel: "حذف یا آرشیو آیتم",
+                    onPress: handleRequestDeleteWorkspaceItem,
+                };
 
     const detailsSecondaryAction =
         pageType === "archive"

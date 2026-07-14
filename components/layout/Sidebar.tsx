@@ -216,6 +216,34 @@ export default function Sidebar({
                         Archive
                     </Text>
                 </Pressable>
+
+                {/* Trash */}
+
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="نمایش سطل زباله"
+                    onPress={() => onChangePage("trash")}
+                    style={[
+                        styles.navigationButton,
+                        activePage === "trash" && {
+                            backgroundColor: colors.background,
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.navigationItem,
+                            {
+                                color:
+                                    activePage === "trash"
+                                        ? colors.primary
+                                        : colors.text,
+                            },
+                        ]}
+                    >
+                        Trash
+                    </Text>
+                </Pressable>
             </View>
 
             {/* =========================================================================
