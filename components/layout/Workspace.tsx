@@ -12,6 +12,7 @@ import {
     Pressable,
     StyleSheet,
     Text,
+    TextInput,
     useWindowDimensions,
     View,
 } from "react-native";
@@ -114,6 +115,7 @@ interface WorkspaceProps {
     onArchiveItem: (itemId: string) => void;
     onMoveItemToTrash: (itemId: string) => void;
     onRestoreItem: (item: WorkspaceItem) => void;
+    onRenameItem: (itemId: string, newName: string) => void;
 }
 
 /**
@@ -129,6 +131,7 @@ export default function Workspace({
     onArchiveItem,
     onMoveItemToTrash,
     onRestoreItem,
+    onRenameItem,
 }: WorkspaceProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -149,6 +152,9 @@ export default function Workspace({
 
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
+
+    const [pendingRenameItemId, setPendingRenameItemId] = useState<string | null>(null);
+    const [renameItemName, setRenameItemName] = useState("");
 
     const [undoToast, setUndoToast] = useState<WorkspaceUndoToast | null>(null);
     const undoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -191,6 +197,40 @@ export default function Workspace({
 
     function handleRequestDeleteWorkspaceItem(itemId: string) {
         setPendingDeleteItemId(itemId);
+    }
+
+    function handleRequestRenameWorkspaceItem(itemId: string) {
+        const itemToRename = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (!itemToRename) {
+            return;
+        }
+
+        setPendingRenameItemId(itemToRename.id);
+        setRenameItemName(itemToRename.name);
+    }
+
+    function handleCancelRenameWorkspaceItem() {
+        setPendingRenameItemId(null);
+        setRenameItemName("");
+    }
+
+    function handleSaveRenameWorkspaceItem() {
+        if (!pendingRenameWorkspaceItem) {
+            return;
+        }
+
+        const trimmedRenameItemName = renameItemName.trim();
+
+        if (!trimmedRenameItemName) {
+            return;
+        }
+
+        onRenameItem(pendingRenameWorkspaceItem.id, trimmedRenameItemName);
+        setPendingRenameItemId(null);
+        setRenameItemName("");
     }
 
     function handleRestoreArchivedWorkspaceItem(itemId: string) {
@@ -321,6 +361,10 @@ export default function Workspace({
         (item) => item.id === pendingDeleteItemId
     );
 
+    const pendingRenameWorkspaceItem = visibleWorkspaceItems.find(
+        (item) => item.id === pendingRenameItemId
+    );
+
     const isLoadingWorkspaceItems = false;
     const workspaceErrorMessage: string | null = null;
 
@@ -367,7 +411,13 @@ export default function Workspace({
                 tone: "danger" as const,
                 onPress: handleMoveArchivedWorkspaceItemToTrash,
             }
-            : undefined;
+            : pageType === "workspace"
+                ? {
+                    label: "تغییر نام",
+                    accessibilityLabel: "تغییر نام آیتم",
+                    onPress: handleRequestRenameWorkspaceItem,
+                }
+                : undefined;
 
     return (
         <View style={[
@@ -580,6 +630,94 @@ export default function Workspace({
                 </View>
             </Modal>
 
+            <Modal
+                transparent
+                visible={pageType === "workspace" && pendingRenameItemId !== null}
+                animationType="fade"
+                onRequestClose={handleCancelRenameWorkspaceItem}
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[
+                            styles.modalCard,
+                            {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.modalTitle,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            تغییر نام آیتم
+                        </Text>
+
+                        <TextInput
+                            value={renameItemName}
+                            onChangeText={setRenameItemName}
+                            placeholder="نام جدید را وارد کنید"
+                            placeholderTextColor={colors.border}
+                            style={[
+                                styles.renameInput,
+                                {
+                                    color: colors.text,
+                                    borderColor: colors.border,
+                                    backgroundColor: colors.background,
+                                },
+                            ]}
+                        />
+
+                        <View style={styles.modalActions}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="ذخیره نام جدید"
+                                onPress={handleSaveRenameWorkspaceItem}
+                                style={[
+                                    styles.modalPrimaryButton,
+                                    {
+                                        backgroundColor: colors.primary,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.modalPrimaryButtonText,
+                                        {
+                                            color: colors.surface,
+                                        },
+                                    ]}
+                                >
+                                    ذخیره
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="لغو تغییر نام"
+                                onPress={handleCancelRenameWorkspaceItem}
+                                style={styles.modalTextButton}
+                            >
+                                <Text
+                                    style={[
+                                        styles.modalTextButtonText,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    لغو
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             {undoToast && (
                 <View
                     style={[
@@ -738,6 +876,31 @@ const styles = StyleSheet.create({
     },
 
     modalTextButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    renameInput: {
+        marginBottom: spacing.lg,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        fontSize: typography.fontSize.md,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: "right",
+    },
+
+    modalPrimaryButton: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+
+        borderRadius: radius.md,
+    },
+
+    modalPrimaryButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },

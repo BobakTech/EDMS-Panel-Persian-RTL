@@ -249,6 +249,26 @@ export default function AppLayout() {
         );
     }
 
+    function handleRenameWorkspaceItem(itemId: string, newName: string) {
+        const trimmedNewName = newName.trim();
+
+        if (!trimmedNewName) {
+            return;
+        }
+
+        setWorkspaceItems((currentItems) =>
+            currentItems.map((item) =>
+                item.id === itemId
+                    ? {
+                        ...item,
+                        name: trimmedNewName,
+                        updatedAt: new Date().toISOString(),
+                    }
+                    : item
+            )
+        );
+    }
+
     return (
         <View
             style={[
@@ -284,6 +304,7 @@ export default function AppLayout() {
                     onArchiveItem={handleArchiveWorkspaceItem}
                     onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
                     onRestoreItem={handleRestoreWorkspaceItem}
+                    onRenameItem={handleRenameWorkspaceItem}
                 />
             </View>
         </View>
