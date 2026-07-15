@@ -21,6 +21,7 @@ export interface WorkspaceItem {
     description: string;
     updatedAt: string;
     status: WorkspaceItemStatus;
+    parentFolderId?: string | null;
     extension?: string;
     sizeLabel?: string;
     childrenCount?: number;

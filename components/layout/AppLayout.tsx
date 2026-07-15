@@ -20,7 +20,6 @@ import {
     type WorkspacePageType,
     type WorkspaceActionType,
     type WorkspaceItem,
-    type WorkspaceItemStatus,
     type WorkspacePickedFile,
 } from "../workspace";
 
@@ -149,6 +148,7 @@ export default function AppLayout() {
                 description: "پوشه ایجاد شده در فضای کاری",
                 updatedAt: new Date().toISOString(),
                 status: "active",
+                parentFolderId: null,
                 childrenCount: 0,
             };
 
@@ -186,6 +186,7 @@ export default function AppLayout() {
                 description: "فایل انتخاب شده از دستگاه",
                 updatedAt: new Date().toISOString(),
                 status: "active",
+                parentFolderId: null,
                 extension: getFileExtension(trimmedFileName),
                 sizeLabel: getFileSizeLabel(file.size),
                 mimeType: file.mimeType,
@@ -275,6 +276,23 @@ export default function AppLayout() {
         );
     }
 
+    function handleMoveWorkspaceItem(
+        itemId: string,
+        destinationFolderId: string | null
+    ) {
+        setWorkspaceItems((currentItems) =>
+            currentItems.map((item) =>
+                item.id === itemId
+                    ? {
+                        ...item,
+                        parentFolderId: destinationFolderId,
+                        updatedAt: new Date().toISOString(),
+                    }
+                    : item
+            )
+        );
+    }
+
     return (
         <View
             style={[
@@ -312,6 +330,7 @@ export default function AppLayout() {
                     onRestoreItem={handleRestoreWorkspaceItem}
                     onRenameItem={handleRenameWorkspaceItem}
                     onDeleteItem={handleDeleteWorkspaceItem}
+                    onMoveItem={handleMoveWorkspaceItem}
                 />
             </View>
         </View>

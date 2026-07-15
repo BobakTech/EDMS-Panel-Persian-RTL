@@ -95,12 +95,40 @@ function getWorkspacePageContent(pageType: WorkspacePageType): WorkspacePageCont
     };
 }
 
+/**
+ * ============================================================================
+ * Workspace Item Visibility
+ * ----------------------------------------------------------------------------
+ * Active workspace only shows items outside folders until folder browsing exists.
+ * ============================================================================
+ */
+
 function isWorkspaceItemVisibleOnPage(
     item: WorkspaceItem,
     pageType: WorkspacePageType
 ) {
-    return item.status === getWorkspacePageContent(pageType).visibleStatus;
+    const isVisibleByStatus =
+        item.status === getWorkspacePageContent(pageType).visibleStatus;
+
+    if (!isVisibleByStatus) {
+        return false;
+    }
+
+    if (pageType === "workspace") {
+        return !item.parentFolderId;
+    }
+
+    return true;
 }
+
+/**
+ * ============================================================================
+ * Move Destinations
+ * ============================================================================
+ */
+
+const MOVE_OUTSIDE_FOLDER_DESTINATION_ID = "__outside_folder__";
+const MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL = "خارج از پوشه";
 
 /**
  * ============================================================================
@@ -117,6 +145,7 @@ interface WorkspaceProps {
     onRestoreItem: (item: WorkspaceItem) => void;
     onRenameItem: (itemId: string, newName: string) => void;
     onDeleteItem: (itemId: string) => void;
+    onMoveItem: (itemId: string, destinationFolderId: string | null) => void;
 }
 
 /**
@@ -134,6 +163,7 @@ export default function Workspace({
     onRestoreItem,
     onRenameItem,
     onDeleteItem,
+    onMoveItem,
 }: WorkspaceProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -157,6 +187,13 @@ export default function Workspace({
 
     const [pendingRenameItemId, setPendingRenameItemId] = useState<string | null>(null);
     const [renameItemName, setRenameItemName] = useState("");
+
+    const [pendingMoveItemId, setPendingMoveItemId] = useState<string | null>(null);
+    const [selectedDestinationFolderId, setSelectedDestinationFolderId] =
+        useState<string | null>(null);
+    const [moveSearchQuery, setMoveSearchQuery] = useState("");
+    const [isMoveDestinationComboOpen, setIsMoveDestinationComboOpen] =
+        useState(false);
 
     const [pendingPermanentDeleteItemId, setPendingPermanentDeleteItemId] =
         useState<string | null>(null);
@@ -236,6 +273,47 @@ export default function Workspace({
         onRenameItem(pendingRenameWorkspaceItem.id, trimmedRenameItemName);
         setPendingRenameItemId(null);
         setRenameItemName("");
+    }
+
+    function handleRequestMoveWorkspaceItem(itemId: string) {
+        const itemToMove = workspaceItems.find((item) => item.id === itemId);
+
+        setPendingMoveItemId(itemId);
+        setSelectedDestinationFolderId(
+            itemToMove?.parentFolderId ?? MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+        );
+        setMoveSearchQuery("");
+        setIsMoveDestinationComboOpen(false);
+    }
+
+    function handleCancelMoveWorkspaceItem() {
+        setPendingMoveItemId(null);
+        setSelectedDestinationFolderId(null);
+        setMoveSearchQuery("");
+        setIsMoveDestinationComboOpen(false);
+    }
+
+    function handleSaveMoveWorkspaceItem() {
+        if (
+            !pendingMoveWorkspaceItem ||
+            selectedDestinationFolderId === null ||
+            isMoveDestinationDisabled(selectedDestinationFolderId)
+        ) {
+            return;
+        }
+
+        const destinationFolderId =
+            selectedDestinationFolderId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                ? null
+                : selectedDestinationFolderId;
+
+        onMoveItem(pendingMoveWorkspaceItem.id, destinationFolderId);
+        showUndoToast(pendingMoveWorkspaceItem, "آیتم منتقل شد.");
+        setSelectedItemId(null);
+        setPendingMoveItemId(null);
+        setSelectedDestinationFolderId(null);
+        setMoveSearchQuery("");
+        setIsMoveDestinationComboOpen(false);
     }
 
     function handleRestoreArchivedWorkspaceItem(itemId: string) {
@@ -388,9 +466,62 @@ export default function Workspace({
         (item) => item.id === pendingRenameItemId
     );
 
+    const pendingMoveWorkspaceItem = workspaceItems.find(
+        (item) => item.id === pendingMoveItemId
+    );
+
     const pendingPermanentDeleteWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === pendingPermanentDeleteItemId
     );
+
+    const destinationFolders = workspaceItems.filter(
+        (item) =>
+            item.type === "folder" &&
+            item.status === "active" &&
+            item.id !== pendingMoveItemId
+    );
+
+    const currentMoveParentFolderId = pendingMoveWorkspaceItem?.parentFolderId ?? null;
+
+    const normalizedMoveSearchQuery = moveSearchQuery.trim().toLowerCase();
+
+    const isOutsideFolderDestinationVisible =
+        !normalizedMoveSearchQuery ||
+        MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL.toLowerCase().includes(
+            normalizedMoveSearchQuery
+        );
+
+    const filteredDestinationFolders = normalizedMoveSearchQuery
+        ? destinationFolders.filter((folder) =>
+            folder.name.toLowerCase().includes(normalizedMoveSearchQuery)
+        )
+        : destinationFolders;
+
+    function getDestinationFolderId(destinationId: string) {
+        return destinationId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+            ? null
+            : destinationId;
+    }
+
+    function isMoveDestinationDisabled(destinationId: string) {
+        return getDestinationFolderId(destinationId) === currentMoveParentFolderId;
+    }
+
+    const canSaveMoveWorkspaceItem =
+        selectedDestinationFolderId !== null &&
+        !isMoveDestinationDisabled(selectedDestinationFolderId);
+
+    function getSelectedDestinationLabel() {
+        if (selectedDestinationFolderId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID) {
+            return MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL;
+        }
+
+        const selectedFolder = destinationFolders.find(
+            (folder) => folder.id === selectedDestinationFolderId
+        );
+
+        return selectedFolder?.name ?? "انتخاب مقصد";
+    }
 
     const isLoadingWorkspaceItems = false;
     const workspaceErrorMessage: string | null = null;
@@ -415,17 +546,20 @@ export default function Workspace({
         pageType === "archive"
             ? {
                 label: "بازگردانی",
+                icon: "↩",
                 accessibilityLabel: "بازگردانی آیتم از آرشیو",
                 onPress: handleRestoreArchivedWorkspaceItem,
             }
             : pageType === "trash"
                 ? {
                     label: "بازگردانی",
+                    icon: "↩",
                     accessibilityLabel: "بازگردانی آیتم از سطل زباله",
                     onPress: handleRestoreTrashedWorkspaceItem,
                 }
                 : {
                     label: "حذف / آرشیو",
+                    icon: "⋯",
                     accessibilityLabel: "حذف یا آرشیو آیتم",
                     onPress: handleRequestDeleteWorkspaceItem,
                 };
@@ -434,6 +568,7 @@ export default function Workspace({
         pageType === "archive"
             ? {
                 label: "انتقال به سطل زباله",
+                icon: "🗑",
                 accessibilityLabel: "انتقال آیتم آرشیوی به سطل زباله",
                 tone: "danger" as const,
                 onPress: handleMoveArchivedWorkspaceItemToTrash,
@@ -441,17 +576,29 @@ export default function Workspace({
             : pageType === "workspace"
                 ? {
                     label: "تغییر نام",
+                    icon: "✎",
                     accessibilityLabel: "تغییر نام آیتم",
                     onPress: handleRequestRenameWorkspaceItem,
                 }
                 : pageType === "trash"
                     ? {
                         label: "حذف دائمی",
+                        icon: "🗑",
                         accessibilityLabel: "حذف دائمی آیتم",
                         tone: "danger" as const,
                         onPress: handleRequestPermanentDeleteWorkspaceItem,
                     }
                     : undefined;
+
+    const detailsTertiaryAction =
+        pageType === "workspace"
+            ? {
+                label: "انتقال",
+                icon: "⇄",
+                accessibilityLabel: "انتقال آیتم",
+                onPress: handleRequestMoveWorkspaceItem,
+            }
+            : undefined;
 
     return (
         <View style={[
@@ -471,19 +618,12 @@ export default function Workspace({
                     borderColor: colors.border,
                 },
             ]}>
-                {/* =========================================================================
-                * Breadcrumb
-                * ========================================================================= */}
                 <WorkspaceBreadcrumb items={["خانه", pageContent.breadcrumbLabel]} />
 
-                {/* =========================================================================
-                * Workspace Header
-                * ========================================================================= */}
                 <WorkspaceHeader
                     title={pageContent.title}
                     subtitle={pageContent.subtitle}
                 >
-                    {/* View Controls */}
                     <WorkspaceViewControls
                         viewMode={viewMode}
                         onChangeViewMode={setViewMode}
@@ -495,13 +635,11 @@ export default function Workspace({
                         item={selectedWorkspaceItem}
                         primaryAction={detailsPrimaryAction}
                         secondaryAction={detailsSecondaryAction}
+                        tertiaryAction={detailsTertiaryAction}
                         onClose={handleCloseWorkspaceItemDetails}
                     />
                 )}
 
-                {/* =========================================================================
-                 * Workspace Content
-                 * ========================================================================= */}
                 <View style={styles.workspaceBody}>
                     {shouldShowWorkspaceItems && (
                         <View style={
@@ -595,7 +733,6 @@ export default function Workspace({
                         </Text>
 
                         <View style={styles.modalActions}>
-                            {/* Move to Trash Action */}
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel="انتقال به سطل زباله"
@@ -619,7 +756,6 @@ export default function Workspace({
                                 </Text>
                             </Pressable>
 
-                            {/* Archive Action */}
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel="آرشیو آیتم"
@@ -638,10 +774,8 @@ export default function Workspace({
                                 </Text>
                             </Pressable>
 
-                            {/* Spacer pushes Cancel to the opposite side */}
                             <View style={styles.modalActionSpacer} />
 
-                            {/* Cancel Action */}
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel="لغو عملیات"
@@ -734,6 +868,240 @@ export default function Workspace({
                                 accessibilityRole="button"
                                 accessibilityLabel="لغو تغییر نام"
                                 onPress={handleCancelRenameWorkspaceItem}
+                                style={styles.modalTextButton}
+                            >
+                                <Text
+                                    style={[
+                                        styles.modalTextButtonText,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    لغو
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                transparent
+                visible={pageType === "workspace" && pendingMoveItemId !== null}
+                animationType="fade"
+                onRequestClose={handleCancelMoveWorkspaceItem}
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[
+                            styles.modalCard,
+                            {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.modalTitle,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            انتقال آیتم
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.modalDescription,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            مقصد جدید آیتم را انتخاب کنید.
+                        </Text>
+
+                        <View style={styles.destinationCombo}>
+                            <TextInput
+                                value={
+                                    isMoveDestinationComboOpen
+                                        ? moveSearchQuery
+                                        : getSelectedDestinationLabel()
+                                }
+                                onFocus={() => {
+                                    setMoveSearchQuery("");
+                                    setIsMoveDestinationComboOpen(true);
+                                }}
+                                onChangeText={(query) => {
+                                    setMoveSearchQuery(query);
+                                    setSelectedDestinationFolderId(null);
+                                    setIsMoveDestinationComboOpen(true);
+                                }}
+                                placeholder="انتخاب مقصد..."
+                                placeholderTextColor={colors.border}
+                                style={[
+                                    styles.destinationComboInput,
+                                    {
+                                        color: colors.text,
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.background,
+                                    },
+                                ]}
+                            />
+
+                            {isMoveDestinationComboOpen && (
+                                <View
+                                    style={[
+                                        styles.destinationDropdown,
+                                        {
+                                            backgroundColor: colors.surface,
+                                            borderColor: colors.border,
+                                        },
+                                    ]}
+                                >
+                                    {isOutsideFolderDestinationVisible && (
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel="انتقال به خارج از پوشه"
+                                            disabled={isMoveDestinationDisabled(
+                                                MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                                            )}
+                                            onPress={() => {
+                                                setSelectedDestinationFolderId(
+                                                    MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                                                );
+                                                setMoveSearchQuery("");
+                                                setIsMoveDestinationComboOpen(false);
+                                            }}
+                                            style={[
+                                                styles.destinationOption,
+                                                isMoveDestinationDisabled(
+                                                    MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                                                ) && styles.destinationOptionCurrentLocation,
+                                                {
+                                                    backgroundColor: isMoveDestinationDisabled(
+                                                        MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                                                    )
+                                                        ? colors.background
+                                                        : colors.surface,
+                                                },
+                                            ]}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.destinationOptionText,
+                                                    {
+                                                        color: colors.text,
+                                                    },
+                                                ]}
+                                            >
+                                                {MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL}
+                                                {isMoveDestinationDisabled(
+                                                    MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                                                )
+                                                    ? " — مکان فعلی"
+                                                    : ""}
+                                            </Text>
+                                        </Pressable>
+                                    )}
+
+                                    {filteredDestinationFolders.map((folder) => {
+                                        const isCurrentDestination =
+                                            isMoveDestinationDisabled(folder.id);
+
+                                        return (
+                                            <Pressable
+                                                key={folder.id}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`انتخاب پوشه ${folder.name}`}
+                                                disabled={isCurrentDestination}
+                                                onPress={() => {
+                                                    setSelectedDestinationFolderId(folder.id);
+                                                    setMoveSearchQuery("");
+                                                    setIsMoveDestinationComboOpen(false);
+                                                }}
+                                                style={[
+                                                    styles.destinationOption,
+                                                    isCurrentDestination &&
+                                                    styles.destinationOptionCurrentLocation,
+                                                    {
+                                                        backgroundColor: isCurrentDestination
+                                                            ? colors.background
+                                                            : colors.surface,
+                                                    },
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.destinationOptionText,
+                                                        {
+                                                            color: colors.text,
+                                                        },
+                                                    ]}
+                                                >
+                                                    {folder.name}
+                                                    {isCurrentDestination
+                                                        ? " — مکان فعلی"
+                                                        : ""}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+
+                                    {!isOutsideFolderDestinationVisible &&
+                                        filteredDestinationFolders.length === 0 && (
+                                            <Text
+                                                style={[
+                                                    styles.destinationEmptyText,
+                                                    {
+                                                        color: colors.text,
+                                                    },
+                                                ]}
+                                            >
+                                                مقصدی پیدا نشد
+                                            </Text>
+                                        )}
+                                </View>
+                            )}
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="ذخیره انتقال آیتم"
+                                disabled={!canSaveMoveWorkspaceItem}
+                                onPress={handleSaveMoveWorkspaceItem}
+                                style={[
+                                    styles.modalPrimaryButton,
+                                    {
+                                        backgroundColor: canSaveMoveWorkspaceItem
+                                            ? colors.primary
+                                            : colors.border,
+                                        opacity: canSaveMoveWorkspaceItem
+                                            ? 1
+                                            : 0.76,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.modalPrimaryButtonText,
+                                        {
+                                            color: colors.surface,
+                                        },
+                                    ]}
+                                >
+                                    انتقال
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="لغو انتقال آیتم"
+                                onPress={handleCancelMoveWorkspaceItem}
                                 style={styles.modalTextButton}
                             >
                                 <Text
@@ -988,6 +1356,18 @@ const styles = StyleSheet.create({
         fontWeight: typography.fontWeight.semibold,
     },
 
+    modalPrimaryButton: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+
+        borderRadius: radius.md,
+    },
+
+    modalPrimaryButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
     modalTextButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
@@ -1011,16 +1391,59 @@ const styles = StyleSheet.create({
         textAlign: "right",
     },
 
-    modalPrimaryButton: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
+    destinationCombo: {
+        position: "relative",
 
-        borderRadius: radius.md,
+        marginBottom: spacing.lg,
     },
 
-    modalPrimaryButtonText: {
+    destinationComboInput: {
+        minHeight: 40,
+
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: "right",
+    },
+
+    destinationDropdown: {
+        marginTop: spacing.xs,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        overflow: "hidden",
+    },
+
+    destinationOption: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+    },
+
+    destinationOptionCurrentLocation: {
+        opacity: 0.78,
+    },
+
+    destinationOptionText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
+    },
+
+    destinationEmptyText: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: "right",
+
+        opacity: 0.72,
     },
 
     undoToast: {

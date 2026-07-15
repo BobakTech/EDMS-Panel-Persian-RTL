@@ -22,6 +22,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         description: "پوشه اصلی اسناد پروژه",
         updatedAt: "2026-07-11T08:00:00.000Z",
         status: "active",
+        parentFolderId: null,
         childrenCount: 12,
     },
     {

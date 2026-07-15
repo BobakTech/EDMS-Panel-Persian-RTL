@@ -28,6 +28,7 @@ type WorkspaceItemDetailsActionTone = "primary" | "danger";
 
 interface WorkspaceItemDetailsAction {
     label: string;
+    icon?: string;
     accessibilityLabel: string;
     tone?: WorkspaceItemDetailsActionTone;
     onPress: (itemId: string) => void;
@@ -43,6 +44,7 @@ interface WorkspaceItemDetailsPanelProps {
     item: WorkspaceItem;
     primaryAction: WorkspaceItemDetailsAction;
     secondaryAction?: WorkspaceItemDetailsAction;
+    tertiaryAction?: WorkspaceItemDetailsAction;
     onClose: () => void;
 }
 
@@ -74,6 +76,7 @@ export default function WorkspaceItemDetailsPanel({
     item,
     primaryAction,
     secondaryAction,
+    tertiaryAction,
     onClose,
 }: WorkspaceItemDetailsPanelProps) {
     const { theme } = useSettings();
@@ -176,7 +179,7 @@ export default function WorkspaceItemDetailsPanel({
                         },
                     ]}
                 >
-                    {primaryAction.label}
+                    {primaryAction.icon ?? primaryAction.label}
                 </Text>
             </Pressable>
 
@@ -201,7 +204,33 @@ export default function WorkspaceItemDetailsPanel({
                             },
                         ]}
                     >
-                        {secondaryAction.label}
+                        {secondaryAction.icon ?? secondaryAction.label}
+                    </Text>
+                </Pressable>
+            )}
+
+            {/* Tertiary Item Action */}
+            {tertiaryAction && (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={tertiaryAction.accessibilityLabel}
+                    onPress={() => tertiaryAction.onPress(item.id)}
+                    style={[
+                        styles.actionButton,
+                        {
+                            borderColor: getActionColor(tertiaryAction),
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.actionButtonText,
+                            {
+                                color: getActionColor(tertiaryAction),
+                            },
+                        ]}
+                    >
+                        {tertiaryAction.icon ?? tertiaryAction.label}
                     </Text>
                 </Pressable>
             )}
@@ -226,7 +255,7 @@ export default function WorkspaceItemDetailsPanel({
                         },
                     ]}
                 >
-                    بستن
+                    ×
                 </Text>
             </Pressable>
         </View>
@@ -297,9 +326,14 @@ const styles = StyleSheet.create({
     },
 
     actionButton: {
+        minWidth: 40,
+
         marginRight: spacing.md,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
+
+        alignItems: "center",
+        justifyContent: "center",
 
         borderWidth: 1,
         borderRadius: radius.md,
@@ -311,16 +345,21 @@ const styles = StyleSheet.create({
     },
 
     closeButton: {
+        minWidth: 40,
+
         marginRight: spacing.md,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
+
+        alignItems: "center",
+        justifyContent: "center",
 
         borderWidth: 1,
         borderRadius: radius.md,
     },
 
     closeButtonText: {
-        fontSize: typography.fontSize.sm,
+        fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
     },
 });

@@ -8,7 +8,7 @@
 
 import * as DocumentPicker from "expo-document-picker";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Pressable,
     StyleSheet,
@@ -72,6 +72,8 @@ export default function Toolbar({
     const { theme } = useSettings();
     const colors = theme.colors;
 
+    const newFolderInputRef = useRef<TextInput>(null);
+
     const [newFolderName, setNewFolderName] = useState("");
 
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -79,6 +81,28 @@ export default function Toolbar({
     const [uploadStatusText, setUploadStatusText] = useState("");
 
     const isPreparingUpload = uploadProgress !== null;
+
+    /**
+     * ============================================================================
+     * New Folder Autofocus
+     * ----------------------------------------------------------------------------
+     * Focuses the folder name input after the New Folder panel is opened.
+     * ============================================================================
+     */
+
+    useEffect(() => {
+        if (activeAction !== "new-folder") {
+            return;
+        }
+
+        const focusTimer = setTimeout(() => {
+            newFolderInputRef.current?.focus();
+        }, 50);
+
+        return () => {
+            clearTimeout(focusTimer);
+        };
+    }, [activeAction]);
 
     function handleCreateFolder() {
         onCreateFolder(newFolderName);
@@ -284,6 +308,7 @@ export default function Toolbar({
                         </Text>
 
                         <TextInput
+                            ref={newFolderInputRef}
                             placeholder="نام پوشه"
                             placeholderTextColor={colors.border}
                             value={newFolderName}
