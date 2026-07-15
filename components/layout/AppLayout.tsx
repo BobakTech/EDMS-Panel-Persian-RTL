@@ -269,6 +269,12 @@ export default function AppLayout() {
         );
     }
 
+    function handleDeleteWorkspaceItem(itemId: string) {
+        setWorkspaceItems((currentItems) =>
+            currentItems.filter((item) => item.id !== itemId)
+        );
+    }
+
     return (
         <View
             style={[
@@ -305,6 +311,7 @@ export default function AppLayout() {
                     onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
                     onRestoreItem={handleRestoreWorkspaceItem}
                     onRenameItem={handleRenameWorkspaceItem}
+                    onDeleteItem={handleDeleteWorkspaceItem}
                 />
             </View>
         </View>

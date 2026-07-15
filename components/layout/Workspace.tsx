@@ -116,6 +116,7 @@ interface WorkspaceProps {
     onMoveItemToTrash: (itemId: string) => void;
     onRestoreItem: (item: WorkspaceItem) => void;
     onRenameItem: (itemId: string, newName: string) => void;
+    onDeleteItem: (itemId: string) => void;
 }
 
 /**
@@ -132,6 +133,7 @@ export default function Workspace({
     onMoveItemToTrash,
     onRestoreItem,
     onRenameItem,
+    onDeleteItem,
 }: WorkspaceProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -155,6 +157,9 @@ export default function Workspace({
 
     const [pendingRenameItemId, setPendingRenameItemId] = useState<string | null>(null);
     const [renameItemName, setRenameItemName] = useState("");
+
+    const [pendingPermanentDeleteItemId, setPendingPermanentDeleteItemId] =
+        useState<string | null>(null);
 
     const [undoToast, setUndoToast] = useState<WorkspaceUndoToast | null>(null);
     const undoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -285,6 +290,24 @@ export default function Workspace({
         setSelectedItemId(null);
     }
 
+    function handleRequestPermanentDeleteWorkspaceItem(itemId: string) {
+        setPendingPermanentDeleteItemId(itemId);
+    }
+
+    function handleCancelPermanentDeleteWorkspaceItem() {
+        setPendingPermanentDeleteItemId(null);
+    }
+
+    function handleConfirmPermanentDeleteWorkspaceItem() {
+        if (!pendingPermanentDeleteWorkspaceItem) {
+            return;
+        }
+
+        onDeleteItem(pendingPermanentDeleteWorkspaceItem.id);
+        setSelectedItemId(null);
+        setPendingPermanentDeleteItemId(null);
+    }
+
     function handleCancelDeleteWorkspaceItem() {
         setPendingDeleteItemId(null);
     }
@@ -365,6 +388,10 @@ export default function Workspace({
         (item) => item.id === pendingRenameItemId
     );
 
+    const pendingPermanentDeleteWorkspaceItem = visibleWorkspaceItems.find(
+        (item) => item.id === pendingPermanentDeleteItemId
+    );
+
     const isLoadingWorkspaceItems = false;
     const workspaceErrorMessage: string | null = null;
 
@@ -417,7 +444,14 @@ export default function Workspace({
                     accessibilityLabel: "تغییر نام آیتم",
                     onPress: handleRequestRenameWorkspaceItem,
                 }
-                : undefined;
+                : pageType === "trash"
+                    ? {
+                        label: "حذف دائمی",
+                        accessibilityLabel: "حذف دائمی آیتم",
+                        tone: "danger" as const,
+                        onPress: handleRequestPermanentDeleteWorkspaceItem,
+                    }
+                    : undefined;
 
     return (
         <View style={[
@@ -700,6 +734,90 @@ export default function Workspace({
                                 accessibilityRole="button"
                                 accessibilityLabel="لغو تغییر نام"
                                 onPress={handleCancelRenameWorkspaceItem}
+                                style={styles.modalTextButton}
+                            >
+                                <Text
+                                    style={[
+                                        styles.modalTextButtonText,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    لغو
+                                </Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                transparent
+                visible={pageType === "trash" && pendingPermanentDeleteItemId !== null}
+                animationType="fade"
+                onRequestClose={handleCancelPermanentDeleteWorkspaceItem}
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[
+                            styles.modalCard,
+                            {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.modalTitle,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            حذف دائمی آیتم
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.modalDescription,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            این آیتم به‌صورت دائمی حذف می‌شود و امکان بازگردانی آن وجود ندارد.
+                        </Text>
+
+                        <View style={styles.modalActions}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="تأیید حذف دائمی"
+                                onPress={handleConfirmPermanentDeleteWorkspaceItem}
+                                style={[
+                                    styles.modalDangerButton,
+                                    {
+                                        backgroundColor: dangerColor,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.modalDangerButtonText,
+                                        {
+                                            color: colors.surface,
+                                        },
+                                    ]}
+                                >
+                                    حذف دائمی
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="لغو حذف دائمی"
+                                onPress={handleCancelPermanentDeleteWorkspaceItem}
                                 style={styles.modalTextButton}
                             >
                                 <Text
