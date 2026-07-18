@@ -10,6 +10,7 @@ import * as DocumentPicker from "expo-document-picker";
 
 import { useEffect, useRef, useState } from "react";
 import {
+    Modal,
     Pressable,
     StyleSheet,
     Text,
@@ -69,7 +70,7 @@ export default function Toolbar({
     onCreateFolder,
     onCreateFile,
 }: ToolbarProps) {
-    const { theme, themeMode, toggleTheme } = useSettings();
+    const { theme } = useSettings();
     const colors = theme.colors;
 
     const newFolderInputRef = useRef<TextInput>(null);
@@ -169,6 +170,7 @@ export default function Toolbar({
                 styles.container,
                 {
                     backgroundColor: colors.surface,
+                    borderColor: colors.border,
                 },
             ]}
         >
@@ -177,8 +179,6 @@ export default function Toolbar({
             * ========================================================================= */}
 
             <View style={styles.user}>
-                {/* Avatar */}
-
                 <View
                     style={[
                         styles.avatar,
@@ -200,8 +200,6 @@ export default function Toolbar({
                     </Text>
                 </View>
 
-                {/* User Information */}
-
                 <View style={styles.userInfo}>
                     <Text
                         style={[
@@ -218,7 +216,7 @@ export default function Toolbar({
                         style={[
                             styles.userRole,
                             {
-                                color: colors.border,
+                                color: colors.text,
                             },
                         ]}
                     >
@@ -232,51 +230,33 @@ export default function Toolbar({
             * ========================================================================= */}
 
             <View style={styles.actionsArea}>
-                <View style={styles.actions}>
-                    {/* Theme Toggle */}
-
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="تغییر حالت روشن و تیره"
-                        onPress={toggleTheme}
-                        style={[
-                            styles.themeToggleButton,
-                            {
-                                backgroundColor: colors.background,
-                                borderColor: colors.border,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.themeToggleButtonText,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                        >
-                            {themeMode === "light" ? "Dark" : "Light"}
-                        </Text>
-                    </Pressable>
-
-                    {/* Upload */}
-
+                <View
+                    style={[
+                        styles.actions,
+                        {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                        },
+                    ]}
+                >
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="بارگذاری فایل"
                         onPress={handlePickFile}
-                        style={[
-                            styles.actionButton,
+                        disabled={isPreparingUpload}
+                        style={({ pressed }) => [
+                            styles.actionSegmentButton,
+                            styles.primaryActionSegmentButton,
                             isPreparingUpload && styles.disabledActionButton,
+                            pressed && !isPreparingUpload && styles.pressedActionButton,
                             {
                                 backgroundColor: colors.primary,
                             },
                         ]}
-                        disabled={isPreparingUpload}
                     >
                         <Text
                             style={[
-                                styles.actionButtonText,
+                                styles.actionSegmentPrimaryText,
                                 {
                                     color: colors.surface,
                                 },
@@ -286,24 +266,29 @@ export default function Toolbar({
                         </Text>
                     </Pressable>
 
-                    {/* New Folder */}
+                    <View
+                        style={[
+                            styles.actionSegmentDivider,
+                            {
+                                backgroundColor: colors.border,
+                            },
+                        ]}
+                    />
 
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel="ساخت پوشه جدید"
                         onPress={onPressCreateFolder}
-                        style={[
-                            styles.actionButton,
-                            {
-                                backgroundColor: colors.primary,
-                            },
+                        style={({ pressed }) => [
+                            styles.actionSegmentButton,
+                            pressed && styles.pressedActionButton,
                         ]}
                     >
                         <Text
                             style={[
-                                styles.actionButtonText,
+                                styles.actionSegmentSecondaryText,
                                 {
-                                    color: colors.surface,
+                                    color: colors.text,
                                 },
                             ]}
                         >
@@ -312,16 +297,22 @@ export default function Toolbar({
                     </Pressable>
                 </View>
 
-                {activeAction === "new-folder" && (
-                    <View
-                        style={[
-                            styles.actionPanel,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.primary,
-                            },
-                        ]}
-                    >
+                <Modal
+                    transparent
+                    visible={activeAction === "new-folder"}
+                    animationType="fade"
+                    onRequestClose={onDismissAction}
+                >
+                    <View style={styles.popupOverlay}>
+                        <View
+                            style={[
+                                styles.actionPanel,
+                                {
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.primary,
+                                },
+                            ]}
+                        >
                         <Text
                             style={[
                                 styles.actionPanelTitle,
@@ -388,21 +379,22 @@ export default function Toolbar({
                                     style={[
                                         styles.actionPanelSecondaryButtonText,
                                         {
-                                            color: colors.primary,
+                                            color: colors.text,
                                         },
                                     ]}
                                 >
-                                    بستن
+                                    لغو
                                 </Text>
                             </Pressable>
                         </View>
+                        </View>
                     </View>
-                )}
+                </Modal>
 
                 {isPreparingUpload && (
                     <View
                         style={[
-                            styles.actionPanel,
+                            styles.uploadPanel,
                             {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.primary,
@@ -411,46 +403,32 @@ export default function Toolbar({
                     >
                         <Text
                             style={[
-                                styles.actionPanelTitle,
+                                styles.uploadPanelTitle,
                                 {
                                     color: colors.text,
                                 },
                             ]}
+                            numberOfLines={1}
                         >
-                            آماده‌سازی فایل
+                            {uploadFileName ?? "فایل انتخاب‌شده"}
                         </Text>
 
                         <Text
                             style={[
-                                styles.actionPanelDescription,
+                                styles.uploadPanelDescription,
                                 {
-                                    color: colors.text,
+                                    color: colors.border,
                                 },
                             ]}
                         >
                             {uploadStatusText}
                         </Text>
 
-                        {uploadFileName && (
-                            <Text
-                                style={[
-                                    styles.uploadFileName,
-                                    {
-                                        color: colors.text,
-                                    },
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {uploadFileName}
-                            </Text>
-                        )}
-
                         <View
                             style={[
                                 styles.uploadProgressTrack,
                                 {
                                     backgroundColor: colors.background,
-                                    borderColor: colors.border,
                                 },
                             ]}
                         >
@@ -464,17 +442,6 @@ export default function Toolbar({
                                 ]}
                             />
                         </View>
-
-                        <Text
-                            style={[
-                                styles.uploadProgressText,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                        >
-                            {uploadProgress ?? 0}٪
-                        </Text>
                     </View>
                 )}
             </View>
@@ -483,24 +450,20 @@ export default function Toolbar({
             * Search
             * ========================================================================= */}
 
-            <View style={styles.search}>
-                {/* Search Input */}
-
-                <TextInput
-                    placeholder="Search..."
-                    placeholderTextColor={colors.border}
-                    style={[
-                        styles.searchInput,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                            color: colors.text,
-                        },
-                    ]}
-                    value={searchQuery}
-                    onChangeText={onChangeSearchQuery}
-                />
-            </View>
+            <TextInput
+                value={searchQuery}
+                onChangeText={onChangeSearchQuery}
+                placeholder="Search..."
+                placeholderTextColor={colors.border}
+                style={[
+                    styles.searchInput,
+                    {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        color: colors.text,
+                    },
+                ]}
+            />
         </View>
     );
 }
@@ -513,224 +476,32 @@ export default function Toolbar({
 
 const styles = StyleSheet.create({
     container: {
-        position: "relative",
-        zIndex: 30,
-        overflow: "visible",
-
-        minHeight: spacing.toolbarHeight,
+        minHeight: 72,
 
         flexDirection: "row-reverse",
-        alignItems: "center",
-        flexWrap: "wrap",
-        alignContent: "center",
+        alignItems: "flex-start",
 
-        paddingHorizontal: spacing.xl,
-        paddingVertical: spacing.xs,
-
-        columnGap: spacing.lg,
-        rowGap: spacing.md,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
 
         borderRadius: radius.lg,
+        borderWidth: 1,
+
+        gap: spacing.md,
 
         ...shadows.sm,
     },
 
-    /**
-     * ============================================================================
-     * Toolbar Sections
-     * ============================================================================
-     */
-
-    search: {
-        flex: 1,
-        flexShrink: 1,
-
-        minWidth: 260,
-    },
-
-    searchInput: {
-        height: 38,
-
-        paddingHorizontal: spacing.lg,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        fontSize: typography.fontSize.md,
-    },
-
-    actionsArea: {
-        position: "relative",
-        flexShrink: 0,
-    },
-
-    actionPanel: {
-        position: "absolute",
-        top: spacing.xxl + spacing.xs,
-        right: spacing.none,
-
-        width: 360,
-
-        padding: spacing.md,
-
-        borderWidth: 1,
-        borderRadius: radius.lg,
-
-        zIndex: 20,
-
-        ...shadows.md,
-    },
-
-    actionPanelTitle: {
-        marginBottom: spacing.sm,
-
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
-    },
-
-    actionPanelDescription: {
-        marginBottom: spacing.md,
-
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
-
-        opacity: 0.72,
-    },
-
-    actionPanelInput: {
-        minHeight: 40,
-
-        marginBottom: spacing.md,
-        paddingHorizontal: spacing.md,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        fontSize: typography.fontSize.sm,
-        textAlign: "right",
-    },
-
-    actionPanelButtons: {
+    user: {
         flexDirection: "row-reverse",
         alignItems: "center",
 
         gap: spacing.sm,
     },
 
-    actionPanelPrimaryButton: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-
-        borderRadius: radius.md,
-    },
-
-    actionPanelPrimaryButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    actionPanelSecondaryButton: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-    },
-
-    actionPanelSecondaryButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    disabledActionButton: {
-        opacity: 0.64,
-    },
-
-    uploadFileName: {
-        marginBottom: spacing.sm,
-
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "right",
-
-        opacity: 0.72,
-    },
-
-    uploadProgressTrack: {
-        height: 8,
-
-        overflow: "hidden",
-
-        marginBottom: spacing.sm,
-
-        borderWidth: 1,
-        borderRadius: radius.pill,
-    },
-
-    uploadProgressFill: {
-        height: "100%",
-
-        borderRadius: radius.pill,
-    },
-
-    uploadProgressText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "left",
-
-        opacity: 0.72,
-    },
-
-    actions: {
-        flexDirection: "row",
-        alignItems: "center",
-        flexShrink: 0,
-
-        columnGap: spacing.md,
-    },
-
-    actionButton: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-
-        borderRadius: radius.md,
-    },
-
-    actionButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    themeToggleButton: {
-        minHeight: 40,
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        paddingHorizontal: spacing.md,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-    },
-
-    themeToggleButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    user: {
-        width: 180,
-
-        flexDirection: "row-reverse",
-        alignItems: "center",
-        flexShrink: 0,
-    },
-
     avatar: {
-        width: 40,
-        height: 40,
+        width: 42,
+        height: 42,
 
         alignItems: "center",
         justifyContent: "center",
@@ -745,18 +516,220 @@ const styles = StyleSheet.create({
     },
 
     userInfo: {
-        flex: 1,
+        minWidth: 150,
 
-        marginRight: spacing.lg,
+        alignItems: "flex-start",
     },
 
     userName: {
         fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.semibold,
+        fontWeight: typography.fontWeight.bold,
     },
 
     userRole: {
         fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.regular,
+
+        opacity: 0.56,
+    },
+
+    actionsArea: {
+        position: "relative",
+
+        alignItems: "flex-end",
+    },
+
+    actions: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.lg,
+
+        overflow: "hidden",
+    },
+
+    actionSegmentButton: {
+        minHeight: 42,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.lg,
+    },
+
+    primaryActionSegmentButton: {
+        minWidth: 104,
+    },
+
+    pressedActionButton: {
+        opacity: 0.82,
+    },
+
+    disabledActionButton: {
+        opacity: 0.72,
+    },
+
+    actionSegmentPrimaryText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    actionSegmentSecondaryText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    actionSegmentDivider: {
+        width: 1,
+        alignSelf: "stretch",
+
+        opacity: 0.72,
+    },
+
+    popupOverlay: {
+        flex: 1,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        padding: spacing.xl,
+
+        backgroundColor: "rgba(0, 0, 0, 0.32)",
+    },
+
+    actionPanel: {
+        width: 320,
+
+        padding: spacing.lg,
+
+        borderWidth: 1,
+        borderRadius: radius.lg,
+
+        ...shadows.md,
+    },
+
+    actionPanelTitle: {
+        marginBottom: spacing.sm,
+
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
+    },
+
+    actionPanelInput: {
+        minHeight: 40,
+
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: "right",
+    },
+
+    actionPanelButtons: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        marginTop: spacing.md,
+
+        gap: spacing.sm,
+    },
+
+    actionPanelPrimaryButton: {
+        minHeight: 36,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.md,
+
+        borderRadius: radius.md,
+    },
+
+    actionPanelPrimaryButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    actionPanelSecondaryButton: {
+        minHeight: 36,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.md,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    actionPanelSecondaryButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    uploadPanel: {
+        position: "absolute",
+        top: 48,
+        right: 0,
+        zIndex: 10,
+
+        width: 320,
+
+        padding: spacing.md,
+
+        borderWidth: 1,
+        borderRadius: radius.lg,
+
+        ...shadows.md,
+    },
+
+    uploadPanelTitle: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
+    },
+
+    uploadPanelDescription: {
+        marginTop: spacing.xs,
+
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: "right",
+    },
+
+    uploadProgressTrack: {
+        height: 6,
+
+        marginTop: spacing.sm,
+
+        borderRadius: radius.pill,
+
+        overflow: "hidden",
+    },
+
+    uploadProgressFill: {
+        height: "100%",
+
+        borderRadius: radius.pill,
+    },
+
+    searchInput: {
+        flex: 1,
+        minHeight: 40,
+
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.regular,
     },
 });

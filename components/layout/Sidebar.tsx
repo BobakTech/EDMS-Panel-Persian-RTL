@@ -48,7 +48,7 @@ export default function Sidebar({
     projectInfoError,
     onChangePage,
 }: SidebarProps) {
-    const { theme } = useSettings();
+    const { theme, themeMode, toggleTheme } = useSettings();
     const colors = theme.colors;
 
     const { height } = useWindowDimensions();
@@ -78,8 +78,6 @@ export default function Sidebar({
                 styles.brand,
                 isShortSidebar && styles.compactBrand,
             ]}>
-                {/* Logo Placeholder */}
-
                 <View
                     style={[
                         styles.logoPlaceholder,
@@ -102,8 +100,6 @@ export default function Sidebar({
                     </Text>
                 </View>
 
-                {/* Application Title */}
-
                 <Text
                     style={[
                         styles.appTitle,
@@ -115,8 +111,6 @@ export default function Sidebar({
                 >
                     EDMS
                 </Text>
-
-                {/* Application Subtitle */}
 
                 <Text
                     style={[
@@ -135,8 +129,6 @@ export default function Sidebar({
             * ========================================================================= */}
 
             <View style={styles.navigation}>
-                {/* Dashboard */}
-
                 <Text
                     style={[
                         styles.navigationItem,
@@ -147,8 +139,6 @@ export default function Sidebar({
                 >
                     Dashboard
                 </Text>
-
-                {/* My Documents */}
 
                 <Pressable
                     accessibilityRole="button"
@@ -176,8 +166,6 @@ export default function Sidebar({
                     </Text>
                 </Pressable>
 
-                {/* Shared Documents */}
-
                 <Text
                     style={[
                         styles.navigationItem,
@@ -188,8 +176,6 @@ export default function Sidebar({
                 >
                     Shared Documents
                 </Text>
-
-                {/* Archive */}
 
                 <Pressable
                     accessibilityRole="button"
@@ -216,8 +202,6 @@ export default function Sidebar({
                         Archive
                     </Text>
                 </Pressable>
-
-                {/* Trash */}
 
                 <Pressable
                     accessibilityRole="button"
@@ -251,20 +235,26 @@ export default function Sidebar({
             * ========================================================================= */}
 
             <View style={styles.utilities}>
-                {/* Theme */}
-
-                <Text
-                    style={[
-                        styles.utilityItem,
-                        {
-                            color: colors.text,
-                        },
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="تغییر حالت روشن و تیره"
+                    onPress={toggleTheme}
+                    style={({ pressed }) => [
+                        styles.utilityButton,
+                        pressed && styles.pressedUtilityButton,
                     ]}
                 >
-                    🌙 Theme
-                </Text>
-
-                {/* Language */}
+                    <Text
+                        style={[
+                            styles.utilityItem,
+                            {
+                                color: colors.text,
+                            },
+                        ]}
+                    >
+                        {themeMode === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
+                    </Text>
+                </Pressable>
 
                 <Text
                     style={[
@@ -276,8 +266,6 @@ export default function Sidebar({
                 >
                     🌐 Language
                 </Text>
-
-                {/* Settings */}
 
                 <Text
                     style={[
@@ -303,66 +291,62 @@ export default function Sidebar({
 const styles = StyleSheet.create({
     container: {
         width: spacing.sidebarWidth,
+
+        justifyContent: "space-between",
+
         padding: spacing.lg,
 
-        borderRadius: radius.lg,
-
-        ...shadows.md,
+        ...shadows.sm,
     },
 
-    /**
-     * ============================================================================
-     * Brand
-     * ============================================================================
-     */
-
     brand: {
-        paddingBottom: spacing.lg,
+        alignItems: "center",
+
+        gap: spacing.md,
+    },
+
+    compactBrand: {
+        gap: spacing.sm,
     },
 
     logoPlaceholder: {
-        width: 72,
-        height: 72,
+        width: 78,
+        height: 78,
 
-        alignSelf: "center",
         alignItems: "center",
         justifyContent: "center",
 
         borderWidth: 1,
         borderRadius: radius.lg,
+    },
 
-        marginBottom: spacing.lg,
+    compactLogoPlaceholder: {
+        width: 60,
+        height: 60,
     },
 
     logoPlaceholderText: {
         fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.medium,
+        fontWeight: typography.fontWeight.semibold,
     },
 
     appTitle: {
-        textAlign: "center",
-
-        fontSize: typography.fontSize.xxxl,
+        fontSize: typography.fontSize.xl,
         fontWeight: typography.fontWeight.bold,
+    },
 
-        marginBottom: spacing.sm,
+    compactAppTitle: {
+        fontSize: typography.fontSize.lg,
     },
 
     appSubtitle: {
-        textAlign: "center",
-
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
+        textAlign: "center",
     },
 
-    /**
-     * ============================================================================
-     * Navigation
-     * ============================================================================
-     */
-
     navigation: {
-        flex: 1,
+        gap: spacing.sm,
     },
 
     navigationButton: {
@@ -370,51 +354,29 @@ const styles = StyleSheet.create({
     },
 
     navigationItem: {
+        paddingHorizontal: spacing.none,
+        paddingVertical: spacing.xs,
+
         fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.medium,
-
-        paddingVertical: spacing.sm,
-
-        textAlign: "left",
+        fontWeight: typography.fontWeight.semibold,
     },
 
-    /**
-     * ============================================================================
-     * Utilities
-     * ============================================================================
-     */
-
     utilities: {
-        paddingTop: spacing.xl,
+        gap: spacing.lg,
+    },
+
+    utilityButton: {
+        alignSelf: "stretch",
+
+        borderRadius: radius.md,
+    },
+
+    pressedUtilityButton: {
+        opacity: 0.72,
     },
 
     utilityItem: {
         fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.medium,
-
-        paddingVertical: spacing.sm,
-
-        textAlign: "left",
-    },
-
-    /**
-     * ============================================================================
-     * Compacts
-     * ============================================================================
-     */
-
-    compactBrand: {
-        paddingBottom: spacing.md,
-    },
-
-    compactLogoPlaceholder: {
-        width: 56,
-        height: 56,
-
-        marginBottom: spacing.md,
-    },
-
-    compactAppTitle: {
-        fontSize: typography.fontSize.xxl,
+        fontWeight: typography.fontWeight.semibold,
     },
 });

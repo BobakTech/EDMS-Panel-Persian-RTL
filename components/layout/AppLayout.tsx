@@ -389,5 +389,7 @@ const styles = StyleSheet.create({
         marginRight: spacing.lg,
         paddingTop: spacing.sm,
         paddingLeft: spacing.sm,
+
+        gap: spacing.md,
     },
 });
