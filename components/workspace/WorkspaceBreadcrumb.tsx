@@ -2,7 +2,7 @@
  * ============================================================================
  * Workspace Breadcrumb
  * ----------------------------------------------------------------------------
- * Displays clickable breadcrumb navigation for workspace pages and folders.
+ * Displays clean, clickable breadcrumb navigation for workspace pages.
  * ============================================================================
  */
 
@@ -43,7 +43,7 @@ export default function WorkspaceBreadcrumb({
         <View style={styles.container}>
             {items.map((item, index) => {
                 const isLastItem = index === items.length - 1;
-                const isClickable = !isLastItem && Boolean(item.onPress);
+                const isClickable = Boolean(item.onPress);
 
                 return (
                     <View
@@ -56,6 +56,7 @@ export default function WorkspaceBreadcrumb({
                                 accessibilityLabel={
                                     item.accessibilityLabel ?? item.label
                                 }
+                                hitSlop={8}
                                 onPress={item.onPress}
                                 style={styles.itemButton}
                             >
@@ -72,19 +73,19 @@ export default function WorkspaceBreadcrumb({
                                 </Text>
                             </Pressable>
                         ) : (
-                            <Text
-                                style={[
-                                    styles.itemText,
-                                    {
-                                        color: isLastItem
-                                            ? colors.text
-                                            : colors.primary,
-                                        opacity: isLastItem ? 1 : 0.72,
-                                    },
-                                ]}
-                            >
-                                {item.label}
-                            </Text>
+                            <View style={styles.currentItem}>
+                                <Text
+                                    style={[
+                                        styles.itemText,
+                                        styles.currentItemText,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    {item.label}
+                                </Text>
+                            </View>
                         )}
 
                         {!isLastItem && (
@@ -116,10 +117,7 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: "row-reverse",
         alignItems: "center",
-        alignSelf: "flex-start",
         flexWrap: "wrap",
-
-        marginBottom: spacing.md,
 
         gap: spacing.xs,
     },
@@ -135,6 +133,10 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.xs,
     },
 
+    currentItem: {
+        paddingVertical: spacing.xs,
+    },
+
     itemText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.medium,
@@ -142,7 +144,11 @@ const styles = StyleSheet.create({
     },
 
     clickableItemText: {
-        textDecorationLine: "underline",
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    currentItemText: {
+        fontWeight: typography.fontWeight.semibold,
     },
 
     separator: {

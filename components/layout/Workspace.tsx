@@ -122,10 +122,7 @@ const MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL = "خارج از پوشه";
 
 /**
  * ============================================================================
- * Workspace Props
- * ----------------------------------------------------------------------------
- * Receives the current folder from AppLayout so Toolbar uploads/new folders can
- * target the opened folder too.
+ * Props
  * ============================================================================
  */
 
@@ -134,11 +131,8 @@ interface WorkspaceProps {
     currentFolderId: string | null;
     workspaceItems: WorkspaceItem[];
     searchQuery: string;
-    onArchiveItem: (itemId: string) => void;
-    /**
-     * Changes the opened folder in the workspace.
-     */
     onChangeFolder: (folderId: string | null) => void;
+    onArchiveItem: (itemId: string) => void;
     onMoveItemToTrash: (itemId: string) => void;
     onRestoreItem: (item: WorkspaceItem) => void;
     onRenameItem: (itemId: string, newName: string) => void;
@@ -148,7 +142,7 @@ interface WorkspaceProps {
 
 /**
  * ============================================================================
- * Workspace Component Props
+ * Component
  * ============================================================================
  */
 
@@ -226,12 +220,12 @@ export default function Workspace({
     }, []);
 
     /**
- * ============================================================================
- * Current Folder Validation
- * ----------------------------------------------------------------------------
- * Returns to root if the opened folder is no longer available.
- * ============================================================================
- */
+     * ============================================================================
+     * Current Folder Validation
+     * ----------------------------------------------------------------------------
+     * Returns to root if the opened folder is no longer available.
+     * ============================================================================
+     */
 
     useEffect(() => {
         if (pageType !== "workspace") {
@@ -500,14 +494,6 @@ export default function Workspace({
 
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
-    /**
-     * ============================================================================
-     * Page Workspace Items
-     * ----------------------------------------------------------------------------
-     * Root workspace shows items outside folders. Opened folders show their children.
-     * ============================================================================
-     */
-
     const currentWorkspaceFolder = workspaceItems.find(
         (item) =>
             item.id === currentFolderId &&
@@ -682,12 +668,12 @@ export default function Workspace({
             : undefined;
 
     /**
-    * ============================================================================
-    * Breadcrumb Items
-    * ----------------------------------------------------------------------------
-    * Allows folder breadcrumb items to navigate back to the workspace root.
-    * ============================================================================
-    */
+     * ============================================================================
+     * Breadcrumb Items
+     * ----------------------------------------------------------------------------
+     * Keeps breadcrumb navigation available in both root and folder views.
+     * ============================================================================
+     */
 
     const breadcrumbItems = currentWorkspaceFolder
         ? [
@@ -708,9 +694,13 @@ export default function Workspace({
         : [
             {
                 label: "خانه",
+                accessibilityLabel: "رفتن به خانه",
+                onPress: handleReturnToWorkspaceRoot,
             },
             {
                 label: pageContent.breadcrumbLabel,
+                accessibilityLabel: "رفتن به فضای کاری",
+                onPress: handleReturnToWorkspaceRoot,
             },
         ];
 
@@ -732,37 +722,35 @@ export default function Workspace({
                     borderColor: colors.border,
                 },
             ]}>
-                {currentWorkspaceFolder && (
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="بازگشت به فضای کاری"
-                        onPress={handleReturnToWorkspaceRoot}
-                        style={[
-                            styles.folderBackIconButton,
-                            {
-                                backgroundColor: colors.background,
-                                borderColor: colors.border,
-                            },
-                        ]}
-                    >
-                        <Text
+                <View style={styles.workspaceTopBar}>
+                    <WorkspaceBreadcrumb items={breadcrumbItems} />
+
+                    {currentWorkspaceFolder && (
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="بازگشت به فضای کاری"
+                            onPress={handleReturnToWorkspaceRoot}
                             style={[
-                                styles.folderBackIconButtonText,
+                                styles.folderBackButton,
                                 {
-                                    color: colors.primary,
+                                    backgroundColor: colors.primary,
+                                    borderColor: colors.primary,
                                 },
                             ]}
                         >
-                            ↩
-                        </Text>
-                    </Pressable>
-                )}
-
-                <WorkspaceBreadcrumb items={breadcrumbItems} />
-
-                {/* =========================================================================
-                * Workspace Header
-                * ========================================================================= */}
+                            <Text
+                                style={[
+                                    styles.folderBackButtonText,
+                                    {
+                                        color: colors.surface,
+                                    },
+                                ]}
+                            >
+                                ↩ بازگشت
+                            </Text>
+                        </Pressable>
+                    )}
+                </View>
 
                 <WorkspaceHeader
                     title={currentWorkspaceFolder?.name ?? pageContent.title}
@@ -1427,6 +1415,36 @@ const styles = StyleSheet.create({
         ...shadows.sm,
     },
 
+    workspaceTopBar: {
+        minHeight: 44,
+
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        justifyContent: "space-between",
+
+        marginBottom: spacing.md,
+    },
+
+    folderBackButton: {
+        minWidth: 88,
+        height: 40,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.md,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        ...shadows.sm,
+    },
+
+    folderBackButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
     workspaceBody: {
         flex: 1,
     },
@@ -1444,34 +1462,6 @@ const styles = StyleSheet.create({
         alignItems: "stretch",
 
         gap: spacing.md,
-    },
-
-    /**
-     * ============================================================================
-     * Folder Navigation
-     * ============================================================================
-     */
-
-    folderBackIconButton: {
-        position: "absolute",
-        top: spacing.lg,
-        left: spacing.lg,
-
-        width: 40,
-        height: 40,
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        zIndex: 10,
-    },
-
-    folderBackIconButtonText: {
-        fontSize: typography.fontSize.lg,
-        fontWeight: typography.fontWeight.semibold,
     },
 
     modalOverlay: {
