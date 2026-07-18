@@ -69,7 +69,7 @@ export default function Toolbar({
     onCreateFolder,
     onCreateFile,
 }: ToolbarProps) {
-    const { theme } = useSettings();
+    const { theme, themeMode, toggleTheme } = useSettings();
     const colors = theme.colors;
 
     const newFolderInputRef = useRef<TextInput>(null);
@@ -233,6 +233,32 @@ export default function Toolbar({
 
             <View style={styles.actionsArea}>
                 <View style={styles.actions}>
+                    {/* Theme Toggle */}
+
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="تغییر حالت روشن و تیره"
+                        onPress={toggleTheme}
+                        style={[
+                            styles.themeToggleButton,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.themeToggleButtonText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            {themeMode === "light" ? "Dark" : "Light"}
+                        </Text>
+                    </Pressable>
+
                     {/* Upload */}
 
                     <Pressable
@@ -673,6 +699,23 @@ const styles = StyleSheet.create({
     },
 
     actionButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    themeToggleButton: {
+        minHeight: 40,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.md,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    themeToggleButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
