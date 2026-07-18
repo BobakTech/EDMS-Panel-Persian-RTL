@@ -14,6 +14,7 @@ import { spacing } from "../../theme";
 import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
+import Dashboard from "./Dashboard";
 
 import {
     getWorkspaceItems,
@@ -62,6 +63,8 @@ function getFileSizeLabel(fileSize?: number) {
  * Component
  * ============================================================================
  */
+
+type AppPageType = "dashboard" | WorkspacePageType;
 
 export default function AppLayout() {
     const { theme } = useSettings();
@@ -126,7 +129,7 @@ export default function AppLayout() {
      */
 
     const [activeWorkspacePage, setActiveWorkspacePage] =
-        useState<WorkspacePageType>("workspace");
+        useState<AppPageType>("dashboard");
 
     const [activeWorkspaceFolderId, setActiveWorkspaceFolderId] =
         useState<string | null>(null);
@@ -147,7 +150,7 @@ export default function AppLayout() {
      * ============================================================================
      */
 
-    function handleChangeWorkspacePage(page: WorkspacePageType) {
+    function handleChangeWorkspacePage(page: AppPageType) {
         setActiveWorkspacePage(page);
         setActiveWorkspaceFolderId(null);
         setActiveWorkspaceAction(null);
@@ -351,22 +354,24 @@ export default function AppLayout() {
                     onCreateFile={handleCreateFile}
                 />
 
-                <Workspace
-                    pageType={activeWorkspacePage}
-                    currentFolderId={activeWorkspaceFolderId}
-                    workspaceItems={workspaceItems}
-                    searchQuery={workspaceSearchQuery}
-                    onArchiveItem={handleArchiveWorkspaceItem}
-                    /**
-                     * Allows Workspace to open folders and return to root.
-                     */
-                    onChangeFolder={setActiveWorkspaceFolderId}
-                    onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
-                    onRestoreItem={handleRestoreWorkspaceItem}
-                    onRenameItem={handleRenameWorkspaceItem}
-                    onDeleteItem={handleDeleteWorkspaceItem}
-                    onMoveItem={handleMoveWorkspaceItem}
-                />
+                {activeWorkspacePage === "dashboard" ? (
+                    <Dashboard workspaceItems={workspaceItems} />
+                ) : (
+                        <Workspace
+                            pageType={activeWorkspacePage}
+                            currentFolderId={activeWorkspaceFolderId}
+                            workspaceItems={workspaceItems}
+                            searchQuery={workspaceSearchQuery}
+                            onArchiveItem={handleArchiveWorkspaceItem}
+                            onChangeFolder={setActiveWorkspaceFolderId}
+                            onOpenDashboard={() => handleChangeWorkspacePage("dashboard")}
+                            onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
+                            onRestoreItem={handleRestoreWorkspaceItem}
+                            onRenameItem={handleRenameWorkspaceItem}
+                            onDeleteItem={handleDeleteWorkspaceItem}
+                            onMoveItem={handleMoveWorkspaceItem}
+                        />
+                )}
             </View>
         </View>
     );

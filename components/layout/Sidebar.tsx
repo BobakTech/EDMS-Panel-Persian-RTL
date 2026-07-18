@@ -23,16 +23,24 @@ import type { ProjectInfo } from "../project";
 
 /**
  * ============================================================================
+ * Types
+ * ============================================================================
+ */
+
+type AppPageType = "dashboard" | WorkspacePageType;
+
+/**
+ * ============================================================================
  * Props
  * ============================================================================
  */
 
 interface SidebarProps {
-    activePage: WorkspacePageType;
+    activePage: AppPageType;
     projectInfo: ProjectInfo | null;
     isProjectInfoLoading: boolean;
     projectInfoError: string | null;
-    onChangePage: (page: WorkspacePageType) => void;
+    onChangePage: (page: AppPageType) => void;
 }
 
 /**
@@ -74,10 +82,12 @@ export default function Sidebar({
             * Brand
             * ========================================================================= */}
 
-            <View style={[
-                styles.brand,
-                isShortSidebar && styles.compactBrand,
-            ]}>
+            <View
+                style={[
+                    styles.brand,
+                    isShortSidebar && styles.compactBrand,
+                ]}
+            >
                 <View
                     style={[
                         styles.logoPlaceholder,
@@ -129,16 +139,31 @@ export default function Sidebar({
             * ========================================================================= */}
 
             <View style={styles.navigation}>
-                <Text
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="نمایش داشبورد"
+                    onPress={() => onChangePage("dashboard")}
                     style={[
-                        styles.navigationItem,
-                        {
-                            color: colors.text,
+                        styles.navigationButton,
+                        activePage === "dashboard" && {
+                            backgroundColor: colors.background,
                         },
                     ]}
                 >
-                    Dashboard
-                </Text>
+                    <Text
+                        style={[
+                            styles.navigationItem,
+                            {
+                                color:
+                                    activePage === "dashboard"
+                                        ? colors.primary
+                                        : colors.text,
+                            },
+                        ]}
+                    >
+                        Dashboard
+                    </Text>
+                </Pressable>
 
                 <Pressable
                     accessibilityRole="button"
@@ -169,6 +194,7 @@ export default function Sidebar({
                 <Text
                     style={[
                         styles.navigationItem,
+                        styles.staticNavigationItem,
                         {
                             color: colors.text,
                         },
@@ -350,15 +376,26 @@ const styles = StyleSheet.create({
     },
 
     navigationButton: {
+        alignSelf: "stretch",
+
+        minHeight: 34,
+
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+
         borderRadius: radius.md,
     },
 
     navigationItem: {
-        paddingHorizontal: spacing.none,
-        paddingVertical: spacing.xs,
-
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
+    },
+
+    staticNavigationItem: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
     },
 
     utilities: {

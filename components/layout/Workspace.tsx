@@ -85,7 +85,7 @@ function getWorkspacePageContent(pageType: WorkspacePageType): WorkspacePageCont
     }
 
     return {
-        breadcrumbLabel: "فضای کاری",
+        breadcrumbLabel: "My Documents",
         title: "فضای کاری",
         subtitle: "مدیریت پوشه‌ها، فایل‌ها و اسناد سازمانی",
         emptyIcon: "+",
@@ -138,6 +138,7 @@ interface WorkspaceProps {
     onRenameItem: (itemId: string, newName: string) => void;
     onDeleteItem: (itemId: string) => void;
     onMoveItem: (itemId: string, destinationFolderId: string | null) => void;
+    onOpenDashboard: () => void;
 }
 
 /**
@@ -158,6 +159,7 @@ export default function Workspace({
     onRenameItem,
     onDeleteItem,
     onMoveItem,
+    onOpenDashboard,
 }: WorkspaceProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -679,12 +681,12 @@ export default function Workspace({
         ? [
             {
                 label: "خانه",
-                accessibilityLabel: "بازگشت به خانه",
-                onPress: handleReturnToWorkspaceRoot,
+                accessibilityLabel: "رفتن به داشبورد",
+                onPress: onOpenDashboard,
             },
             {
                 label: pageContent.breadcrumbLabel,
-                accessibilityLabel: "بازگشت به فضای کاری",
+                accessibilityLabel: "بازگشت به My Documents",
                 onPress: handleReturnToWorkspaceRoot,
             },
             {
@@ -694,13 +696,11 @@ export default function Workspace({
         : [
             {
                 label: "خانه",
-                accessibilityLabel: "رفتن به خانه",
-                onPress: handleReturnToWorkspaceRoot,
+                accessibilityLabel: "رفتن به داشبورد",
+                onPress: onOpenDashboard,
             },
             {
                 label: pageContent.breadcrumbLabel,
-                accessibilityLabel: "رفتن به فضای کاری",
-                onPress: handleReturnToWorkspaceRoot,
             },
         ];
 
@@ -708,7 +708,7 @@ export default function Workspace({
         <View style={[
             styles.container,
             {
-                paddingHorizontal: workspacePadding,
+                paddingHorizontal: spacing.none,
                 paddingTop: workspaceTopPadding,
                 paddingBottom: workspacePadding,
                 backgroundColor: colors.background,
