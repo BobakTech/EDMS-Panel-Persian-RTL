@@ -25,6 +25,28 @@ interface DashboardProps {
 
 /**
  * ============================================================================
+ * Helpers
+ * ============================================================================
+ */
+
+function getDashboardItemTypeLabel(item: WorkspaceItem) {
+    return item.type === "folder" ? "Folder" : "File";
+}
+
+function getDashboardStatusLabel(item: WorkspaceItem) {
+    if (item.status === "active") {
+        return "Active";
+    }
+
+    if (item.status === "archived") {
+        return "Archived";
+    }
+
+    return "Trash";
+}
+
+/**
+ * ============================================================================
  * Component
  * ============================================================================
  */
@@ -212,7 +234,7 @@ export default function Dashboard({
                                             },
                                         ]}
                                     >
-                                        {item.type === "folder" ? "Folder" : "File"} · {item.status}
+                                        {getDashboardItemTypeLabel(item)} · {getDashboardStatusLabel(item)}
                                     </Text>
                                 </View>
 
@@ -224,7 +246,7 @@ export default function Dashboard({
                                         },
                                     ]}
                                 >
-                                    {item.type === "folder" ? "Folder" : "File"}
+                                    {getDashboardStatusLabel(item)}
                                 </Text>
                             </View>
                         ))}
