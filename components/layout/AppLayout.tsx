@@ -117,8 +117,19 @@ export default function AppLayout() {
         };
     }, []);
 
+    /**
+     * ============================================================================
+     * Workspace Location State
+     * ----------------------------------------------------------------------------
+     * Tracks the current workspace page and the currently opened folder.
+     * ============================================================================
+     */
+
     const [activeWorkspacePage, setActiveWorkspacePage] =
         useState<WorkspacePageType>("workspace");
+
+    const [activeWorkspaceFolderId, setActiveWorkspaceFolderId] =
+        useState<string | null>(null);
 
     function handlePressCreateFolder() {
         setActiveWorkspaceAction("new-folder");
@@ -128,8 +139,17 @@ export default function AppLayout() {
         setActiveWorkspaceAction(null);
     }
 
+    /**
+     * ============================================================================
+     * Change Workspace Page
+     * ----------------------------------------------------------------------------
+     * Resets the opened folder when switching between Workspace, Archive, and Trash.
+     * ============================================================================
+     */
+
     function handleChangeWorkspacePage(page: WorkspacePageType) {
         setActiveWorkspacePage(page);
+        setActiveWorkspaceFolderId(null);
         setActiveWorkspaceAction(null);
     }
 
@@ -148,7 +168,13 @@ export default function AppLayout() {
                 description: "پوشه ایجاد شده در فضای کاری",
                 updatedAt: new Date().toISOString(),
                 status: "active",
-                parentFolderId: null,
+                /**
+                 * New folders are created inside the currently opened folder.
+                 */
+                parentFolderId:
+                    activeWorkspacePage === "workspace"
+                        ? activeWorkspaceFolderId
+                        : null,
                 childrenCount: 0,
             };
 
@@ -323,9 +349,14 @@ export default function AppLayout() {
 
                 <Workspace
                     pageType={activeWorkspacePage}
+                    currentFolderId={activeWorkspaceFolderId}
                     workspaceItems={workspaceItems}
                     searchQuery={workspaceSearchQuery}
                     onArchiveItem={handleArchiveWorkspaceItem}
+                    /**
+                     * Allows Workspace to open folders and return to root.
+                     */
+                    onChangeFolder={setActiveWorkspaceFolderId}
                     onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
                     onRestoreItem={handleRestoreWorkspaceItem}
                     onRenameItem={handleRenameWorkspaceItem}

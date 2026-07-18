@@ -99,7 +99,8 @@ function getWorkspacePageContent(pageType: WorkspacePageType): WorkspacePageCont
  * ============================================================================
  * Workspace Item Visibility
  * ----------------------------------------------------------------------------
- * Active workspace only shows items outside folders until folder browsing exists.
+ * Page visibility is based on status. Folder filtering happens inside the
+ * component because it depends on currentFolderId.
  * ============================================================================
  */
 
@@ -107,18 +108,7 @@ function isWorkspaceItemVisibleOnPage(
     item: WorkspaceItem,
     pageType: WorkspacePageType
 ) {
-    const isVisibleByStatus =
-        item.status === getWorkspacePageContent(pageType).visibleStatus;
-
-    if (!isVisibleByStatus) {
-        return false;
-    }
-
-    if (pageType === "workspace") {
-        return !item.parentFolderId;
-    }
-
-    return true;
+    return item.status === getWorkspacePageContent(pageType).visibleStatus;
 }
 
 /**
@@ -132,15 +122,23 @@ const MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL = "خارج از پوشه";
 
 /**
  * ============================================================================
- * Props
+ * Workspace Props
+ * ----------------------------------------------------------------------------
+ * Receives the current folder from AppLayout so Toolbar uploads/new folders can
+ * target the opened folder too.
  * ============================================================================
  */
 
 interface WorkspaceProps {
     pageType: WorkspacePageType;
+    currentFolderId: string | null;
     workspaceItems: WorkspaceItem[];
     searchQuery: string;
     onArchiveItem: (itemId: string) => void;
+    /**
+     * Changes the opened folder in the workspace.
+     */
+    onChangeFolder: (folderId: string | null) => void;
     onMoveItemToTrash: (itemId: string) => void;
     onRestoreItem: (item: WorkspaceItem) => void;
     onRenameItem: (itemId: string, newName: string) => void;
@@ -150,14 +148,16 @@ interface WorkspaceProps {
 
 /**
  * ============================================================================
- * Component
+ * Workspace Component Props
  * ============================================================================
  */
 
 export default function Workspace({
     pageType,
+    currentFolderId,
     workspaceItems,
     searchQuery,
+    onChangeFolder,
     onArchiveItem,
     onMoveItemToTrash,
     onRestoreItem,
@@ -225,12 +225,69 @@ export default function Workspace({
         };
     }, []);
 
+    /**
+ * ============================================================================
+ * Current Folder Validation
+ * ----------------------------------------------------------------------------
+ * Returns to root if the opened folder is no longer available.
+ * ============================================================================
+ */
+
+    useEffect(() => {
+        if (pageType !== "workspace") {
+            if (currentFolderId !== null) {
+                onChangeFolder(null);
+            }
+
+            return;
+        }
+
+        if (!currentFolderId) {
+            return;
+        }
+
+        const currentFolderStillExists = workspaceItems.some(
+            (item) =>
+                item.id === currentFolderId &&
+                item.type === "folder" &&
+                item.status === "active"
+        );
+
+        if (!currentFolderStillExists) {
+            onChangeFolder(null);
+        }
+    }, [currentFolderId, onChangeFolder, pageType, workspaceItems]);
+
+    /**
+     * ============================================================================
+     * Open Folder Or Select Item
+     * ----------------------------------------------------------------------------
+     * Folder cards open the folder. File cards keep the existing details behavior.
+     * ============================================================================
+     */
+
     function handlePressWorkspaceItem(itemId: string) {
+        const pressedItem = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (pageType === "workspace" && pressedItem?.type === "folder") {
+            onChangeFolder(pressedItem.id);
+            setSelectedItemId(null);
+
+            return;
+        }
+
         setSelectedItemId((currentItemId) =>
             currentItemId === itemId
                 ? null
                 : itemId
         );
+    }
+
+    function handleReturnToWorkspaceRoot() {
+        onChangeFolder(null);
+        setSelectedItemId(null);
     }
 
     function handleCloseWorkspaceItemDetails() {
@@ -443,9 +500,32 @@ export default function Workspace({
 
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
-    const pageWorkspaceItems = workspaceItems.filter((item) =>
-        isWorkspaceItemVisibleOnPage(item, pageType)
+    /**
+     * ============================================================================
+     * Page Workspace Items
+     * ----------------------------------------------------------------------------
+     * Root workspace shows items outside folders. Opened folders show their children.
+     * ============================================================================
+     */
+
+    const currentWorkspaceFolder = workspaceItems.find(
+        (item) =>
+            item.id === currentFolderId &&
+            item.type === "folder" &&
+            item.status === "active"
     );
+
+    const pageWorkspaceItems = workspaceItems.filter((item) => {
+        if (!isWorkspaceItemVisibleOnPage(item, pageType)) {
+            return false;
+        }
+
+        if (pageType !== "workspace") {
+            return true;
+        }
+
+        return (item.parentFolderId ?? null) === currentFolderId;
+    });
 
     const visibleWorkspaceItems = normalizedSearchQuery
         ? pageWorkspaceItems.filter((item) =>
@@ -601,6 +681,39 @@ export default function Workspace({
             }
             : undefined;
 
+    /**
+    * ============================================================================
+    * Breadcrumb Items
+    * ----------------------------------------------------------------------------
+    * Allows folder breadcrumb items to navigate back to the workspace root.
+    * ============================================================================
+    */
+
+    const breadcrumbItems = currentWorkspaceFolder
+        ? [
+            {
+                label: "خانه",
+                accessibilityLabel: "بازگشت به خانه",
+                onPress: handleReturnToWorkspaceRoot,
+            },
+            {
+                label: pageContent.breadcrumbLabel,
+                accessibilityLabel: "بازگشت به فضای کاری",
+                onPress: handleReturnToWorkspaceRoot,
+            },
+            {
+                label: currentWorkspaceFolder.name,
+            },
+        ]
+        : [
+            {
+                label: "خانه",
+            },
+            {
+                label: pageContent.breadcrumbLabel,
+            },
+        ];
+
     return (
         <View style={[
             styles.container,
@@ -619,11 +732,45 @@ export default function Workspace({
                     borderColor: colors.border,
                 },
             ]}>
-                <WorkspaceBreadcrumb items={["خانه", pageContent.breadcrumbLabel]} />
+                {currentWorkspaceFolder && (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="بازگشت به فضای کاری"
+                        onPress={handleReturnToWorkspaceRoot}
+                        style={[
+                            styles.folderBackIconButton,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.folderBackIconButtonText,
+                                {
+                                    color: colors.primary,
+                                },
+                            ]}
+                        >
+                            ↩
+                        </Text>
+                    </Pressable>
+                )}
+
+                <WorkspaceBreadcrumb items={breadcrumbItems} />
+
+                {/* =========================================================================
+                * Workspace Header
+                * ========================================================================= */}
 
                 <WorkspaceHeader
-                    title={pageContent.title}
-                    subtitle={pageContent.subtitle}
+                    title={currentWorkspaceFolder?.name ?? pageContent.title}
+                    subtitle={
+                        currentWorkspaceFolder
+                            ? "مشاهده فایل‌ها و پوشه‌های داخل این پوشه"
+                            : pageContent.subtitle
+                    }
                 >
                     <WorkspaceViewControls
                         viewMode={viewMode}
@@ -683,12 +830,16 @@ export default function Workspace({
                             title={
                                 normalizedSearchQuery
                                     ? "نتیجه‌ای پیدا نشد"
-                                    : pageContent.emptyTitle
+                                    : currentWorkspaceFolder
+                                        ? "این پوشه خالی است"
+                                        : pageContent.emptyTitle
                             }
                             description={
                                 normalizedSearchQuery
                                     ? "عبارت جستجو را تغییر دهید یا بعداً دوباره تلاش کنید."
-                                    : pageContent.emptyDescription
+                                    : currentWorkspaceFolder
+                                        ? "برای افزودن فایل یا پوشه به این بخش، از دکمه‌های بالای صفحه استفاده کنید."
+                                        : pageContent.emptyDescription
                             }
                         />
                     )}
@@ -1266,6 +1417,8 @@ const styles = StyleSheet.create({
     },
 
     content: {
+        position: "relative",
+
         flex: 1,
 
         borderWidth: 1,
@@ -1291,6 +1444,34 @@ const styles = StyleSheet.create({
         alignItems: "stretch",
 
         gap: spacing.md,
+    },
+
+    /**
+     * ============================================================================
+     * Folder Navigation
+     * ============================================================================
+     */
+
+    folderBackIconButton: {
+        position: "absolute",
+        top: spacing.lg,
+        left: spacing.lg,
+
+        width: 40,
+        height: 40,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        zIndex: 10,
+    },
+
+    folderBackIconButtonText: {
+        fontSize: typography.fontSize.lg,
+        fontWeight: typography.fontWeight.semibold,
     },
 
     modalOverlay: {
