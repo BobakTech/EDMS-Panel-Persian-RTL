@@ -2,13 +2,15 @@
  * ============================================================================
  * Workspace Item Details Panel
  * ----------------------------------------------------------------------------
- * Displays metadata and quick actions for the selected workspace item.
+ * Displays metadata, icon actions, and cursor-following tooltips for the
+ * selected workspace item.
  * ============================================================================
  */
 
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { radius, spacing, typography } from "../../theme";
+import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
 import {
@@ -24,7 +26,7 @@ import type { WorkspaceItem } from "./workspace.types";
  * ============================================================================
  */
 
-type WorkspaceItemDetailsActionTone = "primary" | "danger";
+type WorkspaceItemDetailsActionTone = "primary" | "warning" | "danger";
 
 interface WorkspaceItemDetailsAction {
     label: string;
@@ -32,6 +34,13 @@ interface WorkspaceItemDetailsAction {
     accessibilityLabel: string;
     tone?: WorkspaceItemDetailsActionTone;
     onPress: (itemId: string) => void;
+}
+
+interface WorkspaceTooltipState {
+    key: string;
+    label: string;
+    x: number;
+    y: number;
 }
 
 /**
@@ -82,12 +91,64 @@ export default function WorkspaceItemDetailsPanel({
     const { theme } = useSettings();
     const colors = theme.colors;
 
+    const warningColor = "#D97706";
     const dangerColor = "#DC2626";
 
+    const [visibleTooltip, setVisibleTooltip] =
+        useState<WorkspaceTooltipState | null>(null);
+
     function getActionColor(action: WorkspaceItemDetailsAction) {
-        return action.tone === "danger"
-            ? dangerColor
-            : colors.primary;
+        if (action.tone === "danger") {
+            return dangerColor;
+        }
+
+        if (action.tone === "warning") {
+            return warningColor;
+        }
+
+        return colors.primary;
+    }
+
+    function handleShowTooltip(key: string, label: string, event: any) {
+        const nativeEvent = event.nativeEvent ?? {};
+
+        setVisibleTooltip({
+            key,
+            label,
+            x: (nativeEvent.locationX ?? nativeEvent.offsetX ?? 0) + 14,
+            y: (nativeEvent.locationY ?? nativeEvent.offsetY ?? 0) + 14,
+        });
+    }
+
+    function renderTooltip(key: string) {
+        if (!visibleTooltip || visibleTooltip.key !== key) {
+            return null;
+        }
+
+        return (
+            <View
+                style={[
+                    styles.tooltip,
+                    {
+                        left: visibleTooltip.x,
+                        top: visibleTooltip.y,
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                    },
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.tooltipText,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                >
+                    {visibleTooltip.label}
+                </Text>
+            </View>
+        );
     }
 
     return (
@@ -163,6 +224,21 @@ export default function WorkspaceItemDetailsPanel({
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={primaryAction.accessibilityLabel}
+                onHoverIn={(event) =>
+                    handleShowTooltip(
+                        "primary",
+                        primaryAction.accessibilityLabel,
+                        event
+                    )
+                }
+                onPointerMove={(event) =>
+                    handleShowTooltip(
+                        "primary",
+                        primaryAction.accessibilityLabel,
+                        event
+                    )
+                }
+                onHoverOut={() => setVisibleTooltip(null)}
                 onPress={() => primaryAction.onPress(item.id)}
                 style={[
                     styles.actionButton,
@@ -181,6 +257,8 @@ export default function WorkspaceItemDetailsPanel({
                 >
                     {primaryAction.icon ?? primaryAction.label}
                 </Text>
+
+                {renderTooltip("primary")}
             </Pressable>
 
             {/* Secondary Item Action */}
@@ -188,6 +266,21 @@ export default function WorkspaceItemDetailsPanel({
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={secondaryAction.accessibilityLabel}
+                    onHoverIn={(event) =>
+                        handleShowTooltip(
+                            "secondary",
+                            secondaryAction.accessibilityLabel,
+                            event
+                        )
+                    }
+                    onPointerMove={(event) =>
+                        handleShowTooltip(
+                            "secondary",
+                            secondaryAction.accessibilityLabel,
+                            event
+                        )
+                    }
+                    onHoverOut={() => setVisibleTooltip(null)}
                     onPress={() => secondaryAction.onPress(item.id)}
                     style={[
                         styles.actionButton,
@@ -206,6 +299,8 @@ export default function WorkspaceItemDetailsPanel({
                     >
                         {secondaryAction.icon ?? secondaryAction.label}
                     </Text>
+
+                    {renderTooltip("secondary")}
                 </Pressable>
             )}
 
@@ -214,6 +309,21 @@ export default function WorkspaceItemDetailsPanel({
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={tertiaryAction.accessibilityLabel}
+                    onHoverIn={(event) =>
+                        handleShowTooltip(
+                            "tertiary",
+                            tertiaryAction.accessibilityLabel,
+                            event
+                        )
+                    }
+                    onPointerMove={(event) =>
+                        handleShowTooltip(
+                            "tertiary",
+                            tertiaryAction.accessibilityLabel,
+                            event
+                        )
+                    }
+                    onHoverOut={() => setVisibleTooltip(null)}
                     onPress={() => tertiaryAction.onPress(item.id)}
                     style={[
                         styles.actionButton,
@@ -232,6 +342,8 @@ export default function WorkspaceItemDetailsPanel({
                     >
                         {tertiaryAction.icon ?? tertiaryAction.label}
                     </Text>
+
+                    {renderTooltip("tertiary")}
                 </Pressable>
             )}
 
@@ -239,6 +351,13 @@ export default function WorkspaceItemDetailsPanel({
             <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="بستن جزئیات"
+                onHoverIn={(event) =>
+                    handleShowTooltip("close", "بستن جزئیات", event)
+                }
+                onPointerMove={(event) =>
+                    handleShowTooltip("close", "بستن جزئیات", event)
+                }
+                onHoverOut={() => setVisibleTooltip(null)}
                 onPress={onClose}
                 style={[
                     styles.closeButton,
@@ -257,6 +376,8 @@ export default function WorkspaceItemDetailsPanel({
                 >
                     ×
                 </Text>
+
+                {renderTooltip("close")}
             </Pressable>
         </View>
     );
@@ -270,6 +391,8 @@ export default function WorkspaceItemDetailsPanel({
 
 const styles = StyleSheet.create({
     container: {
+        position: "relative",
+
         flexDirection: "row-reverse",
         alignItems: "center",
 
@@ -326,6 +449,8 @@ const styles = StyleSheet.create({
     },
 
     actionButton: {
+        position: "relative",
+
         minWidth: 40,
 
         marginRight: spacing.md,
@@ -337,6 +462,8 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.md,
+
+        overflow: "visible",
     },
 
     actionButtonText: {
@@ -345,6 +472,8 @@ const styles = StyleSheet.create({
     },
 
     closeButton: {
+        position: "relative",
+
         minWidth: 40,
 
         marginRight: spacing.md,
@@ -356,10 +485,36 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.md,
+
+        overflow: "visible",
     },
 
     closeButtonText: {
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
+    },
+
+    tooltip: {
+        position: "absolute",
+
+        minWidth: 120,
+
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        zIndex: 50,
+
+        pointerEvents: "none",
+
+        ...shadows.sm,
+    },
+
+    tooltipText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.medium,
+        textAlign: "center",
     },
 });

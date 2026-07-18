@@ -559,8 +559,9 @@ export default function Workspace({
                 }
                 : {
                     label: "حذف / آرشیو",
-                    icon: "⋯",
+                    icon: "⚠",
                     accessibilityLabel: "حذف یا آرشیو آیتم",
+                    tone: "warning" as const,
                     onPress: handleRequestDeleteWorkspaceItem,
                 };
 
