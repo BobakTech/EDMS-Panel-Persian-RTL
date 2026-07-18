@@ -212,7 +212,10 @@ export default function AppLayout() {
                 description: "فایل انتخاب شده از دستگاه",
                 updatedAt: new Date().toISOString(),
                 status: "active",
-                parentFolderId: null,
+                parentFolderId:
+                    activeWorkspacePage === "workspace"
+                        ? activeWorkspaceFolderId
+                        : null,
                 extension: getFileExtension(trimmedFileName),
                 sizeLabel: getFileSizeLabel(file.size),
                 mimeType: file.mimeType,
