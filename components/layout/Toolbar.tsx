@@ -41,6 +41,7 @@ interface ToolbarProps {
     onDismissAction: () => void;
     onCreateFolder: (folderName: string) => void;
     onCreateFile: (file: WorkspacePickedFile) => void;
+    canCreateWorkspaceItems: boolean;
 }
 
 /**
@@ -69,6 +70,7 @@ export default function Toolbar({
     onDismissAction,
     onCreateFolder,
     onCreateFile,
+    canCreateWorkspaceItems,
 }: ToolbarProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -229,222 +231,224 @@ export default function Toolbar({
             * Actions
             * ========================================================================= */}
 
-            <View style={styles.actionsArea}>
-                <View
-                    style={[
-                        styles.actions,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                >
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="بارگذاری فایل"
-                        onPress={handlePickFile}
-                        disabled={isPreparingUpload}
-                        style={({ pressed }) => [
-                            styles.actionSegmentButton,
-                            styles.primaryActionSegmentButton,
-                            isPreparingUpload && styles.disabledActionButton,
-                            pressed && !isPreparingUpload && styles.pressedActionButton,
-                            {
-                                backgroundColor: colors.primary,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.actionSegmentPrimaryText,
-                                {
-                                    color: colors.surface,
-                                },
-                            ]}
-                        >
-                            Upload
-                        </Text>
-                    </Pressable>
-
+            {canCreateWorkspaceItems && (
+                <View style={styles.actionsArea}>
                     <View
                         style={[
-                            styles.actionSegmentDivider,
+                            styles.actions,
                             {
-                                backgroundColor: colors.border,
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
                             },
                         ]}
-                    />
-
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel="ساخت پوشه جدید"
-                        onPress={onPressCreateFolder}
-                        style={({ pressed }) => [
-                            styles.actionSegmentButton,
-                            pressed && styles.pressedActionButton,
-                        ]}
                     >
-                        <Text
-                            style={[
-                                styles.actionSegmentSecondaryText,
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="بارگذاری فایل"
+                            onPress={handlePickFile}
+                            disabled={isPreparingUpload}
+                            style={({ pressed }) => [
+                                styles.actionSegmentButton,
+                                styles.primaryActionSegmentButton,
+                                isPreparingUpload && styles.disabledActionButton,
+                                pressed && !isPreparingUpload && styles.pressedActionButton,
                                 {
-                                    color: colors.text,
+                                    backgroundColor: colors.primary,
                                 },
                             ]}
                         >
-                            New Folder
-                        </Text>
-                    </Pressable>
-                </View>
+                            <Text
+                                style={[
+                                    styles.actionSegmentPrimaryText,
+                                    {
+                                        color: colors.surface,
+                                    },
+                                ]}
+                            >
+                                Upload
+                            </Text>
+                        </Pressable>
 
-                <Modal
-                    transparent
-                    visible={activeAction === "new-folder"}
-                    animationType="fade"
-                    onRequestClose={onDismissAction}
-                >
-                    <View style={styles.popupOverlay}>
                         <View
                             style={[
-                                styles.actionPanel,
+                                styles.actionSegmentDivider,
+                                {
+                                    backgroundColor: colors.border,
+                                },
+                            ]}
+                        />
+
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="ساخت پوشه جدید"
+                            onPress={onPressCreateFolder}
+                            style={({ pressed }) => [
+                                styles.actionSegmentButton,
+                                pressed && styles.pressedActionButton,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.actionSegmentSecondaryText,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                New Folder
+                            </Text>
+                        </Pressable>
+                    </View>
+
+                    <Modal
+                        transparent
+                        visible={activeAction === "new-folder"}
+                        animationType="fade"
+                        onRequestClose={onDismissAction}
+                    >
+                        <View style={styles.popupOverlay}>
+                            <View
+                                style={[
+                                    styles.actionPanel,
+                                    {
+                                        backgroundColor: colors.surface,
+                                        borderColor: colors.primary,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.actionPanelTitle,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    ساخت پوشه جدید
+                                </Text>
+
+                                <TextInput
+                                    ref={newFolderInputRef}
+                                    placeholder="نام پوشه"
+                                    placeholderTextColor={colors.border}
+                                    value={newFolderName}
+                                    onChangeText={setNewFolderName}
+                                    style={[
+                                        styles.actionPanelInput,
+                                        {
+                                            backgroundColor: colors.background,
+                                            borderColor: colors.border,
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                />
+
+                                <View style={styles.actionPanelButtons}>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="ایجاد پوشه"
+                                        onPress={handleCreateFolder}
+                                        style={[
+                                            styles.actionPanelPrimaryButton,
+                                            {
+                                                backgroundColor: colors.primary,
+                                            },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.actionPanelPrimaryButtonText,
+                                                {
+                                                    color: colors.surface,
+                                                },
+                                            ]}
+                                        >
+                                            ایجاد
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="بستن فرم"
+                                        onPress={onDismissAction}
+                                        style={[
+                                            styles.actionPanelSecondaryButton,
+                                            {
+                                                borderColor: colors.border,
+                                            },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.actionPanelSecondaryButtonText,
+                                                {
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            لغو
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+
+                    {isPreparingUpload && (
+                        <View
+                            style={[
+                                styles.uploadPanel,
                                 {
                                     backgroundColor: colors.surface,
                                     borderColor: colors.primary,
                                 },
                             ]}
                         >
-                        <Text
-                            style={[
-                                styles.actionPanelTitle,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                        >
-                            ساخت پوشه جدید
-                        </Text>
-
-                        <TextInput
-                            ref={newFolderInputRef}
-                            placeholder="نام پوشه"
-                            placeholderTextColor={colors.border}
-                            value={newFolderName}
-                            onChangeText={setNewFolderName}
-                            style={[
-                                styles.actionPanelInput,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                    color: colors.text,
-                                },
-                            ]}
-                        />
-
-                        <View style={styles.actionPanelButtons}>
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel="ایجاد پوشه"
-                                onPress={handleCreateFolder}
+                            <Text
                                 style={[
-                                    styles.actionPanelPrimaryButton,
+                                    styles.uploadPanelTitle,
                                     {
-                                        backgroundColor: colors.primary,
+                                        color: colors.text,
+                                    },
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {uploadFileName ?? "فایل انتخاب‌شده"}
+                            </Text>
+
+                            <Text
+                                style={[
+                                    styles.uploadPanelDescription,
+                                    {
+                                        color: colors.border,
                                     },
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.actionPanelPrimaryButtonText,
-                                        {
-                                            color: colors.surface,
-                                        },
-                                    ]}
-                                >
-                                    ایجاد
-                                </Text>
-                            </Pressable>
+                                {uploadStatusText}
+                            </Text>
 
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel="بستن فرم"
-                                onPress={onDismissAction}
-                                style={[
-                                    styles.actionPanelSecondaryButton,
-                                    {
-                                        borderColor: colors.border,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.actionPanelSecondaryButtonText,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    لغو
-                                </Text>
-                            </Pressable>
-                        </View>
-                        </View>
-                    </View>
-                </Modal>
-
-                {isPreparingUpload && (
-                    <View
-                        style={[
-                            styles.uploadPanel,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.primary,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.uploadPanelTitle,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                            numberOfLines={1}
-                        >
-                            {uploadFileName ?? "فایل انتخاب‌شده"}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.uploadPanelDescription,
-                                {
-                                    color: colors.border,
-                                },
-                            ]}
-                        >
-                            {uploadStatusText}
-                        </Text>
-
-                        <View
-                            style={[
-                                styles.uploadProgressTrack,
-                                {
-                                    backgroundColor: colors.background,
-                                },
-                            ]}
-                        >
                             <View
                                 style={[
-                                    styles.uploadProgressFill,
+                                    styles.uploadProgressTrack,
                                     {
-                                        width: `${uploadProgress ?? 0}%`,
-                                        backgroundColor: colors.primary,
+                                        backgroundColor: colors.background,
                                     },
                                 ]}
-                            />
+                            >
+                                <View
+                                    style={[
+                                        styles.uploadProgressFill,
+                                        {
+                                            width: `${uploadProgress ?? 0}%`,
+                                            backgroundColor: colors.primary,
+                                        },
+                                    ]}
+                                />
+                            </View>
                         </View>
-                    </View>
-                )}
-            </View>
+                    )}
+                </View>
+            )}
 
             {/* =========================================================================
             * Search

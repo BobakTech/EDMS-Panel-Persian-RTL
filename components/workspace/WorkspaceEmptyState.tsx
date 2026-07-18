@@ -15,6 +15,7 @@ interface WorkspaceEmptyStateProps {
     title?: string;
     description?: string;
     icon?: string;
+    showHints?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export default function WorkspaceEmptyState({
     title = "هنوز سندی وجود ندارد",
     description = "برای شروع، یک پوشه جدید بسازید یا فایل‌های خود را بارگذاری کنید.",
     icon = "+",
+    showHints = true,
 }: WorkspaceEmptyStateProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -67,6 +69,52 @@ export default function WorkspaceEmptyState({
             ]}>
                 {description}
             </Text>
+
+            {showHints && (
+                <View style={styles.hints}>
+                    <View
+                        style={[
+                            styles.hintChip,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.hintChipText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            پوشه جدید
+                        </Text>
+                    </View>
+
+                    <View
+                        style={[
+                            styles.hintChip,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.hintChipText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            بارگذاری فایل
+                        </Text>
+                    </View>
+                </View>
+            )}
         </View>
     );
 }
@@ -119,5 +167,27 @@ const styles = StyleSheet.create({
         textAlign: "center",
 
         opacity: 0.64,
+    },
+
+    hints: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        marginTop: spacing.lg,
+
+        gap: spacing.sm,
+    },
+
+    hintChip: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+    },
+
+    hintChipText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
     },
 });

@@ -100,6 +100,27 @@ export default function WorkspaceItemCard({
                 </Text>
             </View>
 
+            <View
+                style={[
+                    styles.typeBadge,
+                    {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                    },
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.typeBadgeText,
+                        {
+                            color: colors.primary,
+                        },
+                    ]}
+                >
+                    {item.type === "folder" ? "Folder" : "File"}
+                </Text>
+            </View>
+
             <View style={styles.textContent}>
                 <Text style={[
                     styles.title,
@@ -143,7 +164,7 @@ const styles = StyleSheet.create({
         padding: spacing.lg,
 
         borderWidth: 1,
-        borderRadius: radius.lg,
+        borderRadius: radius.xl,
     },
 
     pressedCard: {
@@ -220,5 +241,21 @@ const styles = StyleSheet.create({
         textAlign: "right",
 
         opacity: 0.56,
+    },
+
+    typeBadge: {
+        alignSelf: "flex-end",
+
+        marginBottom: spacing.sm,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+    },
+
+    typeBadgeText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
     },
 });

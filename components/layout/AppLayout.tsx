@@ -343,6 +343,7 @@ export default function AppLayout() {
                 <Toolbar
                     activeAction={activeWorkspaceAction}
                     searchQuery={workspaceSearchQuery}
+                    canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
                     onChangeSearchQuery={setWorkspaceSearchQuery}
                     onPressCreateFolder={handlePressCreateFolder}
                     onDismissAction={handleDismissWorkspaceAction}

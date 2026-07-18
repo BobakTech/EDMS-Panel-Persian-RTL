@@ -829,6 +829,7 @@ export default function Workspace({
                                         ? "برای افزودن فایل یا پوشه به این بخش، از دکمه‌های بالای صفحه استفاده کنید."
                                         : pageContent.emptyDescription
                             }
+                            showHints={pageType === "workspace"}
                         />
                     )}
                 </View>
