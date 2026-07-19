@@ -88,7 +88,7 @@ function getWorkspacePageContent(pageType: WorkspacePageType): WorkspacePageCont
     }
 
     return {
-        breadcrumbLabel: "My Documents",
+        breadcrumbLabel: "اسناد من",
         title: "فضای کاری",
         subtitle: "مدیریت پوشه‌ها، فایل‌ها و اسناد سازمانی",
         emptyIcon: "+",

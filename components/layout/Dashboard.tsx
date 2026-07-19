@@ -30,19 +30,19 @@ interface DashboardProps {
  */
 
 function getDashboardItemTypeLabel(item: WorkspaceItem) {
-    return item.type === "folder" ? "Folder" : "File";
+    return item.type === "folder" ? "پوشه" : "فایل";
 }
 
 function getDashboardStatusLabel(item: WorkspaceItem) {
     if (item.status === "active") {
-        return "Active";
+        return "فعال";
     }
 
     if (item.status === "archived") {
-        return "Archived";
+        return "آرشیو شده";
     }
 
-    return "Trash";
+    return "سطل زباله";
 }
 
 /**
@@ -72,24 +72,24 @@ export default function Dashboard({
 
     const summaryCards = [
         {
-            label: "Active Items",
+            label: "آیتم‌های فعال",
             value: activeItems.length,
-            description: "Files and folders in workspace",
+            description: "فایل‌ها و پوشه‌های فعال در فضای کاری",
         },
         {
-            label: "Folders",
+            label: "پوشه‌ها",
             value: folders.length,
-            description: "Organized document groups",
+            description: "گروه‌بندی و سازماندهی اسناد",
         },
         {
-            label: "Archived",
+            label: "آرشیو",
             value: archivedItems.length,
-            description: "Stored for later review",
+            description: "آیتم‌های نگهداری‌شده برای بررسی بعدی",
         },
         {
-            label: "Trash",
+            label: "سطل زباله",
             value: trashedItems.length,
-            description: "Waiting for restore or delete",
+            description: "آیتم‌های در انتظار بازیابی یا حذف",
         },
     ];
 
@@ -120,7 +120,7 @@ export default function Dashboard({
                             },
                         ]}
                     >
-                        Dashboard
+                        داشبورد
                     </Text>
 
                     <Text
@@ -200,7 +200,7 @@ export default function Dashboard({
                             },
                         ]}
                     >
-                        Recent Activity
+                        فعالیت‌های اخیر
                     </Text>
 
                     <View style={styles.activityList}>

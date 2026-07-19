@@ -222,7 +222,7 @@ export default function Toolbar({
                             },
                         ]}
                     >
-                        Software Developer
+                        توسعه‌دهنده نرم‌افزار
                     </Text>
                 </View>
             </View>
@@ -265,7 +265,7 @@ export default function Toolbar({
                                     },
                                 ]}
                             >
-                                Upload
+                                بارگذاری
                             </Text>
                         </Pressable>
 
@@ -295,7 +295,7 @@ export default function Toolbar({
                                     },
                                 ]}
                             >
-                                New Folder
+                                پوشه جدید
                             </Text>
                         </Pressable>
                     </View>
@@ -457,7 +457,7 @@ export default function Toolbar({
             <TextInput
                 value={searchQuery}
                 onChangeText={onChangeSearchQuery}
-                placeholder="Search..."
+                placeholder="جست‌وجو..."
                 placeholderTextColor={colors.border}
                 style={[
                     styles.searchInput,
