@@ -22,7 +22,6 @@ import { useSettings } from "../../settings/SettingsContext";
 
 import {
     WorkspaceBreadcrumb,
-    WorkspaceEmptyState,
     WorkspaceHeader,
     WorkspaceItemCard,
     WorkspaceViewControls,
@@ -31,6 +30,10 @@ import {
     type WorkspaceViewMode,
     type WorkspacePageType,
 } from "../workspace";
+
+import WorkspaceEmptyState, {
+    type DroppedWorkspaceFile,
+} from "../workspace/WorkspaceEmptyState";
 
 /**
  * ============================================================================
@@ -132,6 +135,8 @@ interface WorkspaceProps {
     workspaceItems: WorkspaceItem[];
     searchQuery: string;
     onChangeFolder: (folderId: string | null) => void;
+    onPressCreateFolder: () => void;
+    onPressUpload: () => void;
     onArchiveItem: (itemId: string) => void;
     onMoveItemToTrash: (itemId: string) => void;
     onRestoreItem: (item: WorkspaceItem) => void;
@@ -139,6 +144,7 @@ interface WorkspaceProps {
     onDeleteItem: (itemId: string) => void;
     onMoveItem: (itemId: string, destinationFolderId: string | null) => void;
     onOpenDashboard: () => void;
+    onDropFiles: (files: DroppedWorkspaceFile[]) => void;
 }
 
 /**
@@ -153,6 +159,8 @@ export default function Workspace({
     workspaceItems,
     searchQuery,
     onChangeFolder,
+    onPressCreateFolder,
+    onPressUpload,
     onArchiveItem,
     onMoveItemToTrash,
     onRestoreItem,
@@ -160,6 +168,7 @@ export default function Workspace({
     onDeleteItem,
     onMoveItem,
     onOpenDashboard,
+    onDropFiles,
 }: WorkspaceProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -175,6 +184,26 @@ export default function Workspace({
     const workspaceTopPadding = spacing.none;
 
     const pageContent = getWorkspacePageContent(pageType);
+
+    const workspaceFolders = workspaceItems.filter(
+        (item) => item.type === "folder"
+    );
+
+    const currentWorkspaceFolder =
+        currentFolderId
+            ? workspaceFolders.find((item) => item.id === currentFolderId) ?? null
+            : null;
+
+    const currentFolderPath: WorkspaceItem[] = [];
+    let folderWalker = currentWorkspaceFolder;
+
+    while (folderWalker) {
+        currentFolderPath.unshift(folderWalker);
+
+        folderWalker = folderWalker.parentFolderId
+            ? workspaceFolders.find((item) => item.id === folderWalker?.parentFolderId) ?? null
+            : null;
+    }
 
     const [viewMode, setViewMode] = useState<WorkspaceViewMode>("grid");
 
@@ -281,9 +310,33 @@ export default function Workspace({
         );
     }
 
+    function handleOpenWorkspaceItemActions(itemId: string) {
+        setSelectedItemId(itemId);
+    }
+
+    function handlePressEmptyStateCreateFolder() {
+        onPressCreateFolder();
+    }
+
+    function handlePressEmptyStateUploadFile() {
+        onPressUpload();
+    }
+
+    function handleDropFilesInEmptyState(files: DroppedWorkspaceFile[]) {
+        onDropFiles(files);
+    }
+
     function handleReturnToWorkspaceRoot() {
         onChangeFolder(null);
-        setSelectedItemId(null);
+    }
+
+    function handleReturnToPreviousFolder() {
+        if (!currentWorkspaceFolder) {
+            onChangeFolder(null);
+            return;
+        }
+
+        onChangeFolder(currentWorkspaceFolder.parentFolderId ?? null);
     }
 
     function handleCloseWorkspaceItemDetails() {
@@ -496,13 +549,6 @@ export default function Workspace({
 
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
-    const currentWorkspaceFolder = workspaceItems.find(
-        (item) =>
-            item.id === currentFolderId &&
-            item.type === "folder" &&
-            item.status === "active"
-    );
-
     const pageWorkspaceItems = workspaceItems.filter((item) => {
         if (!isWorkspaceItemVisibleOnPage(item, pageType)) {
             return false;
@@ -610,6 +656,9 @@ export default function Workspace({
         !hasWorkspaceItemsError &&
         !hasWorkspaceItems;
 
+    const shouldShowEmptyStateActions =
+        pageType === "workspace" && !normalizedSearchQuery;
+
     const detailsPrimaryAction =
         pageType === "archive"
             ? {
@@ -677,32 +726,29 @@ export default function Workspace({
      * ============================================================================
      */
 
-    const breadcrumbItems = currentWorkspaceFolder
-        ? [
-            {
-                label: "خانه",
-                accessibilityLabel: "رفتن به داشبورد",
-                onPress: onOpenDashboard,
-            },
-            {
-                label: pageContent.breadcrumbLabel,
-                accessibilityLabel: "بازگشت به My Documents",
-                onPress: handleReturnToWorkspaceRoot,
-            },
-            {
-                label: currentWorkspaceFolder.name,
-            },
-        ]
-        : [
-            {
-                label: "خانه",
-                accessibilityLabel: "رفتن به داشبورد",
-                onPress: onOpenDashboard,
-            },
-            {
-                label: pageContent.breadcrumbLabel,
-            },
-        ];
+    const breadcrumbItems = [
+        {
+            label: "خانه",
+            accessibilityLabel: "رفتن به داشبورد",
+            onPress: onOpenDashboard,
+        },
+        {
+            label: pageContent.breadcrumbLabel,
+            accessibilityLabel: "بازگشت به ریشه اسناد",
+            onPress: handleReturnToWorkspaceRoot,
+        },
+        ...currentFolderPath.map((folder, folderIndex) => {
+            const isLastFolder = folderIndex === currentFolderPath.length - 1;
+
+            return {
+                label: folder.name,
+                accessibilityLabel: `رفتن به ${folder.name}`,
+                onPress: isLastFolder
+                    ? undefined
+                    : () => onChangeFolder(folder.id),
+            };
+        }),
+    ];
 
     return (
         <View style={[
@@ -729,7 +775,7 @@ export default function Workspace({
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel="بازگشت به فضای کاری"
-                            onPress={handleReturnToWorkspaceRoot}
+                            onPress={handleReturnToPreviousFolder}
                             style={[
                                 styles.folderBackButton,
                                 {
@@ -791,6 +837,7 @@ export default function Workspace({
                                     isCompact={isCompactWorkspace}
                                     isSelected={selectedItemId === item.id}
                                     onPress={handlePressWorkspaceItem}
+                                    onOpenActions={handleOpenWorkspaceItemActions}
                                 />
                             ))}
                         </View>
@@ -826,10 +873,35 @@ export default function Workspace({
                                 normalizedSearchQuery
                                     ? "عبارت جستجو را تغییر دهید یا بعداً دوباره تلاش کنید."
                                     : currentWorkspaceFolder
-                                        ? "برای افزودن فایل یا پوشه به این بخش، از دکمه‌های بالای صفحه استفاده کنید."
+                                        ? "برای افزودن فایل یا پوشه به این بخش، از دکمه‌های پایین استفاده کنید."
                                         : pageContent.emptyDescription
                             }
-                            showHints={pageType === "workspace"}
+                            showHints={false}
+                            primaryActionLabel={
+                                shouldShowEmptyStateActions
+                                    ? "پوشه جدید"
+                                    : undefined
+                            }
+                            secondaryActionLabel={
+                                shouldShowEmptyStateActions
+                                    ? "بارگذاری فایل"
+                                    : undefined
+                            }
+                            onPrimaryActionPress={
+                                shouldShowEmptyStateActions
+                                    ? handlePressEmptyStateCreateFolder
+                                    : undefined
+                            }
+                            onSecondaryActionPress={
+                                shouldShowEmptyStateActions
+                                    ? handlePressEmptyStateUploadFile
+                                    : undefined
+                            }
+                            onFilesDrop={
+                                shouldShowEmptyStateActions
+                                    ? handleDropFilesInEmptyState
+                                    : undefined
+                            }
                         />
                     )}
                 </View>

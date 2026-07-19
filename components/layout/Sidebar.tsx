@@ -255,7 +255,52 @@ export default function Sidebar({
             * Utilities
             * ========================================================================= */}
 
+            {/* =========================================================================
+ * Utilities
+ * ========================================================================= */}
+
             <View style={styles.utilities}>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="نمایش تنظیمات"
+                    onPress={() => onChangePage("settings")}
+                    style={({ pressed }) => [
+                        styles.utilityButton,
+                        activePage === "settings" && {
+                            backgroundColor: colors.background,
+                        },
+                        pressed && styles.pressedUtilityButton,
+                    ]}
+                >
+                    <View style={styles.utilityButtonContent}>
+                        <View style={styles.navigationIconBox}>
+                            <Feather
+                                name="settings"
+                                size={18}
+                                color={
+                                    activePage === "settings"
+                                        ? colors.primary
+                                        : colors.text
+                                }
+                            />
+                        </View>
+
+                        <Text
+                            style={[
+                                styles.utilityItem,
+                                {
+                                    color:
+                                        activePage === "settings"
+                                            ? colors.primary
+                                            : colors.text,
+                                },
+                            ]}
+                        >
+                            تنظیمات
+                        </Text>
+                    </View>
+                </Pressable>
+
                 <View
                     style={[
                         styles.storageCard,
@@ -354,47 +399,6 @@ export default function Sidebar({
                         </Text>
                     </View>
                 </View>
-
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="نمایش تنظیمات"
-                    onPress={() => onChangePage("settings")}
-                    style={({ pressed }) => [
-                        styles.utilityButton,
-                        activePage === "settings" && {
-                            backgroundColor: colors.background,
-                        },
-                        pressed && styles.pressedUtilityButton,
-                    ]}
-                >
-                    <View style={styles.utilityButtonContent}>
-                        <View style={styles.navigationIconBox}>
-                            <Feather
-                                name="settings"
-                                size={18}
-                                color={
-                                    activePage === "settings"
-                                        ? colors.primary
-                                        : colors.text
-                                }
-                            />
-                        </View>
-
-                        <Text
-                            style={[
-                                styles.utilityItem,
-                                {
-                                    color:
-                                        activePage === "settings"
-                                            ? colors.primary
-                                            : colors.text,
-                                },
-                            ]}
-                        >
-                            تنظیمات
-                        </Text>
-                    </View>
-                </Pressable>
             </View>
         </View>
     );

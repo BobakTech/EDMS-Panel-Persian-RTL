@@ -26,6 +26,8 @@ import {
     type WorkspacePickedFile,
 } from "../workspace";
 
+import type { DroppedWorkspaceFile } from "../workspace/WorkspaceEmptyState";
+
 import { getProjectInfo, type ProjectInfo } from "../project";
 
 import { useSettings } from "../../settings/SettingsContext";
@@ -84,6 +86,8 @@ export default function AppLayout() {
 
     const [activeWorkspaceAction, setActiveWorkspaceAction] =
         useState<WorkspaceActionType | null>(null);
+
+    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
 
@@ -146,6 +150,47 @@ export default function AppLayout() {
         setActiveWorkspaceAction("new-folder");
     }
 
+    function handlePressUpload() {
+        setActiveWorkspaceAction("upload");
+    }
+
+    function handleDropWorkspaceFiles(files: DroppedWorkspaceFile[]) {
+        if (files.length === 0) {
+            return;
+        }
+
+        const uploadedAt = new Date().toISOString();
+
+        const newWorkspaceFiles = files.map((file, fileIndex): WorkspaceItem => ({
+            id: `file-${Date.now()}-${fileIndex}`,
+            type: "file",
+            name: file.name,
+            description: "فایل بارگذاری شده در فضای کاری",
+            updatedAt: uploadedAt,
+            status: "active",
+            parentFolderId: currentFolderId,
+            extension: getFileExtension(file.name),
+            sizeLabel: getFileSizeLabel(file.size ?? 0),
+            mimeType: file.mimeType,
+            localUri: file.uri,
+        }));
+
+        setWorkspaceItems((currentItems) => [
+            ...newWorkspaceFiles,
+            ...currentItems.map((item) =>
+                currentFolderId &&
+                    item.type === "folder" &&
+                    item.id === currentFolderId
+                    ? {
+                        ...item,
+                        childrenCount: (item.childrenCount ?? 0) + newWorkspaceFiles.length,
+                        updatedAt: uploadedAt,
+                    }
+                    : item
+            ),
+        ]);
+    }
+
     function handleDismissWorkspaceAction() {
         setActiveWorkspaceAction(null);
     }
@@ -160,8 +205,11 @@ export default function AppLayout() {
 
     function handleChangeWorkspacePage(page: AppPageType) {
         setActiveWorkspacePage(page);
-        setActiveWorkspaceFolderId(null);
         setActiveWorkspaceAction(null);
+
+        if (page !== "workspace") {
+            setCurrentFolderId(null);
+        }
     }
 
     function handleCreateFolder(folderName: string) {
@@ -179,13 +227,7 @@ export default function AppLayout() {
                 description: "پوشه ایجاد شده در فضای کاری",
                 updatedAt: new Date().toISOString(),
                 status: "active",
-                /**
-                 * New folders are created inside the currently opened folder.
-                 */
-                parentFolderId:
-                    activeWorkspacePage === "workspace"
-                        ? activeWorkspaceFolderId
-                        : null,
+                parentFolderId: currentFolderId,
                 childrenCount: 0,
             };
 
@@ -369,17 +411,20 @@ export default function AppLayout() {
                 ) : (
                     <Workspace
                         pageType={activeWorkspacePage}
-                        currentFolderId={activeWorkspaceFolderId}
+                        currentFolderId={currentFolderId}
                         workspaceItems={workspaceItems}
                         searchQuery={workspaceSearchQuery}
+                        onChangeFolder={setCurrentFolderId}
+                        onPressCreateFolder={handlePressCreateFolder}
+                        onPressUpload={handlePressUpload}
                         onArchiveItem={handleArchiveWorkspaceItem}
-                        onChangeFolder={setActiveWorkspaceFolderId}
-                        onOpenDashboard={() => handleChangeWorkspacePage("dashboard")}
                         onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
                         onRestoreItem={handleRestoreWorkspaceItem}
                         onRenameItem={handleRenameWorkspaceItem}
                         onDeleteItem={handleDeleteWorkspaceItem}
                         onMoveItem={handleMoveWorkspaceItem}
+                        onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
+                        onDropFiles={handleDropWorkspaceFiles}
                     />
                 )}
             </View>

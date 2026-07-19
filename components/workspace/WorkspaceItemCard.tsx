@@ -8,7 +8,12 @@
 
 import { Feather } from "@expo/vector-icons";
 
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -37,6 +42,7 @@ interface WorkspaceItemCardProps {
     isCompact: boolean;
     isSelected: boolean;
     onPress: (itemId: string) => void;
+    onOpenActions?: (itemId: string) => void;
 }
 
 /**
@@ -74,29 +80,22 @@ export default function WorkspaceItemCard({
     isCompact,
     isSelected,
     onPress,
+    onOpenActions,
 }: WorkspaceItemCardProps) {
     const { theme, language } = useSettings();
     const colors = theme.colors;
 
     const isListMode = viewMode === "list";
-
     const visualLabel = getWorkspaceVisualLabel(item, language);
 
     return (
-        <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={item.name}
-            accessibilityState={{
-                selected: isSelected,
-            }}
-            onPress={() => onPress(item.id)}
-            style={({ pressed }) => [
+        <View
+            style={[
                 styles.card,
                 isListMode
                     ? styles.listCard
                     : styles.gridCard,
                 !isListMode && isCompact && styles.compactGridCard,
-                pressed && styles.pressedCard,
                 {
                     backgroundColor: isSelected
                         ? colors.background
@@ -107,80 +106,115 @@ export default function WorkspaceItemCard({
                 },
             ]}
         >
-            <View
-                style={[
-                    styles.visualArea,
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={item.name}
+                accessibilityState={{
+                    selected: isSelected,
+                }}
+                onPress={() => onPress(item.id)}
+                style={({ pressed }) => [
+                    styles.cardPressArea,
                     isListMode
-                        ? styles.listVisualArea
-                        : styles.gridVisualArea,
+                        ? styles.listPressArea
+                        : styles.gridPressArea,
+                    pressed && styles.pressedCardContent,
                 ]}
             >
-                <Feather
-                    name={getWorkspaceIconName(item)}
-                    size={isListMode ? 24 : 28}
-                    color={colors.primary}
-                />
-
                 <View
                     style={[
-                        styles.visualLabel,
+                        styles.visualArea,
                         isListMode
-                            ? styles.listVisualLabel
-                            : styles.gridVisualLabel,
+                            ? styles.listVisualArea
+                            : styles.gridVisualArea,
+                    ]}
+                >
+                    <Feather
+                        name={getWorkspaceIconName(item)}
+                        size={isListMode ? 24 : 28}
+                        color={colors.primary}
+                    />
+
+                    <View
+                        style={[
+                            styles.visualLabel,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.visualLabelText,
+                                {
+                                    color: colors.primary,
+                                },
+                            ]}
+                        >
+                            {visualLabel}
+                        </Text>
+                    </View>
+                </View>
+
+                <View style={styles.textContent}>
+                    <Text
+                        style={[
+                            styles.title,
+                            {
+                                color: colors.text,
+                            },
+                        ]}
+                    >
+                        {item.name}
+                    </Text>
+
+                    <Text
+                        style={[
+                            styles.description,
+                            {
+                                color: colors.text,
+                            },
+                        ]}
+                    >
+                        {item.description}
+                    </Text>
+
+                    <Text
+                        style={[
+                            styles.meta,
+                            {
+                                color: colors.text,
+                            },
+                        ]}
+                    >
+                        {getWorkspaceItemUpdatedAtLabel(item)}
+                    </Text>
+                </View>
+            </Pressable>
+
+            {onOpenActions && (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`عملیات ${item.name}`}
+                    onPress={() => onOpenActions(item.id)}
+                    style={({ pressed }) => [
+                        styles.actionsButton,
+                        pressed && styles.pressedCardContent,
                         {
                             backgroundColor: colors.background,
                             borderColor: colors.border,
                         },
                     ]}
                 >
-                    <Text
-                        style={[
-                            styles.visualLabelText,
-                            {
-                                color: colors.primary,
-                            },
-                        ]}
-                    >
-                        {visualLabel}
-                    </Text>
-                </View>
-            </View>
-
-            <View style={styles.textContent}>
-                <Text
-                    style={[
-                        styles.title,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    {item.name}
-                </Text>
-
-                <Text
-                    style={[
-                        styles.description,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    {item.description}
-                </Text>
-
-                <Text
-                    style={[
-                        styles.meta,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    {getWorkspaceItemUpdatedAtLabel(item)}
-                </Text>
-            </View>
-        </Pressable>
+                    <Feather
+                        name="more-horizontal"
+                        size={18}
+                        color={isSelected ? colors.primary : colors.text}
+                    />
+                </Pressable>
+            )}
+        </View>
     );
 }
 
@@ -192,20 +226,16 @@ export default function WorkspaceItemCard({
 
 const styles = StyleSheet.create({
     card: {
+        position: "relative",
+
+        overflow: "hidden",
+
         borderWidth: 1,
         borderRadius: radius.lg,
     },
 
-    pressedCard: {
-        opacity: 0.72,
-    },
-
     gridCard: {
         width: 240,
-
-        gap: spacing.md,
-
-        padding: spacing.lg,
     },
 
     compactGridCard: {
@@ -215,7 +245,20 @@ const styles = StyleSheet.create({
     listCard: {
         width: "100%",
         minHeight: 96,
+    },
 
+    cardPressArea: {
+        flex: 1,
+    },
+
+    gridPressArea: {
+        gap: spacing.md,
+
+        padding: spacing.lg,
+        paddingLeft: spacing.xxl,
+    },
+
+    listPressArea: {
         flexDirection: "row-reverse",
         alignItems: "center",
 
@@ -223,6 +266,11 @@ const styles = StyleSheet.create({
 
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.md,
+        paddingLeft: spacing.xxl,
+    },
+
+    pressedCardContent: {
+        opacity: 0.72,
     },
 
     visualArea: {
@@ -250,14 +298,6 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.pill,
-    },
-
-    gridVisualLabel: {
-        alignSelf: "center",
-    },
-
-    listVisualLabel: {
-        alignSelf: "center",
     },
 
     visualLabelText: {
@@ -294,5 +334,20 @@ const styles = StyleSheet.create({
         textAlign: "right",
 
         opacity: 0.56,
+    },
+
+    actionsButton: {
+        position: "absolute",
+        top: spacing.sm,
+        left: spacing.sm,
+
+        width: 30,
+        height: 30,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
     },
 });
