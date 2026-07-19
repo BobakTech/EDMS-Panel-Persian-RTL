@@ -6,6 +6,8 @@
  * ============================================================================
  */
 
+import { Feather } from "@expo/vector-icons";
+
 import {
     Pressable,
     StyleSheet,
@@ -27,7 +29,16 @@ import type { ProjectInfo } from "../project";
  * ============================================================================
  */
 
-type AppPageType = "dashboard" | WorkspacePageType;
+type AppPageType = "dashboard" | WorkspacePageType | "settings";
+
+type FeatherIconName = keyof typeof Feather.glyphMap;
+
+interface NavigationItemConfig {
+    page: AppPageType;
+    icon: FeatherIconName;
+    label: string;
+    accessibilityLabel: string;
+}
 
 /**
  * ============================================================================
@@ -45,6 +56,39 @@ interface SidebarProps {
 
 /**
  * ============================================================================
+ * Navigation
+ * ============================================================================
+ */
+
+const navigationItems: NavigationItemConfig[] = [
+    {
+        page: "dashboard",
+        icon: "grid",
+        label: "داشبورد",
+        accessibilityLabel: "نمایش داشبورد",
+    },
+    {
+        page: "workspace",
+        icon: "file-text",
+        label: "اسناد من",
+        accessibilityLabel: "نمایش اسناد من",
+    },
+    {
+        page: "archive",
+        icon: "archive",
+        label: "آرشیو",
+        accessibilityLabel: "نمایش آرشیو",
+    },
+    {
+        page: "trash",
+        icon: "trash-2",
+        label: "سطل زباله",
+        accessibilityLabel: "نمایش سطل زباله",
+    },
+];
+
+/**
+ * ============================================================================
  * Component
  * ============================================================================
  */
@@ -56,7 +100,7 @@ export default function Sidebar({
     projectInfoError,
     onChangePage,
 }: SidebarProps) {
-    const { theme, themeMode, toggleTheme } = useSettings();
+    const { theme } = useSettings();
     const colors = theme.colors;
 
     const { height } = useWindowDimensions();
@@ -64,10 +108,12 @@ export default function Sidebar({
     const isShortSidebar = height < 720;
 
     const projectSubtitle = isProjectInfoLoading
-        ? "Loading project info..."
+        ? "در حال دریافت اطلاعات پروژه..."
         : projectInfo
             ? `${projectInfo.projectName}${projectInfo.projectCode ? ` · ${projectInfo.projectCode}` : ""}`
-            : projectInfoError ?? "Enterprise Document Management System";
+            : projectInfoError
+                ? "اطلاعات پروژه در دسترس نیست."
+                : "سامانه مدیریت اسناد سازمانی";
 
     return (
         <View
@@ -126,7 +172,7 @@ export default function Sidebar({
                     style={[
                         styles.appSubtitle,
                         {
-                            color: colors.border,
+                            color: colors.text,
                         },
                     ]}
                 >
@@ -139,121 +185,70 @@ export default function Sidebar({
             * ========================================================================= */}
 
             <View style={styles.navigation}>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="نمایش داشبورد"
-                    onPress={() => onChangePage("dashboard")}
-                    style={[
-                        styles.navigationButton,
-                        activePage === "dashboard" && {
-                            backgroundColor: colors.background,
-                        },
-                    ]}
-                >
+                {navigationItems.map((item) => {
+                    const isSelected = activePage === item.page;
+
+                    const itemColor = isSelected
+                        ? colors.primary
+                        : colors.text;
+
+                    return (
+                        <Pressable
+                            key={item.page}
+                            accessibilityRole="button"
+                            accessibilityLabel={item.accessibilityLabel}
+                            onPress={() => onChangePage(item.page)}
+                            style={[
+                                styles.navigationButton,
+                                isSelected && {
+                                    backgroundColor: colors.background,
+                                },
+                            ]}
+                        >
+                            <View style={styles.navigationButtonContent}>
+                                <View style={styles.navigationIconBox}>
+                                    <Feather
+                                        name={item.icon}
+                                        size={18}
+                                        color={itemColor}
+                                    />
+                                </View>
+
+                                <Text
+                                    style={[
+                                        styles.navigationItem,
+                                        {
+                                            color: itemColor,
+                                        },
+                                    ]}
+                                >
+                                    {item.label}
+                                </Text>
+                            </View>
+                        </Pressable>
+                    );
+                })}
+
+                <View style={styles.staticNavigationItem}>
+                    <View style={styles.navigationIconBox}>
+                        <Feather
+                            name="users"
+                            size={18}
+                            color={colors.text}
+                        />
+                    </View>
+
                     <Text
                         style={[
                             styles.navigationItem,
                             {
-                                color:
-                                    activePage === "dashboard"
-                                        ? colors.primary
-                                        : colors.text,
+                                color: colors.text,
                             },
                         ]}
                     >
-                        Dashboard
+                        اسناد مشترک
                     </Text>
-                </Pressable>
-
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="نمایش اسناد من"
-                    onPress={() => onChangePage("workspace")}
-                    style={[
-                        styles.navigationButton,
-                        activePage === "workspace" && {
-                            backgroundColor: colors.background,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.navigationItem,
-                            {
-                                color:
-                                    activePage === "workspace"
-                                        ? colors.primary
-                                        : colors.text,
-                            },
-                        ]}
-                    >
-                        My Documents
-                    </Text>
-                </Pressable>
-
-                <Text
-                    style={[
-                        styles.navigationItem,
-                        styles.staticNavigationItem,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    Shared Documents
-                </Text>
-
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="نمایش آرشیو"
-                    onPress={() => onChangePage("archive")}
-                    style={[
-                        styles.navigationButton,
-                        activePage === "archive" && {
-                            backgroundColor: colors.background,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.navigationItem,
-                            {
-                                color:
-                                    activePage === "archive"
-                                        ? colors.primary
-                                        : colors.text,
-                            },
-                        ]}
-                    >
-                        Archive
-                    </Text>
-                </Pressable>
-
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="نمایش سطل زباله"
-                    onPress={() => onChangePage("trash")}
-                    style={[
-                        styles.navigationButton,
-                        activePage === "trash" && {
-                            backgroundColor: colors.background,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.navigationItem,
-                            {
-                                color:
-                                    activePage === "trash"
-                                        ? colors.primary
-                                        : colors.text,
-                            },
-                        ]}
-                    >
-                        Trash
-                    </Text>
-                </Pressable>
+                </View>
             </View>
 
             {/* =========================================================================
@@ -261,48 +256,145 @@ export default function Sidebar({
             * ========================================================================= */}
 
             <View style={styles.utilities}>
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="تغییر حالت روشن و تیره"
-                    onPress={toggleTheme}
-                    style={({ pressed }) => [
-                        styles.utilityButton,
-                        pressed && styles.pressedUtilityButton,
+                <View
+                    style={[
+                        styles.storageCard,
+                        {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                        },
                     ]}
                 >
-                    <Text
+                    <View style={styles.storageHeader}>
+                        <Text
+                            style={[
+                                styles.storageLabel,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            فضای ذخیره‌سازی
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.storageValue,
+                                {
+                                    color: colors.primary,
+                                },
+                            ]}
+                        >
+                            ۶۲٪
+                        </Text>
+                    </View>
+
+                    <View
                         style={[
-                            styles.utilityItem,
+                            styles.storageTrack,
                             {
-                                color: colors.text,
+                                backgroundColor: colors.surface,
                             },
                         ]}
                     >
-                        {themeMode === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
-                    </Text>
+                        <View
+                            style={[
+                                styles.storageProgress,
+                                {
+                                    width: "62%",
+                                    backgroundColor: colors.primary,
+                                },
+                            ]}
+                        />
+                    </View>
+
+                    <View style={styles.storageDetails}>
+                        <Text
+                            style={[
+                                styles.storageDetailText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            PDF · ۳۴٪
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.storageDetailText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            DOCX / XLSX · ۱۵٪
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.storageDetailText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            ZIP / RAR · ۷٪
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.storageDetailText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            سایر فایل‌ها · ۶٪
+                        </Text>
+                    </View>
+                </View>
+
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="نمایش تنظیمات"
+                    onPress={() => onChangePage("settings")}
+                    style={({ pressed }) => [
+                        styles.utilityButton,
+                        activePage === "settings" && {
+                            backgroundColor: colors.background,
+                        },
+                        pressed && styles.pressedUtilityButton,
+                    ]}
+                >
+                    <View style={styles.utilityButtonContent}>
+                        <View style={styles.navigationIconBox}>
+                            <Feather
+                                name="settings"
+                                size={18}
+                                color={
+                                    activePage === "settings"
+                                        ? colors.primary
+                                        : colors.text
+                                }
+                            />
+                        </View>
+
+                        <Text
+                            style={[
+                                styles.utilityItem,
+                                {
+                                    color:
+                                        activePage === "settings"
+                                            ? colors.primary
+                                            : colors.text,
+                                },
+                            ]}
+                        >
+                            تنظیمات
+                        </Text>
+                    </View>
                 </Pressable>
-
-                <Text
-                    style={[
-                        styles.utilityItem,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    🌐 Language
-                </Text>
-
-                <Text
-                    style={[
-                        styles.utilityItem,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    ⚙️ Settings
-                </Text>
             </View>
         </View>
     );
@@ -366,6 +458,8 @@ const styles = StyleSheet.create({
     },
 
     appSubtitle: {
+        opacity: 0.72,
+
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
         textAlign: "center",
@@ -388,24 +482,112 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
     },
 
+    navigationButtonContent: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        gap: spacing.sm,
+    },
+
+    navigationIconBox: {
+        width: 24,
+
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
     navigationItem: {
+        flex: 1,
+
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
     },
 
     staticNavigationItem: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        gap: spacing.sm,
+
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xs,
     },
 
     utilities: {
-        gap: spacing.lg,
+        gap: spacing.md,
+    },
+
+    storageCard: {
+        gap: spacing.sm,
+
+        padding: spacing.md,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    storageHeader: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        justifyContent: "space-between",
+
+        gap: spacing.sm,
+    },
+
+    storageLabel: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
+    },
+
+    storageValue: {
+        fontSize: typography.fontSize.md,
+        fontWeight: typography.fontWeight.bold,
+    },
+
+    storageTrack: {
+        height: 8,
+
+        overflow: "hidden",
+
+        borderRadius: radius.pill,
+    },
+
+    storageProgress: {
+        height: "100%",
+
+        borderRadius: radius.pill,
+    },
+
+    storageDetails: {
+        gap: spacing.xs,
+    },
+
+    storageDetailText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.regular,
+        textAlign: "right",
     },
 
     utilityButton: {
         alignSelf: "stretch",
 
+        minHeight: 34,
+
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+
         borderRadius: radius.md,
+    },
+
+    utilityButtonContent: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        gap: spacing.sm,
     },
 
     pressedUtilityButton: {
@@ -413,7 +595,10 @@ const styles = StyleSheet.create({
     },
 
     utilityItem: {
+        flex: 1,
+
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
     },
 });

@@ -11,6 +11,8 @@ import { StyleSheet, View } from "react-native";
 
 import { spacing } from "../../theme";
 
+import SettingsPage from "./SettingsPage";
+
 import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
@@ -60,11 +62,17 @@ function getFileSizeLabel(fileSize?: number) {
 
 /**
  * ============================================================================
- * Component
+ * Types
  * ============================================================================
  */
 
-type AppPageType = "dashboard" | WorkspacePageType;
+type AppPageType = "dashboard" | WorkspacePageType | "settings";
+
+/**
+ * ============================================================================
+ * Component
+ * ============================================================================
+ */
 
 export default function AppLayout() {
     const { theme } = useSettings();
@@ -356,21 +364,23 @@ export default function AppLayout() {
 
                 {activeWorkspacePage === "dashboard" ? (
                     <Dashboard workspaceItems={workspaceItems} />
+                ) : activeWorkspacePage === "settings" ? (
+                    <SettingsPage />
                 ) : (
-                        <Workspace
-                            pageType={activeWorkspacePage}
-                            currentFolderId={activeWorkspaceFolderId}
-                            workspaceItems={workspaceItems}
-                            searchQuery={workspaceSearchQuery}
-                            onArchiveItem={handleArchiveWorkspaceItem}
-                            onChangeFolder={setActiveWorkspaceFolderId}
-                            onOpenDashboard={() => handleChangeWorkspacePage("dashboard")}
-                            onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
-                            onRestoreItem={handleRestoreWorkspaceItem}
-                            onRenameItem={handleRenameWorkspaceItem}
-                            onDeleteItem={handleDeleteWorkspaceItem}
-                            onMoveItem={handleMoveWorkspaceItem}
-                        />
+                    <Workspace
+                        pageType={activeWorkspacePage}
+                        currentFolderId={activeWorkspaceFolderId}
+                        workspaceItems={workspaceItems}
+                        searchQuery={workspaceSearchQuery}
+                        onArchiveItem={handleArchiveWorkspaceItem}
+                        onChangeFolder={setActiveWorkspaceFolderId}
+                        onOpenDashboard={() => handleChangeWorkspacePage("dashboard")}
+                        onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
+                        onRestoreItem={handleRestoreWorkspaceItem}
+                        onRenameItem={handleRenameWorkspaceItem}
+                        onDeleteItem={handleDeleteWorkspaceItem}
+                        onMoveItem={handleMoveWorkspaceItem}
+                    />
                 )}
             </View>
         </View>

@@ -6,6 +6,8 @@
  * ============================================================================
  */
 
+import { Feather } from "@expo/vector-icons";
+
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { radius, spacing, typography } from "../../theme";
@@ -15,6 +17,8 @@ import {
     getWorkspaceItemLabel,
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
+
+import type { Language } from "../../locales";
 
 import type {
     WorkspaceItem,
@@ -37,6 +41,29 @@ interface WorkspaceItemCardProps {
 
 /**
  * ============================================================================
+ * Helpers
+ * ============================================================================
+ */
+
+type FeatherIconName = keyof typeof Feather.glyphMap;
+
+function getWorkspaceIconName(item: WorkspaceItem): FeatherIconName {
+    return item.type === "folder" ? "folder" : "file-text";
+}
+
+function getWorkspaceVisualLabel(
+    item: WorkspaceItem,
+    language: Language
+) {
+    if (item.type === "file") {
+        return getWorkspaceItemLabel(item);
+    }
+
+    return language === "fa" ? "پوشه" : "Folder";
+}
+
+/**
+ * ============================================================================
  * Component
  * ============================================================================
  */
@@ -48,10 +75,12 @@ export default function WorkspaceItemCard({
     isSelected,
     onPress,
 }: WorkspaceItemCardProps) {
-    const { theme } = useSettings();
+    const { theme, language } = useSettings();
     const colors = theme.colors;
 
     const isListMode = viewMode === "list";
+
+    const visualLabel = getWorkspaceVisualLabel(item, language);
 
     return (
         <Pressable
@@ -78,74 +107,76 @@ export default function WorkspaceItemCard({
                 },
             ]}
         >
-            <View style={[
-                styles.icon,
-                isListMode
-                    ? styles.listIcon
-                    : styles.gridIcon,
-                {
-                    backgroundColor: colors.background,
-                    borderColor: isSelected
-                        ? colors.primary
-                        : colors.border,
-                },
-            ]}>
-                <Text style={[
-                    styles.iconText,
-                    {
-                        color: colors.primary,
-                    },
-                ]}>
-                    {getWorkspaceItemLabel(item)}
-                </Text>
-            </View>
-
             <View
                 style={[
-                    styles.typeBadge,
-                    {
-                        backgroundColor: colors.background,
-                        borderColor: colors.border,
-                    },
+                    styles.visualArea,
+                    isListMode
+                        ? styles.listVisualArea
+                        : styles.gridVisualArea,
                 ]}
             >
-                <Text
+                <Feather
+                    name={getWorkspaceIconName(item)}
+                    size={isListMode ? 24 : 28}
+                    color={colors.primary}
+                />
+
+                <View
                     style={[
-                        styles.typeBadgeText,
+                        styles.visualLabel,
+                        isListMode
+                            ? styles.listVisualLabel
+                            : styles.gridVisualLabel,
                         {
-                            color: colors.primary,
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
                         },
                     ]}
                 >
-                    {item.type === "folder" ? "Folder" : "File"}
-                </Text>
+                    <Text
+                        style={[
+                            styles.visualLabelText,
+                            {
+                                color: colors.primary,
+                            },
+                        ]}
+                    >
+                        {visualLabel}
+                    </Text>
+                </View>
             </View>
 
             <View style={styles.textContent}>
-                <Text style={[
-                    styles.title,
-                    {
-                        color: colors.text,
-                    },
-                ]}>
+                <Text
+                    style={[
+                        styles.title,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                >
                     {item.name}
                 </Text>
 
-                <Text style={[
-                    styles.description,
-                    {
-                        color: colors.text,
-                    },
-                ]}>
+                <Text
+                    style={[
+                        styles.description,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                >
                     {item.description}
                 </Text>
 
-                <Text style={[
-                    styles.meta,
-                    {
-                        color: colors.text,
-                    },
-                ]}>
+                <Text
+                    style={[
+                        styles.meta,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                >
                     {getWorkspaceItemUpdatedAtLabel(item)}
                 </Text>
             </View>
@@ -161,10 +192,8 @@ export default function WorkspaceItemCard({
 
 const styles = StyleSheet.create({
     card: {
-        padding: spacing.lg,
-
         borderWidth: 1,
-        borderRadius: radius.xl,
+        borderRadius: radius.lg,
     },
 
     pressedCard: {
@@ -173,6 +202,10 @@ const styles = StyleSheet.create({
 
     gridCard: {
         width: 240,
+
+        gap: spacing.md,
+
+        padding: spacing.lg,
     },
 
     compactGridCard: {
@@ -181,36 +214,56 @@ const styles = StyleSheet.create({
 
     listCard: {
         width: "100%",
-        minHeight: 112,
+        minHeight: 96,
 
         flexDirection: "row-reverse",
         alignItems: "center",
+
+        gap: spacing.lg,
+
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
     },
 
-    icon: {
-        width: 48,
-        height: 48,
-
+    visualArea: {
         alignItems: "center",
         justifyContent: "center",
-
-        borderWidth: 1,
-        borderRadius: radius.lg,
     },
 
-    gridIcon: {
+    gridVisualArea: {
         alignSelf: "flex-end",
 
-        marginBottom: spacing.md,
+        flexDirection: "row-reverse",
+
+        gap: spacing.sm,
     },
 
-    listIcon: {
-        marginLeft: spacing.lg,
+    listVisualArea: {
+        width: 76,
+
+        gap: spacing.xs,
     },
 
-    iconText: {
+    visualLabel: {
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+    },
+
+    gridVisualLabel: {
+        alignSelf: "center",
+    },
+
+    listVisualLabel: {
+        alignSelf: "center",
+    },
+
+    visualLabelText: {
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.semibold,
+        textAlign: "center",
     },
 
     textContent: {
@@ -226,7 +279,7 @@ const styles = StyleSheet.create({
     },
 
     description: {
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
@@ -241,21 +294,5 @@ const styles = StyleSheet.create({
         textAlign: "right",
 
         opacity: 0.56,
-    },
-
-    typeBadge: {
-        alignSelf: "flex-end",
-
-        marginBottom: spacing.sm,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-
-        borderWidth: 1,
-        borderRadius: radius.pill,
-    },
-
-    typeBadgeText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
     },
 });
