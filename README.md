@@ -8,7 +8,7 @@ This project is designed as a Persian RTL admin-style document management panel 
 
 This repository currently contains the frontend demo only.
 
-Backend integration is intentionally not included in this public repository. API URLs and private PHP panel details should stay outside GitHub.
+Backend integration is intentionally not included in this public repository. API URLs and private panel details should stay outside GitHub.
 
 ## Tech Stack
 
@@ -103,4 +103,4 @@ Not included:
 
 ## Author
 
-Built by BobakTech as a Persian RTL EDMS frontend panel demo.
+Built by Bobak Tadjalli (BobakTech) as a Persian RTL EDMS frontend panel demo.
