@@ -2,7 +2,7 @@
 
 A frontend-only Enterprise Document Management System panel built with Expo, React Native, React Native Web, and TypeScript.
 
-This project is designed as a Persian RTL admin-style document management panel demo. It focuses on clean UI structure, workspace flows, dashboard visibility, and frontend interaction quality.
+This project is designed as a Persian RTL admin-style document management panel demo. It focuses on clean UI structure, responsive shell behavior, workspace flows, dashboard visibility, and frontend interaction quality.
 
 ## Current Status
 
@@ -22,7 +22,10 @@ Backend integration is intentionally not included in this public repository. API
 ## Main Features
 
 - Dashboard overview page
-- Sidebar navigation
+- Responsive desktop and mobile shell
+- Desktop sidebar navigation
+- Mobile drawer navigation
+- Mobile toolbar with project info and account menu
 - Dark mode as demo default
 - Workspace / My Documents page
 - Folder browsing
@@ -45,6 +48,7 @@ Backend integration is intentionally not included in this public repository. API
 - My Documents
 - Archive
 - Trash
+- Settings
 
 ## Getting Started
 
@@ -87,6 +91,7 @@ The current demo uses mock workspace data until backend integration is connected
 Included:
 
 - Frontend UI
+- Responsive panel shell
 - Theme system
 - Workspace interactions
 - Mock data
