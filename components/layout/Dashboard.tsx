@@ -278,10 +278,14 @@ export default function Dashboard({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        minWidth: 0,
+        minHeight: 0,
     },
 
     content: {
         flex: 1,
+        minWidth: 0,
+        minHeight: 0,
 
         borderWidth: 1,
         borderRadius: radius.xl,
@@ -385,6 +389,7 @@ const styles = StyleSheet.create({
 
     activityText: {
         flex: 1,
+        minWidth: 0,
     },
 
     activityTitle: {

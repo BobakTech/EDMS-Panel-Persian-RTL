@@ -2,10 +2,11 @@
  * ============================================================================
  * Toolbar
  * ----------------------------------------------------------------------------
- * Displays the application's top toolbar.
+ * Displays desktop toolbar, mobile header, and mobile drawer actions.
  * ============================================================================
  */
 
+import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 
 import { useEffect, useRef, useState } from "react";
@@ -18,14 +19,23 @@ import {
     View,
 } from "react-native";
 
+import { radius, shadows, spacing, typography } from "../../theme";
+import { useSettings } from "../../settings/SettingsContext";
+
+import type { ProjectInfo } from "../project";
+
 import type {
     WorkspaceActionType,
     WorkspacePickedFile,
 } from "../workspace";
 
-import { radius, shadows, spacing, typography } from "../../theme";
+/**
+ * ============================================================================
+ * Types
+ * ============================================================================
+ */
 
-import { useSettings } from "../../settings/SettingsContext";
+type ToolbarVariant = "desktop" | "mobile-header" | "mobile-menu";
 
 /**
  * ============================================================================
@@ -42,6 +52,12 @@ interface ToolbarProps {
     onCreateFolder: (folderName: string) => void;
     onCreateFile: (file: WorkspacePickedFile) => void;
     canCreateWorkspaceItems: boolean;
+    variant?: ToolbarVariant;
+    projectInfo?: ProjectInfo | null;
+    isProjectInfoLoading?: boolean;
+    projectInfoError?: string | null;
+    isMobileMenuOpen?: boolean;
+    onPressMobileMenu?: () => void;
 }
 
 /**
@@ -71,6 +87,12 @@ export default function Toolbar({
     onCreateFolder,
     onCreateFile,
     canCreateWorkspaceItems,
+    variant = "desktop",
+    projectInfo,
+    isProjectInfoLoading = false,
+    projectInfoError = null,
+    isMobileMenuOpen = false,
+    onPressMobileMenu,
 }: ToolbarProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -83,13 +105,24 @@ export default function Toolbar({
     const [uploadFileName, setUploadFileName] = useState<string | null>(null);
     const [uploadStatusText, setUploadStatusText] = useState("");
 
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
     const isPreparingUpload = uploadProgress !== null;
+
+    const isMobileHeader = variant === "mobile-header";
+    const isMobileMenu = variant === "mobile-menu";
+
+    const projectSubtitle = isProjectInfoLoading
+        ? "در حال دریافت اطلاعات پروژه..."
+        : projectInfo
+            ? `${projectInfo.projectName}${projectInfo.projectCode ? ` · ${projectInfo.projectCode}` : ""}`
+            : projectInfoError
+                ? "اطلاعات پروژه در دسترس نیست."
+                : "سامانه مدیریت اسناد سازمانی";
 
     /**
      * ============================================================================
      * New Folder Autofocus
-     * ----------------------------------------------------------------------------
-     * Focuses the folder name input after the New Folder panel is opened.
      * ============================================================================
      */
 
@@ -166,6 +199,549 @@ export default function Toolbar({
         resetUploadProgress();
     }
 
+    /**
+     * Opens the native file picker when upload is triggered from the mobile drawer.
+     */
+
+    useEffect(() => {
+        if (activeAction !== "upload") {
+            return;
+        }
+
+        void handlePickFile();
+    }, [activeAction]);
+
+    const newFolderModal = (
+        <Modal
+            transparent
+            visible={activeAction === "new-folder"}
+            animationType="fade"
+            onRequestClose={onDismissAction}
+        >
+            <View style={styles.popupOverlay}>
+                <View
+                    style={[
+                        styles.actionPanel,
+                        {
+                            backgroundColor: colors.surface,
+                            borderColor: colors.primary,
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.actionPanelTitle,
+                            {
+                                color: colors.text,
+                            },
+                        ]}
+                    >
+                        ساخت پوشه جدید
+                    </Text>
+
+                    <TextInput
+                        ref={newFolderInputRef}
+                        placeholder="نام پوشه"
+                        placeholderTextColor={colors.border}
+                        value={newFolderName}
+                        onChangeText={setNewFolderName}
+                        style={[
+                            styles.actionPanelInput,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                                color: colors.text,
+                            },
+                        ]}
+                    />
+
+                    <View style={styles.actionPanelButtons}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="ایجاد پوشه"
+                            onPress={handleCreateFolder}
+                            style={[
+                                styles.actionPanelPrimaryButton,
+                                {
+                                    backgroundColor: colors.primary,
+                                },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.actionPanelPrimaryButtonText,
+                                    {
+                                        color: colors.surface,
+                                    },
+                                ]}
+                            >
+                                ایجاد
+                            </Text>
+                        </Pressable>
+
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="بستن فرم"
+                            onPress={onDismissAction}
+                            style={[
+                                styles.actionPanelSecondaryButton,
+                                {
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.actionPanelSecondaryButtonText,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                لغو
+                            </Text>
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
+    const desktopUploadPanel = isPreparingUpload ? (
+        <View
+            style={[
+                styles.uploadPanel,
+                {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.primary,
+                },
+            ]}
+        >
+            <Text
+                style={[
+                    styles.uploadPanelTitle,
+                    {
+                        color: colors.text,
+                    },
+                ]}
+                numberOfLines={1}
+            >
+                {uploadFileName ?? "فایل انتخاب‌شده"}
+            </Text>
+
+            <Text
+                style={[
+                    styles.uploadPanelDescription,
+                    {
+                        color: colors.border,
+                    },
+                ]}
+            >
+                {uploadStatusText}
+            </Text>
+
+            <View
+                style={[
+                    styles.uploadProgressTrack,
+                    {
+                        backgroundColor: colors.background,
+                    },
+                ]}
+            >
+                <View
+                    style={[
+                        styles.uploadProgressFill,
+                        {
+                            width: `${uploadProgress ?? 0}%`,
+                            backgroundColor: colors.primary,
+                        },
+                    ]}
+                />
+            </View>
+        </View>
+    ) : null;
+
+    const mobileUploadPanel = isPreparingUpload ? (
+        <View
+            style={[
+                styles.mobileUploadPanel,
+                {
+                    backgroundColor: colors.background,
+                    borderColor: colors.primary,
+                },
+            ]}
+        >
+            <Text
+                style={[
+                    styles.uploadPanelTitle,
+                    {
+                        color: colors.text,
+                    },
+                ]}
+                numberOfLines={1}
+            >
+                {uploadFileName ?? "فایل انتخاب‌شده"}
+            </Text>
+
+            <Text
+                style={[
+                    styles.uploadPanelDescription,
+                    {
+                        color: colors.border,
+                    },
+                ]}
+            >
+                {uploadStatusText}
+            </Text>
+
+            <View
+                style={[
+                    styles.uploadProgressTrack,
+                    {
+                        backgroundColor: colors.surface,
+                    },
+                ]}
+            >
+                <View
+                    style={[
+                        styles.uploadProgressFill,
+                        {
+                            width: `${uploadProgress ?? 0}%`,
+                            backgroundColor: colors.primary,
+                        },
+                    ]}
+                />
+            </View>
+        </View>
+    ) : null;
+
+    if (isMobileHeader) {
+        return (
+            <View
+                style={[
+                    styles.container,
+                    styles.mobileHeaderContainer,
+                    {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                    },
+                ]}
+            >
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        isMobileMenuOpen ? "بستن منوی موبایل" : "باز کردن منوی موبایل"
+                    }
+                    onPress={onPressMobileMenu}
+                    style={({ pressed }) => [
+                        styles.mobileMenuButton,
+                        {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                        },
+                        pressed && styles.pressedActionButton,
+                    ]}
+                >
+                    <Feather
+                        name={isMobileMenuOpen ? "x" : "menu"}
+                        size={20}
+                        color={colors.text}
+                    />
+                </Pressable>
+
+                <View style={styles.mobileBrand}>
+                    <View
+                        style={[
+                            styles.mobileLogo,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.mobileLogoText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            Logo
+                        </Text>
+                    </View>
+
+                    <View style={styles.mobileBrandText}>
+                        <Text
+                            style={[
+                                styles.mobileAppTitle,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                            numberOfLines={1}
+                        >
+                            EDMS
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.mobileProjectSubtitle,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                            numberOfLines={1}
+                        >
+                            {projectSubtitle}
+                        </Text>
+                    </View>
+                </View>
+
+                <View style={styles.mobileUserArea}>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            isUserMenuOpen
+                                ? "بستن منوی حساب کاربری"
+                                : "باز کردن منوی حساب کاربری"
+                        }
+                        onPress={() => setIsUserMenuOpen((currentValue) => !currentValue)}
+                        style={({ pressed }) => [
+                            styles.avatar,
+                            styles.mobileAvatar,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                            pressed && styles.pressedActionButton,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.avatarText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            BT
+                        </Text>
+                    </Pressable>
+
+                    <Modal
+                        transparent
+                        visible={isUserMenuOpen}
+                        animationType="fade"
+                        onRequestClose={() => setIsUserMenuOpen(false)}
+                    >
+                        <View style={styles.mobileUserMenuModal}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="بستن منوی حساب کاربری"
+                                onPress={() => setIsUserMenuOpen(false)}
+                                style={styles.mobileUserMenuBackdrop}
+                            />
+
+                            <View
+                                style={[
+                                    styles.mobileUserMenu,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
+                            >
+                                <View style={styles.mobileUserMenuHeader}>
+                                    <Text
+                                        style={[
+                                            styles.mobileUserMenuName,
+                                            {
+                                                color: colors.text,
+                                            },
+                                        ]}
+                                    >
+                                        Bobak T.
+                                    </Text>
+
+                                    <Text
+                                        style={[
+                                            styles.mobileUserMenuRole,
+                                            {
+                                                color: colors.text,
+                                            },
+                                        ]}
+                                    >
+                                        توسعه‌دهنده نرم‌افزار
+                                    </Text>
+                                </View>
+
+                                <View
+                                    style={[
+                                        styles.mobileUserMenuDivider,
+                                        {
+                                            backgroundColor: colors.border,
+                                        },
+                                    ]}
+                                />
+
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel="نمایش پروفایل کاربر"
+                                    onPress={() => setIsUserMenuOpen(false)}
+                                    style={({ pressed }) => [
+                                        styles.mobileUserMenuItem,
+                                        pressed && styles.pressedActionButton,
+                                    ]}
+                                >
+                                    <Feather
+                                        name="user"
+                                        size={16}
+                                        color={colors.text}
+                                    />
+
+                                    <Text
+                                        style={[
+                                            styles.mobileUserMenuItemText,
+                                            {
+                                                color: colors.text,
+                                            },
+                                        ]}
+                                    >
+                                        پروفایل کاربر
+                                    </Text>
+                                </Pressable>
+
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel="خروج از حساب کاربری"
+                                    onPress={() => setIsUserMenuOpen(false)}
+                                    style={({ pressed }) => [
+                                        styles.mobileUserMenuItem,
+                                        pressed && styles.pressedActionButton,
+                                    ]}
+                                >
+                                    <Feather
+                                        name="log-out"
+                                        size={16}
+                                        color={colors.text}
+                                    />
+
+                                    <Text
+                                        style={[
+                                            styles.mobileUserMenuItemText,
+                                            {
+                                                color: colors.text,
+                                            },
+                                        ]}
+                                    >
+                                        خروج از حساب
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </Modal>
+                </View>
+            </View>
+        );
+    }
+
+    if (isMobileMenu) {
+        return (
+            <View
+                style={[
+                    styles.container,
+                    styles.mobileMenuContainer,
+                    {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                    },
+                ]}
+            >
+                <TextInput
+                    value={searchQuery}
+                    onChangeText={onChangeSearchQuery}
+                    placeholder="جست‌وجو..."
+                    placeholderTextColor={colors.border}
+                    style={[
+                        styles.searchInput,
+                        styles.mobileSearchInput,
+                        {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                        },
+                    ]}
+                />
+
+                {canCreateWorkspaceItems && (
+                    <View style={styles.mobileMenuActionsArea}>
+                        <View style={styles.mobileMenuActions}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="بارگذاری فایل"
+                                onPress={handlePickFile}
+                                disabled={isPreparingUpload}
+                                style={({ pressed }) => [
+                                    styles.actionSegmentButton,
+                                    styles.mobileMenuActionButton,
+                                    isPreparingUpload && styles.disabledActionButton,
+                                    pressed &&
+                                    !isPreparingUpload &&
+                                    styles.pressedActionButton,
+                                    {
+                                        backgroundColor: colors.primary,
+                                        borderColor: colors.primary,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.actionSegmentPrimaryText,
+                                        {
+                                            color: colors.surface,
+                                        },
+                                    ]}
+                                >
+                                    بارگذاری
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="ساخت پوشه جدید"
+                                onPress={onPressCreateFolder}
+                                style={({ pressed }) => [
+                                    styles.actionSegmentButton,
+                                    styles.mobileMenuActionButton,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    pressed && styles.pressedActionButton,
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.actionSegmentSecondaryText,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    پوشه جدید
+                                </Text>
+                            </Pressable>
+                        </View>
+
+                        {mobileUploadPanel}
+                        {newFolderModal}
+                    </View>
+                )}
+            </View>
+        );
+    }
+
     return (
         <View
             style={[
@@ -176,10 +752,6 @@ export default function Toolbar({
                 },
             ]}
         >
-            {/* =========================================================================
-            * User
-            * ========================================================================= */}
-
             <View style={styles.user}>
                 <View
                     style={[
@@ -226,10 +798,6 @@ export default function Toolbar({
                     </Text>
                 </View>
             </View>
-
-            {/* =========================================================================
-            * Actions
-            * ========================================================================= */}
 
             {canCreateWorkspaceItems && (
                 <View style={styles.actionsArea}>
@@ -300,159 +868,10 @@ export default function Toolbar({
                         </Pressable>
                     </View>
 
-                    <Modal
-                        transparent
-                        visible={activeAction === "new-folder"}
-                        animationType="fade"
-                        onRequestClose={onDismissAction}
-                    >
-                        <View style={styles.popupOverlay}>
-                            <View
-                                style={[
-                                    styles.actionPanel,
-                                    {
-                                        backgroundColor: colors.surface,
-                                        borderColor: colors.primary,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.actionPanelTitle,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    ساخت پوشه جدید
-                                </Text>
-
-                                <TextInput
-                                    ref={newFolderInputRef}
-                                    placeholder="نام پوشه"
-                                    placeholderTextColor={colors.border}
-                                    value={newFolderName}
-                                    onChangeText={setNewFolderName}
-                                    style={[
-                                        styles.actionPanelInput,
-                                        {
-                                            backgroundColor: colors.background,
-                                            borderColor: colors.border,
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                />
-
-                                <View style={styles.actionPanelButtons}>
-                                    <Pressable
-                                        accessibilityRole="button"
-                                        accessibilityLabel="ایجاد پوشه"
-                                        onPress={handleCreateFolder}
-                                        style={[
-                                            styles.actionPanelPrimaryButton,
-                                            {
-                                                backgroundColor: colors.primary,
-                                            },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.actionPanelPrimaryButtonText,
-                                                {
-                                                    color: colors.surface,
-                                                },
-                                            ]}
-                                        >
-                                            ایجاد
-                                        </Text>
-                                    </Pressable>
-
-                                    <Pressable
-                                        accessibilityRole="button"
-                                        accessibilityLabel="بستن فرم"
-                                        onPress={onDismissAction}
-                                        style={[
-                                            styles.actionPanelSecondaryButton,
-                                            {
-                                                borderColor: colors.border,
-                                            },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.actionPanelSecondaryButtonText,
-                                                {
-                                                    color: colors.text,
-                                                },
-                                            ]}
-                                        >
-                                            لغو
-                                        </Text>
-                                    </Pressable>
-                                </View>
-                            </View>
-                        </View>
-                    </Modal>
-
-                    {isPreparingUpload && (
-                        <View
-                            style={[
-                                styles.uploadPanel,
-                                {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.primary,
-                                },
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.uploadPanelTitle,
-                                    {
-                                        color: colors.text,
-                                    },
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {uploadFileName ?? "فایل انتخاب‌شده"}
-                            </Text>
-
-                            <Text
-                                style={[
-                                    styles.uploadPanelDescription,
-                                    {
-                                        color: colors.border,
-                                    },
-                                ]}
-                            >
-                                {uploadStatusText}
-                            </Text>
-
-                            <View
-                                style={[
-                                    styles.uploadProgressTrack,
-                                    {
-                                        backgroundColor: colors.background,
-                                    },
-                                ]}
-                            >
-                                <View
-                                    style={[
-                                        styles.uploadProgressFill,
-                                        {
-                                            width: `${uploadProgress ?? 0}%`,
-                                            backgroundColor: colors.primary,
-                                        },
-                                    ]}
-                                />
-                            </View>
-                        </View>
-                    )}
+                    {newFolderModal}
+                    {desktopUploadPanel}
                 </View>
             )}
-
-            {/* =========================================================================
-            * Search
-            * ========================================================================= */}
 
             <TextInput
                 value={searchQuery}
@@ -480,6 +899,8 @@ export default function Toolbar({
 
 const styles = StyleSheet.create({
     container: {
+        width: "100%",
+        minWidth: 0,
         minHeight: 72,
 
         flexDirection: "row-reverse",
@@ -603,7 +1024,8 @@ const styles = StyleSheet.create({
     },
 
     actionPanel: {
-        width: 320,
+        width: "100%",
+        maxWidth: 320,
 
         padding: spacing.lg,
 
@@ -735,5 +1157,214 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.regular,
+        textAlign: "right",
+    },
+
+    mobileHeaderContainer: {
+        minHeight: 64,
+
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+    },
+
+    mobileMenuContainer: {
+        width: "100%",
+        minHeight: 0,
+
+        flexDirection: "column",
+        alignItems: "stretch",
+
+        borderWidth: 0,
+        borderRadius: 0,
+
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+
+        gap: spacing.md,
+
+        boxShadow: "none",
+    },
+
+    mobileMenuButton: {
+        width: 42,
+        height: 42,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    mobileBrand: {
+        flex: 1,
+        minWidth: 0,
+
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        gap: spacing.sm,
+    },
+
+    mobileLogo: {
+        width: 42,
+        height: 42,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    mobileLogoText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    mobileBrandText: {
+        flex: 1,
+        minWidth: 0,
+
+        alignItems: "flex-end",
+    },
+
+    mobileAppTitle: {
+        fontSize: typography.fontSize.md,
+        fontWeight: typography.fontWeight.bold,
+        textAlign: "right",
+    },
+
+    mobileProjectSubtitle: {
+        marginTop: spacing.xs,
+
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.regular,
+        textAlign: "right",
+
+        opacity: 0.64,
+    },
+
+    mobileAvatar: {
+        width: 38,
+        height: 38,
+    },
+
+    mobileUserArea: {
+        position: "relative",
+    },
+
+    /**
+     * Mobile account menu is modal-based so it appears above page content.
+     */
+
+    mobileUserMenuModal: {
+        flex: 1,
+    },
+
+    mobileUserMenuBackdrop: {
+        ...StyleSheet.absoluteFill,
+
+        backgroundColor: "transparent",
+    },
+
+    mobileUserMenu: {
+        position: "absolute",
+        top: 72,
+        left: spacing.sm,
+        zIndex: 1,
+
+        minWidth: 210,
+
+        padding: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+
+        ...shadows.md,
+    },
+
+    mobileUserMenuHeader: {
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+    },
+
+    mobileUserMenuName: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.bold,
+        textAlign: "right",
+    },
+
+    mobileUserMenuRole: {
+        marginTop: spacing.xs,
+
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.regular,
+        textAlign: "right",
+
+        opacity: 0.64,
+    },
+
+    mobileUserMenuDivider: {
+        height: 1,
+
+        marginVertical: spacing.sm,
+
+        opacity: 0.64,
+    },
+
+    mobileUserMenuItem: {
+        minHeight: 36,
+
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        gap: spacing.sm,
+
+        paddingHorizontal: spacing.sm,
+
+        borderRadius: radius.sm,
+    },
+
+    mobileUserMenuItemText: {
+        flex: 1,
+
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
+    },
+
+    mobileSearchInput: {
+        width: "100%",
+        flex: 0,
+    },
+
+    mobileMenuActionsArea: {
+        gap: spacing.sm,
+    },
+
+    mobileMenuActions: {
+        width: "100%",
+
+        gap: spacing.sm,
+    },
+
+    mobileMenuActionButton: {
+        width: "100%",
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    mobileUploadPanel: {
+        width: "100%",
+
+        padding: spacing.md,
+
+        borderWidth: 1,
+        borderRadius: radius.lg,
     },
 });

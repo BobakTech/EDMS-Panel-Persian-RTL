@@ -2,35 +2,48 @@
  * ============================================================================
  * App Layout
  * ----------------------------------------------------------------------------
- * Defines the primary layout of the application.
+ * Defines the responsive application shell, page routing, and workspace state.
  * ============================================================================
  */
 
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import {
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+    View,
+} from "react-native";
 
-import { spacing } from "../../theme";
+import { shadows, spacing } from "../../theme";
+import { useSettings } from "../../settings/SettingsContext";
 
+import Dashboard from "./Dashboard";
 import SettingsPage from "./SettingsPage";
-
 import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
-import Dashboard from "./Dashboard";
+
+import { getProjectInfo, type ProjectInfo } from "../project";
 
 import {
     getWorkspaceItems,
-    type WorkspacePageType,
     type WorkspaceActionType,
     type WorkspaceItem,
+    type WorkspacePageType,
     type WorkspacePickedFile,
 } from "../workspace";
 
 import type { DroppedWorkspaceFile } from "../workspace/WorkspaceEmptyState";
 
-import { getProjectInfo, type ProjectInfo } from "../project";
+/**
+ * ============================================================================
+ * Types
+ * ============================================================================
+ */
 
-import { useSettings } from "../../settings/SettingsContext";
+type AppPageType = "dashboard" | WorkspacePageType | "settings";
 
 /**
  * ============================================================================
@@ -64,14 +77,6 @@ function getFileSizeLabel(fileSize?: number) {
 
 /**
  * ============================================================================
- * Types
- * ============================================================================
- */
-
-type AppPageType = "dashboard" | WorkspacePageType | "settings";
-
-/**
- * ============================================================================
  * Component
  * ============================================================================
  */
@@ -80,6 +85,10 @@ export default function AppLayout() {
     const { theme } = useSettings();
     const colors = theme.colors;
 
+    const { width } = useWindowDimensions();
+
+    const isMobileShell = width < 760;
+
     const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>(() =>
         getWorkspaceItems()
     );
@@ -87,17 +96,39 @@ export default function AppLayout() {
     const [activeWorkspaceAction, setActiveWorkspaceAction] =
         useState<WorkspaceActionType | null>(null);
 
+    const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
+
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
-    const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
+    /**
+     * ============================================================================
+     * Initial Page State
+     * ----------------------------------------------------------------------------
+     * Opens the panel on Dashboard by default.
+     * ============================================================================
+     */
+    const [activeWorkspacePage, setActiveWorkspacePage] =
+        useState<AppPageType>("dashboard");
 
     const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
     const [isProjectInfoLoading, setIsProjectInfoLoading] = useState(true);
     const [projectInfoError, setProjectInfoError] = useState<string | null>(null);
 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const activeWorkspaceFolderId =
+        activeWorkspacePage === "workspace" ? currentFolderId : null;
+
+    const isWorkspacePage =
+        activeWorkspacePage === "workspace" ||
+        activeWorkspacePage === "archive" ||
+        activeWorkspacePage === "trash";
+
     /**
      * ============================================================================
      * Project Info Loading
+     * ----------------------------------------------------------------------------
+     * Loads project metadata from the configured frontend API placeholder.
      * ============================================================================
      */
 
@@ -134,82 +165,38 @@ export default function AppLayout() {
 
     /**
      * ============================================================================
-     * Workspace Location State
-     * ----------------------------------------------------------------------------
-     * Tracks the current workspace page and the currently opened folder.
+     * Workspace Actions
      * ============================================================================
      */
-
-    const [activeWorkspacePage, setActiveWorkspacePage] =
-        useState<AppPageType>("dashboard");
-
-    const [activeWorkspaceFolderId, setActiveWorkspaceFolderId] =
-        useState<string | null>(null);
-
-    function handlePressCreateFolder() {
-        setActiveWorkspaceAction("new-folder");
-    }
 
     function handlePressUpload() {
         setActiveWorkspaceAction("upload");
     }
 
-    function handleDropWorkspaceFiles(files: DroppedWorkspaceFile[]) {
-        if (files.length === 0) {
-            return;
-        }
-
-        const uploadedAt = new Date().toISOString();
-
-        const newWorkspaceFiles = files.map((file, fileIndex): WorkspaceItem => ({
-            id: `file-${Date.now()}-${fileIndex}`,
-            type: "file",
-            name: file.name,
-            description: "فایل بارگذاری شده در فضای کاری",
-            updatedAt: uploadedAt,
-            status: "active",
-            parentFolderId: currentFolderId,
-            extension: getFileExtension(file.name),
-            sizeLabel: getFileSizeLabel(file.size ?? 0),
-            mimeType: file.mimeType,
-            localUri: file.uri,
-        }));
-
-        setWorkspaceItems((currentItems) => [
-            ...newWorkspaceFiles,
-            ...currentItems.map((item) =>
-                currentFolderId &&
-                    item.type === "folder" &&
-                    item.id === currentFolderId
-                    ? {
-                        ...item,
-                        childrenCount: (item.childrenCount ?? 0) + newWorkspaceFiles.length,
-                        updatedAt: uploadedAt,
-                    }
-                    : item
-            ),
-        ]);
+    function handlePressCreateFolder() {
+        setActiveWorkspaceAction("new-folder");
     }
 
     function handleDismissWorkspaceAction() {
         setActiveWorkspaceAction(null);
     }
 
-    /**
-     * ============================================================================
-     * Change Workspace Page
-     * ----------------------------------------------------------------------------
-     * Resets the opened folder when switching between Workspace, Archive, and Trash.
-     * ============================================================================
-     */
-
     function handleChangeWorkspacePage(page: AppPageType) {
         setActiveWorkspacePage(page);
         setActiveWorkspaceAction(null);
+        setIsMobileMenuOpen(false);
 
         if (page !== "workspace") {
             setCurrentFolderId(null);
         }
+    }
+
+    function handleToggleMobileMenu() {
+        setIsMobileMenuOpen((currentValue) => !currentValue);
+    }
+
+    function handleCloseMobileMenu() {
+        setIsMobileMenuOpen(false);
     }
 
     function handleCreateFolder(folderName: string) {
@@ -227,7 +214,7 @@ export default function AppLayout() {
                 description: "پوشه ایجاد شده در فضای کاری",
                 updatedAt: new Date().toISOString(),
                 status: "active",
-                parentFolderId: currentFolderId,
+                parentFolderId: activeWorkspaceFolderId,
                 childrenCount: 0,
             };
 
@@ -294,6 +281,55 @@ export default function AppLayout() {
         setActiveWorkspaceAction(null);
     }
 
+    function handleCreateFolderFromMobileMenu(folderName: string) {
+        handleCreateFolder(folderName);
+        handleCloseMobileMenu();
+    }
+
+    function handleCreateFileFromMobileMenu(file: WorkspacePickedFile) {
+        handleCreateFile(file);
+        handleCloseMobileMenu();
+    }
+
+    function handleDropWorkspaceFiles(files: DroppedWorkspaceFile[]) {
+        if (activeWorkspacePage !== "workspace" || files.length === 0) {
+            return;
+        }
+
+        setWorkspaceItems((currentItems) => {
+            const createdAt = Date.now();
+
+            const droppedFiles: WorkspaceItem[] = files.map((file, index) => ({
+                id: `file-${createdAt}-${index}`,
+                type: "file",
+                name: file.name,
+                description: "فایل رها شده در فضای کاری",
+                updatedAt: new Date().toISOString(),
+                status: "active",
+                parentFolderId: currentFolderId,
+                extension: getFileExtension(file.name),
+                sizeLabel: getFileSizeLabel(file.size),
+                mimeType: file.mimeType,
+                localUri: file.uri,
+            }));
+
+            const lastFileIndex = currentItems.findLastIndex(
+                (item) => item.type === "file"
+            );
+
+            const insertIndex =
+                lastFileIndex === -1
+                    ? currentItems.length
+                    : lastFileIndex + 1;
+
+            return [
+                ...currentItems.slice(0, insertIndex),
+                ...droppedFiles,
+                ...currentItems.slice(insertIndex),
+            ];
+        });
+    }
+
     function handleArchiveWorkspaceItem(itemId: string) {
         setWorkspaceItems((currentItems) =>
             currentItems.map((item) =>
@@ -322,13 +358,6 @@ export default function AppLayout() {
         );
     }
 
-    /**
-     * ============================================================================
-     * Restore Workspace Item
-     * ----------------------------------------------------------------------------
-     * Restores an item without changing its previous folder path.
-     * ============================================================================
-     */
     function handleRestoreWorkspaceItem(restoredItem: WorkspaceItem) {
         setWorkspaceItems((currentItems) =>
             currentItems.map((item) =>
@@ -390,24 +419,38 @@ export default function AppLayout() {
         <View
             style={[
                 styles.container,
+                isMobileShell && styles.mobileContainer,
                 {
                     backgroundColor: colors.background,
                 },
             ]}
         >
-            <Sidebar
-                activePage={activeWorkspacePage}
-                projectInfo={projectInfo}
-                isProjectInfoLoading={isProjectInfoLoading}
-                projectInfoError={projectInfoError}
-                onChangePage={handleChangeWorkspacePage}
-            />
+            {!isMobileShell && (
+                <Sidebar
+                    activePage={activeWorkspacePage}
+                    projectInfo={projectInfo}
+                    isProjectInfoLoading={isProjectInfoLoading}
+                    projectInfoError={projectInfoError}
+                    onChangePage={handleChangeWorkspacePage}
+                />
+            )}
 
-            <View style={styles.main}>
+            <View
+                style={[
+                    styles.main,
+                    isMobileShell && styles.mobileMain,
+                ]}
+            >
                 <Toolbar
+                    variant={isMobileShell ? "mobile-header" : "desktop"}
                     activeAction={activeWorkspaceAction}
                     searchQuery={workspaceSearchQuery}
                     canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
+                    projectInfo={projectInfo}
+                    isProjectInfoLoading={isProjectInfoLoading}
+                    projectInfoError={projectInfoError}
+                    isMobileMenuOpen={isMobileMenuOpen}
+                    onPressMobileMenu={handleToggleMobileMenu}
                     onChangeSearchQuery={setWorkspaceSearchQuery}
                     onPressCreateFolder={handlePressCreateFolder}
                     onDismissAction={handleDismissWorkspaceAction}
@@ -415,29 +458,88 @@ export default function AppLayout() {
                     onCreateFile={handleCreateFile}
                 />
 
-                {activeWorkspacePage === "dashboard" ? (
-                    <Dashboard workspaceItems={workspaceItems} />
-                ) : activeWorkspacePage === "settings" ? (
-                    <SettingsPage />
-                ) : (
-                    <Workspace
-                        pageType={activeWorkspacePage}
-                        currentFolderId={currentFolderId}
-                        workspaceItems={workspaceItems}
-                        searchQuery={workspaceSearchQuery}
-                        onChangeFolder={setCurrentFolderId}
-                        onPressCreateFolder={handlePressCreateFolder}
-                        onPressUpload={handlePressUpload}
-                        onArchiveItem={handleArchiveWorkspaceItem}
-                        onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
-                        onRestoreItem={handleRestoreWorkspaceItem}
-                        onRenameItem={handleRenameWorkspaceItem}
-                        onDeleteItem={handleDeleteWorkspaceItem}
-                        onMoveItem={handleMoveWorkspaceItem}
-                        onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
-                        onDropFiles={handleDropWorkspaceFiles}
-                    />
-                )}
+                <Modal
+                    transparent
+                    visible={isMobileShell && isMobileMenuOpen}
+                    animationType="fade"
+                    onRequestClose={handleCloseMobileMenu}
+                >
+                    <View style={styles.mobileDrawerModal}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="بستن منوی موبایل"
+                            onPress={handleCloseMobileMenu}
+                            style={styles.mobileDrawerBackdrop}
+                        />
+
+                        <View
+                            style={[
+                                styles.mobileDrawer,
+                                {
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                        >
+                            <Toolbar
+                                variant="mobile-menu"
+                                activeAction={activeWorkspaceAction}
+                                searchQuery={workspaceSearchQuery}
+                                canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
+                                onChangeSearchQuery={setWorkspaceSearchQuery}
+                                onPressCreateFolder={handlePressCreateFolder}
+                                onDismissAction={handleDismissWorkspaceAction}
+                                onCreateFolder={handleCreateFolderFromMobileMenu}
+                                onCreateFile={handleCreateFileFromMobileMenu}
+                            />
+
+                            <Sidebar
+                                variant="drawer"
+                                showBrand={false}
+                                activePage={activeWorkspacePage}
+                                projectInfo={projectInfo}
+                                isProjectInfoLoading={isProjectInfoLoading}
+                                projectInfoError={projectInfoError}
+                                onChangePage={handleChangeWorkspacePage}
+                            />
+                        </View>
+                    </View>
+                </Modal>
+
+                <View style={styles.pageSlot}>
+                    {isWorkspacePage ? (
+                        <Workspace
+                            pageType={activeWorkspacePage}
+                            currentFolderId={currentFolderId}
+                            workspaceItems={workspaceItems}
+                            searchQuery={workspaceSearchQuery}
+                            onChangeFolder={setCurrentFolderId}
+                            onPressCreateFolder={handlePressCreateFolder}
+                            onPressUpload={handlePressUpload}
+                            onArchiveItem={handleArchiveWorkspaceItem}
+                            onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
+                            onRestoreItem={handleRestoreWorkspaceItem}
+                            onRenameItem={handleRenameWorkspaceItem}
+                            onDeleteItem={handleDeleteWorkspaceItem}
+                            onMoveItem={handleMoveWorkspaceItem}
+                            onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
+                            onDropFiles={handleDropWorkspaceFiles}
+                        />
+                    ) : (
+                        <ScrollView
+                            style={styles.pageScroller}
+                            contentContainerStyle={styles.pageScrollerContent}
+                            showsVerticalScrollIndicator
+                            showsHorizontalScrollIndicator={false}
+                        >
+                            {activeWorkspacePage === "dashboard" ? (
+                                <Dashboard workspaceItems={workspaceItems} />
+                            ) : (
+                                <SettingsPage />
+                            )}
+                        </ScrollView>
+                    )}
+                </View>
             </View>
         </View>
     );
@@ -452,16 +554,78 @@ export default function AppLayout() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+
         flexDirection: "row-reverse",
+
+        overflow: "hidden",
+    },
+
+    mobileContainer: {
+        flexDirection: "column",
     },
 
     main: {
         flex: 1,
+        minWidth: 0,
+        minHeight: 0,
 
-        marginRight: spacing.lg,
-        paddingTop: spacing.sm,
-        paddingLeft: spacing.sm,
+        padding: spacing.lg,
 
         gap: spacing.md,
+
+        overflow: "hidden",
+    },
+
+    mobileMain: {
+        padding: spacing.sm,
+    },
+
+    pageSlot: {
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+
+        overflow: "hidden",
+    },
+
+    pageScroller: {
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+    },
+
+    pageScrollerContent: {
+        flexGrow: 1,
+    },
+
+    mobileDrawerModal: {
+        flex: 1,
+
+        alignItems: "flex-end",
+    },
+
+    mobileDrawerBackdrop: {
+        ...StyleSheet.absoluteFill,
+
+        backgroundColor: "rgba(0, 0, 0, 0.32)",
+    },
+
+    mobileDrawer: {
+        zIndex: 1,
+
+        width: "88%",
+        maxWidth: 360,
+        minWidth: 0,
+        height: "100%",
+
+        padding: spacing.lg,
+
+        borderLeftWidth: 1,
+
+        gap: spacing.lg,
+
+        ...shadows.lg,
     },
 });

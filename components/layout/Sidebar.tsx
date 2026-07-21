@@ -2,7 +2,7 @@
  * ============================================================================
  * Sidebar
  * ----------------------------------------------------------------------------
- * Displays the application's navigation sidebar.
+ * Displays desktop navigation and mobile drawer navigation.
  * ============================================================================
  */
 
@@ -19,9 +19,8 @@ import {
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
-import type { WorkspacePageType } from "../workspace";
-
 import type { ProjectInfo } from "../project";
+import type { WorkspacePageType } from "../workspace";
 
 /**
  * ============================================================================
@@ -30,6 +29,8 @@ import type { ProjectInfo } from "../project";
  */
 
 type AppPageType = "dashboard" | WorkspacePageType | "settings";
+
+type SidebarVariant = "desktop" | "drawer";
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
 
@@ -52,6 +53,8 @@ interface SidebarProps {
     isProjectInfoLoading: boolean;
     projectInfoError: string | null;
     onChangePage: (page: AppPageType) => void;
+    variant?: SidebarVariant;
+    showBrand?: boolean;
 }
 
 /**
@@ -99,6 +102,8 @@ export default function Sidebar({
     isProjectInfoLoading,
     projectInfoError,
     onChangePage,
+    variant = "desktop",
+    showBrand = true,
 }: SidebarProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -119,70 +124,65 @@ export default function Sidebar({
         <View
             style={[
                 styles.container,
+                variant === "drawer" && styles.drawerContainer,
                 {
                     backgroundColor: colors.surface,
                 },
             ]}
         >
-            {/* =========================================================================
-            * Brand
-            * ========================================================================= */}
-
-            <View
-                style={[
-                    styles.brand,
-                    isShortSidebar && styles.compactBrand,
-                ]}
-            >
+            {showBrand && (
                 <View
                     style={[
-                        styles.logoPlaceholder,
-                        isShortSidebar && styles.compactLogoPlaceholder,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
+                        styles.brand,
+                        isShortSidebar && styles.compactBrand,
                     ]}
                 >
+                    <View
+                        style={[
+                            styles.logoPlaceholder,
+                            isShortSidebar && styles.compactLogoPlaceholder,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.logoPlaceholderText,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            Logo
+                        </Text>
+                    </View>
+
                     <Text
                         style={[
-                            styles.logoPlaceholderText,
+                            styles.appTitle,
+                            isShortSidebar && styles.compactAppTitle,
                             {
                                 color: colors.text,
                             },
                         ]}
                     >
-                        Logo
+                        EDMS
+                    </Text>
+
+                    <Text
+                        style={[
+                            styles.appSubtitle,
+                            {
+                                color: colors.text,
+                            },
+                        ]}
+                    >
+                        {projectSubtitle}
                     </Text>
                 </View>
-
-                <Text
-                    style={[
-                        styles.appTitle,
-                        isShortSidebar && styles.compactAppTitle,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    EDMS
-                </Text>
-
-                <Text
-                    style={[
-                        styles.appSubtitle,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    {projectSubtitle}
-                </Text>
-            </View>
-
-            {/* =========================================================================
-            * Navigation
-            * ========================================================================= */}
+            )}
 
             <View style={styles.navigation}>
                 {navigationItems.map((item) => {
@@ -198,11 +198,12 @@ export default function Sidebar({
                             accessibilityRole="button"
                             accessibilityLabel={item.accessibilityLabel}
                             onPress={() => onChangePage(item.page)}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.navigationButton,
                                 isSelected && {
                                     backgroundColor: colors.background,
                                 },
+                                pressed && styles.pressedNavigationButton,
                             ]}
                         >
                             <View style={styles.navigationButtonContent}>
@@ -250,14 +251,6 @@ export default function Sidebar({
                     </Text>
                 </View>
             </View>
-
-            {/* =========================================================================
-            * Utilities
-            * ========================================================================= */}
-
-            {/* =========================================================================
- * Utilities
- * ========================================================================= */}
 
             <View style={styles.utilities}>
                 <Pressable
@@ -421,6 +414,20 @@ const styles = StyleSheet.create({
         ...shadows.sm,
     },
 
+    drawerContainer: {
+        width: "100%",
+        flex: 1,
+
+        justifyContent: "flex-start",
+
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+
+        gap: spacing.lg,
+
+        boxShadow: "none",
+    },
+
     brand: {
         alignItems: "center",
 
@@ -486,6 +493,10 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
     },
 
+    pressedNavigationButton: {
+        opacity: 0.82,
+    },
+
     navigationButtonContent: {
         flexDirection: "row-reverse",
         alignItems: "center",
@@ -520,6 +531,38 @@ const styles = StyleSheet.create({
 
     utilities: {
         gap: spacing.md,
+    },
+
+    utilityButton: {
+        alignSelf: "stretch",
+
+        minHeight: 34,
+
+        justifyContent: "center",
+
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+
+        borderRadius: radius.md,
+    },
+
+    utilityButtonContent: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        gap: spacing.sm,
+    },
+
+    pressedUtilityButton: {
+        opacity: 0.72,
+    },
+
+    utilityItem: {
+        flex: 1,
+
+        fontSize: typography.fontSize.md,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
     },
 
     storageCard: {
@@ -571,38 +614,6 @@ const styles = StyleSheet.create({
     storageDetailText: {
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
-    },
-
-    utilityButton: {
-        alignSelf: "stretch",
-
-        minHeight: 34,
-
-        justifyContent: "center",
-
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-
-        borderRadius: radius.md,
-    },
-
-    utilityButtonContent: {
-        flexDirection: "row-reverse",
-        alignItems: "center",
-
-        gap: spacing.sm,
-    },
-
-    pressedUtilityButton: {
-        opacity: 0.72,
-    },
-
-    utilityItem: {
-        flex: 1,
-
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.semibold,
         textAlign: "right",
     },
 });
