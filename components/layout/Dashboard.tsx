@@ -6,7 +6,12 @@
  * ============================================================================
  */
 
-import { StyleSheet, Text, View } from "react-native";
+import {
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
+} from "react-native";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -57,6 +62,11 @@ export default function Dashboard({
     const { theme } = useSettings();
     const colors = theme.colors;
 
+    const { width } = useWindowDimensions();
+
+    const isCompactDashboard = width < 920;
+    const dashboardPadding = isCompactDashboard ? spacing.lg : spacing.xl;
+
     const activeItems = workspaceItems.filter((item) => item.status === "active");
     const folders = workspaceItems.filter((item) => item.type === "folder");
     const archivedItems = workspaceItems.filter((item) => item.status === "archived");
@@ -98,6 +108,7 @@ export default function Dashboard({
             style={[
                 styles.container,
                 {
+                    padding: dashboardPadding,
                     backgroundColor: colors.background,
                 },
             ]}
@@ -106,6 +117,7 @@ export default function Dashboard({
                 style={[
                     styles.content,
                     {
+                        padding: dashboardPadding,
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
                     },
@@ -214,7 +226,7 @@ export default function Dashboard({
                                     },
                                 ]}
                             >
-                                <View>
+                                <View style={styles.activityText}>
                                     <Text
                                         style={[
                                             styles.activityTitle,
@@ -266,14 +278,10 @@ export default function Dashboard({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-
-        padding: spacing.xl,
     },
 
     content: {
         flex: 1,
-
-        padding: spacing.xl,
 
         borderWidth: 1,
         borderRadius: radius.xl,
@@ -309,7 +317,9 @@ const styles = StyleSheet.create({
     },
 
     summaryCard: {
-        width: 220,
+        minWidth: 180,
+        flexBasis: 220,
+        flexGrow: 1,
 
         padding: spacing.lg,
 
@@ -366,9 +376,15 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
 
+        gap: spacing.md,
+
         paddingVertical: spacing.sm,
 
         borderBottomWidth: 1,
+    },
+
+    activityText: {
+        flex: 1,
     },
 
     activityTitle: {
@@ -390,5 +406,6 @@ const styles = StyleSheet.create({
     activityStatus: {
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.semibold,
+        textAlign: "left",
     },
 });
