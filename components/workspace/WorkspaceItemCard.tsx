@@ -236,6 +236,7 @@ const styles = StyleSheet.create({
 
     gridCard: {
         width: 240,
+        maxWidth: "100%",
     },
 
     compactGridCard: {

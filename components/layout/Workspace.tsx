@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import {
     Modal,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -310,8 +311,17 @@ export default function Workspace({
         );
     }
 
+    /**
+     * ============================================================================
+     * Toggle Workspace Item Actions
+     * ----------------------------------------------------------------------------
+     * Opens or closes the details/actions panel for the selected file or folder.
+     * ============================================================================
+     */
     function handleOpenWorkspaceItemActions(itemId: string) {
-        setSelectedItemId(itemId);
+        setSelectedItemId((currentSelectedItemId) =>
+            currentSelectedItemId === itemId ? null : itemId
+        );
     }
 
     function handlePressEmptyStateCreateFolder() {
@@ -822,7 +832,13 @@ export default function Workspace({
                     />
                 )}
 
-                <View style={styles.workspaceBody}>
+                <ScrollView
+                    style={styles.workspaceBody}
+                    contentContainerStyle={styles.workspaceBodyContent}
+                    showsVerticalScrollIndicator
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {shouldShowWorkspaceItems && (
                         <View style={
                             viewMode === "grid"
@@ -904,7 +920,7 @@ export default function Workspace({
                             }
                         />
                     )}
-                </View>
+                </ScrollView>
             </View>
 
             <Modal
@@ -1520,12 +1536,19 @@ const styles = StyleSheet.create({
 
     workspaceBody: {
         flex: 1,
+        minHeight: 0,
+    },
+
+    workspaceBodyContent: {
+        flexGrow: 1,
     },
 
     workspaceGrid: {
         flexDirection: "row-reverse",
         flexWrap: "wrap",
         alignItems: "flex-start",
+
+        width: "100%",
 
         gap: spacing.lg,
     },

@@ -322,11 +322,22 @@ export default function AppLayout() {
         );
     }
 
+    /**
+     * ============================================================================
+     * Restore Workspace Item
+     * ----------------------------------------------------------------------------
+     * Restores an item without changing its previous folder path.
+     * ============================================================================
+     */
     function handleRestoreWorkspaceItem(restoredItem: WorkspaceItem) {
         setWorkspaceItems((currentItems) =>
             currentItems.map((item) =>
                 item.id === restoredItem.id
-                    ? restoredItem
+                    ? {
+                        ...item,
+                        status: "active",
+                        updatedAt: new Date().toISOString(),
+                    }
                     : item
             )
         );
