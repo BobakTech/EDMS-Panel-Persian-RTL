@@ -2,7 +2,7 @@
  * ============================================================================
  * Workspace Item Card
  * ----------------------------------------------------------------------------
- * Displays a single workspace item such as a folder or file.
+ * Displays a folder or file in card and list layouts.
  * ============================================================================
  */
 
@@ -15,20 +15,21 @@ import {
     View,
 } from "react-native";
 
-import { radius, spacing, typography } from "../../theme";
+import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
-
-import {
-    getWorkspaceItemLabel,
-    getWorkspaceItemUpdatedAtLabel,
-} from "./workspace.helpers";
-
-import type { Language } from "../../locales";
 
 import type {
     WorkspaceItem,
     WorkspaceViewMode,
 } from "./workspace.types";
+
+/**
+ * ============================================================================
+ * Types
+ * ============================================================================
+ */
+
+type FeatherIconName = keyof typeof Feather.glyphMap;
 
 /**
  * ============================================================================
@@ -51,21 +52,24 @@ interface WorkspaceItemCardProps {
  * ============================================================================
  */
 
-type FeatherIconName = keyof typeof Feather.glyphMap;
-
-function getWorkspaceIconName(item: WorkspaceItem): FeatherIconName {
+function getItemIconName(item: WorkspaceItem): FeatherIconName {
     return item.type === "folder" ? "folder" : "file-text";
 }
 
-function getWorkspaceVisualLabel(
-    item: WorkspaceItem,
-    language: Language
-) {
-    if (item.type === "file") {
-        return getWorkspaceItemLabel(item);
+function getItemTypeLabel(item: WorkspaceItem) {
+    if (item.type === "folder") {
+        return "پوشه";
     }
 
-    return language === "fa" ? "پوشه" : "Folder";
+    return item.extension?.toUpperCase() ?? "فایل";
+}
+
+function getItemMetaLabel(item: WorkspaceItem) {
+    if (item.type === "folder") {
+        return `${item.childrenCount ?? 0} آیتم`;
+    }
+
+    return item.sizeLabel ?? "نامشخص";
 }
 
 /**
@@ -82,62 +86,70 @@ export default function WorkspaceItemCard({
     onPress,
     onOpenActions,
 }: WorkspaceItemCardProps) {
-    const { theme, language } = useSettings();
+    const { theme } = useSettings();
     const colors = theme.colors;
 
     const isListMode = viewMode === "list";
-    const visualLabel = getWorkspaceVisualLabel(item, language);
 
     return (
         <View
             style={[
                 styles.card,
-                isListMode
-                    ? styles.listCard
-                    : styles.gridCard,
+                isListMode ? styles.listCard : styles.gridCard,
                 !isListMode && isCompact && styles.compactGridCard,
                 {
-                    backgroundColor: isSelected
-                        ? colors.background
-                        : colors.surface,
-                    borderColor: isSelected
-                        ? colors.primary
-                        : colors.border,
+                    backgroundColor: colors.surface,
+                    borderColor: isSelected ? colors.primary : colors.border,
                 },
+                isSelected && styles.selectedCard,
             ]}
         >
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={item.name}
-                accessibilityState={{
-                    selected: isSelected,
-                }}
-                onPress={() => onPress(item.id)}
+                accessibilityLabel={`نمایش گزینه‌های ${item.name}`}
+                onPress={() => onOpenActions?.(item.id)}
                 style={({ pressed }) => [
-                    styles.cardPressArea,
-                    isListMode
-                        ? styles.listPressArea
-                        : styles.gridPressArea,
-                    pressed && styles.pressedCardContent,
+                    styles.actionsButton,
+                    {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                    },
+                    pressed && styles.pressedButton,
+                ]}
+            >
+                <Feather
+                    name="more-horizontal"
+                    size={16}
+                    color={colors.text}
+                />
+            </Pressable>
+
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`باز کردن ${item.name}`}
+                onPress={() => onPress(item.id)}
+                style={[
+                    styles.contentButton,
+                    isListMode && styles.listContentButton,
                 ]}
             >
                 <View
                     style={[
-                        styles.visualArea,
-                        isListMode
-                            ? styles.listVisualArea
-                            : styles.gridVisualArea,
+                        styles.iconMetaRow,
+                        isListMode && styles.listIconMetaRow,
                     ]}
                 >
-                    <Feather
-                        name={getWorkspaceIconName(item)}
-                        size={isListMode ? 24 : 28}
-                        color={colors.primary}
-                    />
+                    <View style={styles.itemIcon}>
+                        <Feather
+                            name={getItemIconName(item)}
+                            size={30}
+                            color={colors.primary}
+                        />
+                    </View>
 
                     <View
                         style={[
-                            styles.visualLabel,
+                            styles.typePill,
                             {
                                 backgroundColor: colors.background,
                                 borderColor: colors.border,
@@ -146,25 +158,32 @@ export default function WorkspaceItemCard({
                     >
                         <Text
                             style={[
-                                styles.visualLabelText,
+                                styles.typePillText,
                                 {
                                     color: colors.primary,
                                 },
                             ]}
+                            numberOfLines={1}
                         >
-                            {visualLabel}
+                            {getItemTypeLabel(item)}
                         </Text>
                     </View>
                 </View>
 
-                <View style={styles.textContent}>
+                <View
+                    style={[
+                        styles.textArea,
+                        isListMode && styles.listTextArea,
+                    ]}
+                >
                     <Text
                         style={[
-                            styles.title,
+                            styles.name,
                             {
                                 color: colors.text,
                             },
                         ]}
+                        numberOfLines={2}
                     >
                         {item.name}
                     </Text>
@@ -176,6 +195,7 @@ export default function WorkspaceItemCard({
                                 color: colors.text,
                             },
                         ]}
+                        numberOfLines={2}
                     >
                         {item.description}
                     </Text>
@@ -187,33 +207,12 @@ export default function WorkspaceItemCard({
                                 color: colors.text,
                             },
                         ]}
+                        numberOfLines={1}
                     >
-                        {getWorkspaceItemUpdatedAtLabel(item)}
+                        {getItemMetaLabel(item)}
                     </Text>
                 </View>
             </Pressable>
-
-            {onOpenActions && (
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`عملیات ${item.name}`}
-                    onPress={() => onOpenActions(item.id)}
-                    style={({ pressed }) => [
-                        styles.actionsButton,
-                        pressed && styles.pressedCardContent,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                >
-                    <Feather
-                        name="more-horizontal"
-                        size={18}
-                        color={isSelected ? colors.primary : colors.text}
-                    />
-                </Pressable>
-            )}
         </View>
     );
 }
@@ -228,10 +227,10 @@ const styles = StyleSheet.create({
     card: {
         position: "relative",
 
-        overflow: "hidden",
-
         borderWidth: 1,
         borderRadius: radius.lg,
+
+        ...shadows.sm,
     },
 
     gridCard: {
@@ -240,107 +239,24 @@ const styles = StyleSheet.create({
     },
 
     compactGridCard: {
-        width: "100%",
+        width: "48%",
+        minWidth: 0,
+        maxWidth: "48%",
     },
 
     listCard: {
         width: "100%",
-        minHeight: 96,
     },
 
-    cardPressArea: {
-        flex: 1,
-    },
-
-    gridPressArea: {
-        gap: spacing.md,
-
-        padding: spacing.lg,
-        paddingLeft: spacing.xxl,
-    },
-
-    listPressArea: {
-        flexDirection: "row-reverse",
-        alignItems: "center",
-
-        gap: spacing.lg,
-
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.md,
-        paddingLeft: spacing.xxl,
-    },
-
-    pressedCardContent: {
-        opacity: 0.72,
-    },
-
-    visualArea: {
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    gridVisualArea: {
-        alignSelf: "flex-end",
-
-        flexDirection: "row-reverse",
-
-        gap: spacing.sm,
-    },
-
-    listVisualArea: {
-        width: 76,
-
-        gap: spacing.xs,
-    },
-
-    visualLabel: {
-        paddingHorizontal: spacing.sm,
-        paddingVertical: 2,
-
+    selectedCard: {
         borderWidth: 1,
-        borderRadius: radius.pill,
-    },
-
-    visualLabelText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "center",
-    },
-
-    textContent: {
-        flex: 1,
-    },
-
-    title: {
-        marginBottom: spacing.xs,
-
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
-    },
-
-    description: {
-        marginBottom: spacing.sm,
-
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
-
-        opacity: 0.64,
-    },
-
-    meta: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "right",
-
-        opacity: 0.56,
     },
 
     actionsButton: {
         position: "absolute",
         top: spacing.sm,
         left: spacing.sm,
+        zIndex: 2,
 
         width: 30,
         height: 30,
@@ -350,5 +266,106 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.pill,
+    },
+
+    pressedButton: {
+        opacity: 0.82,
+    },
+
+    contentButton: {
+        minHeight: 160,
+
+        paddingHorizontal: spacing.md,
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.md,
+
+        justifyContent: "space-between",
+
+        gap: spacing.md,
+    },
+
+    listContentButton: {
+        minHeight: 88,
+
+        flexDirection: "row-reverse",
+        alignItems: "center",
+
+        paddingVertical: spacing.md,
+    },
+
+    iconMetaRow: {
+        flexDirection: "row-reverse",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+
+        paddingLeft: 42,
+
+        gap: spacing.sm,
+    },
+
+    listIconMetaRow: {
+        flexShrink: 0,
+
+        paddingLeft: 0,
+
+        justifyContent: "flex-start",
+    },
+
+    itemIcon: {
+        minHeight: 34,
+
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
+    typePill: {
+        maxWidth: 76,
+
+        marginTop: spacing.xs,
+
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 3,
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+    },
+
+    typePillText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "center",
+    },
+
+    textArea: {
+        alignItems: "flex-end",
+
+        gap: spacing.xs,
+    },
+
+    listTextArea: {
+        flex: 1,
+        minWidth: 0,
+    },
+
+    name: {
+        fontSize: typography.fontSize.md,
+        fontWeight: typography.fontWeight.bold,
+        textAlign: "right",
+    },
+
+    description: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.regular,
+        textAlign: "right",
+
+        opacity: 0.64,
+    },
+
+    meta: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+        textAlign: "right",
+
+        opacity: 0.56,
     },
 });

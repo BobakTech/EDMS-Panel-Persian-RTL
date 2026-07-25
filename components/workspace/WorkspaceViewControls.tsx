@@ -2,16 +2,36 @@
  * ============================================================================
  * Workspace View Controls
  * ----------------------------------------------------------------------------
- * Displays controls for switching workspace view modes.
+ * Switches workspace items between card and list views with compact icon buttons.
  * ============================================================================
  */
 
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
-import { radius, spacing, typography } from "../../theme";
+import {
+    Pressable,
+    StyleSheet,
+    View,
+} from "react-native";
+
+import { radius, spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
 import type { WorkspaceViewMode } from "./workspace.types";
+
+/**
+ * ============================================================================
+ * Types
+ * ============================================================================
+ */
+
+type FeatherIconName = keyof typeof Feather.glyphMap;
+
+interface ViewModeConfig {
+    mode: WorkspaceViewMode;
+    icon: FeatherIconName;
+    accessibilityLabel: string;
+}
 
 /**
  * ============================================================================
@@ -26,6 +46,25 @@ interface WorkspaceViewControlsProps {
 
 /**
  * ============================================================================
+ * View Modes
+ * ============================================================================
+ */
+
+const viewModes: ViewModeConfig[] = [
+    {
+        mode: "grid",
+        icon: "grid",
+        accessibilityLabel: "نمایش کارت‌ها",
+    },
+    {
+        mode: "list",
+        icon: "list",
+        accessibilityLabel: "نمایش فهرست",
+    },
+];
+
+/**
+ * ============================================================================
  * Component
  * ============================================================================
  */
@@ -37,80 +76,49 @@ export default function WorkspaceViewControls({
     const { theme } = useSettings();
     const colors = theme.colors;
 
-    const isGridActive = viewMode === "grid";
-    const isListActive = viewMode === "list";
-
     return (
-        <View style={styles.container}>
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="نمایش شبکه‌ای"
-                accessibilityState={{
-                    selected: isGridActive,
-                }}
-                onPress={() => {
-                    if (!isGridActive) {
-                        onChangeViewMode("grid");
-                    }
-                }}
-                style={[
-                    styles.button,
-                    {
-                        backgroundColor: isGridActive
-                            ? colors.background
-                            : colors.surface,
-                        borderColor: isGridActive
-                            ? colors.primary
-                            : colors.border,
-                    },
-                ]}
-            >
-                <Text style={[
-                    styles.buttonText,
-                    {
-                        color: isGridActive
-                            ? colors.primary
-                            : colors.text,
-                    },
-                ]}>
-                    شبکه‌ای
-                </Text>
-            </Pressable>
+        <View
+            style={[
+                styles.container,
+                {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                },
+            ]}
+        >
+            {viewModes.map((item) => {
+                const isSelected = viewMode === item.mode;
 
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="نمایش فهرستی"
-                accessibilityState={{
-                    selected: isListActive,
-                }}
-                onPress={() => {
-                    if (!isListActive) {
-                        onChangeViewMode("list");
-                    }
-                }}
-                style={[
-                    styles.button,
-                    {
-                        backgroundColor: isListActive
-                            ? colors.background
-                            : colors.surface,
-                        borderColor: isListActive
-                            ? colors.primary
-                            : colors.border,
-                    },
-                ]}
-            >
-                <Text style={[
-                    styles.buttonText,
-                    {
-                        color: isListActive
-                            ? colors.primary
-                            : colors.text,
-                    },
-                ]}>
-                    فهرستی
-                </Text>
-            </Pressable>
+                return (
+                    <Pressable
+                        key={item.mode}
+                        accessibilityRole="button"
+                        accessibilityLabel={item.accessibilityLabel}
+                        accessibilityState={{
+                            selected: isSelected,
+                        }}
+                        onPress={() => onChangeViewMode(item.mode)}
+                        style={({ pressed }) => [
+                            styles.button,
+                            {
+                                backgroundColor: isSelected
+                                    ? colors.surface
+                                    : colors.background,
+                                borderColor: isSelected
+                                    ? colors.primary
+                                    : colors.border,
+                            },
+                            pressed && styles.pressedButton,
+                        ]}
+                    >
+                        <Feather
+                            name={item.icon}
+                            size={18}
+                            color={isSelected ? colors.primary : colors.text}
+                        />
+                    </Pressable>
+                );
+            })}
         </View>
     );
 }
@@ -126,19 +134,26 @@ const styles = StyleSheet.create({
         flexDirection: "row-reverse",
         alignItems: "center",
 
-        gap: spacing.sm,
+        padding: 3,
+
+        borderWidth: 1,
+        borderRadius: radius.lg,
+
+        gap: 3,
     },
 
     button: {
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
+        width: 34,
+        height: 34,
+
+        alignItems: "center",
+        justifyContent: "center",
 
         borderWidth: 1,
         borderRadius: radius.md,
     },
 
-    buttonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
+    pressedButton: {
+        opacity: 0.82,
     },
 });

@@ -2,33 +2,26 @@
  * ============================================================================
  * Workspace Header
  * ----------------------------------------------------------------------------
- * Displays the workspace title, subtitle, and optional header actions.
+ * Displays the workspace title, subtitle, and compact inline header actions.
  * ============================================================================
  */
 
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+
+import {
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import { spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
-
-/**
- * ============================================================================
- * Props
- * ============================================================================
- */
 
 interface WorkspaceHeaderProps {
     title: string;
     subtitle: string;
     children?: ReactNode;
 }
-
-/**
- * ============================================================================
- * Component
- * ============================================================================
- */
 
 export default function WorkspaceHeader({
     title,
@@ -40,55 +33,61 @@ export default function WorkspaceHeader({
 
     return (
         <View style={styles.container}>
-            <View style={styles.textContent}>
-                <Text style={[
-                    styles.title,
-                    {
-                        color: colors.text,
-                    },
-                ]}>
+            <View style={styles.textArea}>
+                <Text
+                    style={[
+                        styles.title,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                    numberOfLines={1}
+                >
                     {title}
                 </Text>
 
-                <Text style={[
-                    styles.subtitle,
-                    {
-                        color: colors.text,
-                    },
-                ]}>
+                <Text
+                    style={[
+                        styles.subtitle,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                    numberOfLines={2}
+                >
                     {subtitle}
                 </Text>
             </View>
 
-            {children}
+            {children && (
+                <View style={styles.actions}>
+                    {children}
+                </View>
+            )}
         </View>
     );
 }
-
-/**
- * ============================================================================
- * Styles
- * ============================================================================
- */
 
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row-reverse",
         alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
+        justifyContent: "flex-start",
 
         gap: spacing.md,
-        marginBottom: spacing.xl,
     },
 
-    textContent: {
+    textArea: {
         flexShrink: 1,
+        minWidth: 0,
+
+        alignItems: "flex-end",
     },
 
     title: {
         fontSize: typography.fontSize.xxl,
-        fontWeight: typography.fontWeight.semibold,
+        fontWeight: typography.fontWeight.bold,
+        textAlign: "right",
     },
 
     subtitle: {
@@ -96,7 +95,15 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
+        textAlign: "right",
 
         opacity: 0.64,
+    },
+
+    actions: {
+        flexShrink: 0,
+
+        alignItems: "center",
+        justifyContent: "center",
     },
 });

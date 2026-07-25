@@ -87,7 +87,12 @@ export default function AppLayout() {
 
     const { width } = useWindowDimensions();
 
+    /**
+     * Mobile shell uses CSS viewport width, not physical device pixels.
+     * Nothing Phone 1 is roughly 393 CSS px wide in portrait.
+     */
     const isMobileShell = width < 760;
+    const isPhoneShell = width < 430;
 
     const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>(() =>
         getWorkspaceItems()
@@ -439,6 +444,7 @@ export default function AppLayout() {
                 style={[
                     styles.main,
                     isMobileShell && styles.mobileMain,
+                    isPhoneShell && styles.phoneMain,
                 ]}
             >
                 <Toolbar
@@ -627,5 +633,10 @@ const styles = StyleSheet.create({
         gap: spacing.lg,
 
         ...shadows.lg,
+    },
+
+    phoneMain: {
+        padding: spacing.xs,
+        gap: spacing.sm,
     },
 });

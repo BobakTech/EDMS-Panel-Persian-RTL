@@ -178,10 +178,14 @@ export default function Workspace({
 
     const { width } = useWindowDimensions();
 
+    const isPhoneWorkspace = width < 430;
     const isCompactWorkspace = width < spacing.sidebarWidth * 3;
-    const workspacePadding = isCompactWorkspace
-        ? spacing.lg
-        : spacing.xl;
+
+    const workspacePadding = isPhoneWorkspace
+        ? spacing.xs
+        : isCompactWorkspace
+            ? spacing.lg
+            : spacing.xl;
     const workspaceTopPadding = spacing.none;
 
     const pageContent = getWorkspacePageContent(pageType);
@@ -842,7 +846,10 @@ export default function Workspace({
                     {shouldShowWorkspaceItems && (
                         <View style={
                             viewMode === "grid"
-                                ? styles.workspaceGrid
+                                ? [
+                                    styles.workspaceGrid,
+                                    isPhoneWorkspace && styles.phoneWorkspaceGrid,
+                                ]
                                 : styles.workspaceList
                         }>
                             {visibleWorkspaceItems.map((item) => (
@@ -1551,6 +1558,10 @@ const styles = StyleSheet.create({
         width: "100%",
 
         gap: spacing.lg,
+    },
+
+    phoneWorkspaceGrid: {
+        gap: spacing.sm,
     },
 
     workspaceList: {

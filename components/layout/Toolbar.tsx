@@ -1161,13 +1161,15 @@ const styles = StyleSheet.create({
     },
 
     mobileHeaderContainer: {
-        minHeight: 64,
+        minHeight: 60,
 
         flexDirection: "row-reverse",
         alignItems: "center",
 
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+
+        gap: spacing.sm,
     },
 
     mobileMenuContainer: {
@@ -1189,8 +1191,8 @@ const styles = StyleSheet.create({
     },
 
     mobileMenuButton: {
-        width: 42,
-        height: 42,
+        width: 38,
+        height: 38,
 
         alignItems: "center",
         justifyContent: "center",
@@ -1210,8 +1212,8 @@ const styles = StyleSheet.create({
     },
 
     mobileLogo: {
-        width: 42,
-        height: 42,
+        width: 38,
+        height: 38,
 
         alignItems: "center",
         justifyContent: "center",
@@ -1249,8 +1251,8 @@ const styles = StyleSheet.create({
     },
 
     mobileAvatar: {
-        width: 38,
-        height: 38,
+        width: 36,
+        height: 36,
     },
 
     mobileUserArea: {

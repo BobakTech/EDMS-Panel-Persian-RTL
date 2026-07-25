@@ -64,8 +64,17 @@ export default function Dashboard({
 
     const { width } = useWindowDimensions();
 
+    /**
+     * Dashboard uses CSS viewport width, so phone screens need tighter spacing.
+     */
+    const isPhoneDashboard = width < 430;
     const isCompactDashboard = width < 920;
-    const dashboardPadding = isCompactDashboard ? spacing.lg : spacing.xl;
+
+    const dashboardPadding = isPhoneDashboard
+        ? spacing.sm
+        : isCompactDashboard
+            ? spacing.lg
+            : spacing.xl;
 
     const activeItems = workspaceItems.filter((item) => item.status === "active");
     const folders = workspaceItems.filter((item) => item.type === "folder");
@@ -321,8 +330,8 @@ const styles = StyleSheet.create({
     },
 
     summaryCard: {
-        minWidth: 180,
-        flexBasis: 220,
+        minWidth: 0,
+        flexBasis: 180,
         flexGrow: 1,
 
         padding: spacing.lg,
