@@ -20,6 +20,12 @@ import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
 import type { ProjectInfo } from "../project";
+
+/**
+ * API connection signal shown in the sidebar.
+ */
+import ApiConnectionSignal from "../project/ApiConnectionSignal";
+
 import type { WorkspacePageType } from "../workspace";
 
 /**
@@ -51,7 +57,12 @@ interface SidebarProps {
     activePage: AppPageType;
     projectInfo: ProjectInfo | null;
     isProjectInfoLoading: boolean;
-    projectInfoError: string | null;
+
+    /**
+     * Project info error means the API smoke test failed.
+     */
+    projectInfoError?: string | null;
+
     onChangePage: (page: AppPageType) => void;
     variant?: SidebarVariant;
     showBrand?: boolean;
@@ -100,7 +111,7 @@ export default function Sidebar({
     activePage,
     projectInfo,
     isProjectInfoLoading,
-    projectInfoError,
+    projectInfoError = null,
     onChangePage,
     variant = "desktop",
     showBrand = true,
@@ -119,6 +130,11 @@ export default function Sidebar({
             : projectInfoError
                 ? "اطلاعات پروژه در دسترس نیست."
                 : "سامانه مدیریت اسناد سازمانی";
+
+    /**
+    * The existing project-info request is reused as a frontend-only API smoke test.
+    */
+    const isApiConnected = Boolean(projectInfo && !isProjectInfoLoading && !projectInfoError);
 
     return (
         <View
@@ -181,6 +197,12 @@ export default function Sidebar({
                     >
                         {projectSubtitle}
                     </Text>
+
+                    <ApiConnectionSignal
+                        isLoading={isProjectInfoLoading}
+                        isConnected={isApiConnected}
+                        errorMessage={projectInfoError}
+                    />
                 </View>
             )}
 
@@ -435,6 +457,16 @@ const styles = StyleSheet.create({
     },
 
     compactBrand: {
+        gap: spacing.sm,
+    },
+
+    /**
+     * Keeps the project identity and connection signal visually grouped.
+     */
+    brandContent: {
+        flex: 1,
+        minWidth: 0,
+
         gap: spacing.sm,
     },
 
