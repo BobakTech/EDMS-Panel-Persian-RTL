@@ -22,9 +22,9 @@ import { useSettings } from "../../settings/SettingsContext";
 import type { ProjectInfo } from "../project";
 
 /**
- * API connection signal shown in the sidebar.
+ * Import the new compact project-info panel.
  */
-import ApiConnectionSignal from "../project/ApiConnectionSignal";
+import { ProjectInfoPanel } from "../project/ProjectInfoPanel";
 
 import type { WorkspacePageType } from "../workspace";
 
@@ -131,11 +131,6 @@ export default function Sidebar({
                 ? "اطلاعات پروژه در دسترس نیست."
                 : "سامانه مدیریت اسناد سازمانی";
 
-    /**
-    * The existing project-info request is reused as a frontend-only API smoke test.
-    */
-    const isApiConnected = Boolean(projectInfo && !isProjectInfoLoading && !projectInfoError);
-
     return (
         <View
             style={[
@@ -187,21 +182,12 @@ export default function Sidebar({
                         EDMS
                     </Text>
 
-                    <Text
-                        style={[
-                            styles.appSubtitle,
-                            {
-                                color: colors.text,
-                            },
-                        ]}
-                    >
-                        {projectSubtitle}
-                    </Text>
-
-                    <ApiConnectionSignal
+                    {/**
+                    * Show project name/code as a compact sidebar list.
+                    */}
+                    <ProjectInfoPanel
+                        projectInfo={projectInfo}
                         isLoading={isProjectInfoLoading}
-                        isConnected={isApiConnected}
-                        errorMessage={projectInfoError}
                     />
                 </View>
             )}
