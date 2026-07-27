@@ -32,3 +32,13 @@ export type {
 export { getWorkspaceItems } from "./workspace.service";
 
 export { default as WorkspaceItemDetailsPanel } from "./WorkspaceItemDetailsPanel";
+
+/**
+ * ============================================================================
+ * Document Preview Export
+ * ----------------------------------------------------------------------------
+ * Exposes the workspace document preview panel.
+ * ============================================================================
+ */
+
+export { default as WorkspaceDocumentPreviewPanel } from "./WorkspaceDocumentPreviewPanel";

@@ -6,7 +6,16 @@
  * ============================================================================
  */
 
-import { useEffect, useRef, useState } from "react";
+/**
+ * ============================================================================
+ * React Imports
+ * ----------------------------------------------------------------------------
+ * Workspace uses state, effects, refs, and fragments for inline preview rows.
+ * ============================================================================
+ */
+
+import { Fragment, useEffect, useRef, useState } from "react";
+
 import {
     Modal,
     Pressable,
@@ -21,20 +30,48 @@ import {
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
+/**
+ * ============================================================================
+ * Workspace Component Imports
+ * ----------------------------------------------------------------------------
+ * Reusable workspace components used by the main workspace layout.
+ * ============================================================================
+ */
+
 import {
     WorkspaceBreadcrumb,
+    WorkspaceDocumentPreviewPanel,
     WorkspaceHeader,
     WorkspaceItemCard,
-    WorkspaceViewControls,
     WorkspaceItemDetailsPanel,
-    type WorkspaceItem,
-    type WorkspaceViewMode,
-    type WorkspacePageType,
+    WorkspaceViewControls,
 } from "../workspace";
+
+/**
+ * ============================================================================
+ * Workspace Empty State Import
+ * ----------------------------------------------------------------------------
+ * Imported directly because DroppedWorkspaceFile is exported from this file.
+ * ============================================================================
+ */
 
 import WorkspaceEmptyState, {
     type DroppedWorkspaceFile,
 } from "../workspace/WorkspaceEmptyState";
+
+/**
+ * ============================================================================
+ * Workspace Type Imports
+ * ----------------------------------------------------------------------------
+ * Shared workspace types used by layout state, props, and helpers.
+ * ============================================================================
+ */
+
+import type {
+    WorkspaceItem,
+    WorkspacePageType,
+    WorkspaceViewMode,
+} from "../workspace";
 
 /**
  * ============================================================================
@@ -215,6 +252,11 @@ export default function Workspace({
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
 
+    /**
+     * Tracks the file currently opened in the document preview panel.
+     */
+    const [previewItemId, setPreviewItemId] = useState<string | null>(null);
+
     const [pendingRenameItemId, setPendingRenameItemId] = useState<string | null>(null);
     const [renameItemName, setRenameItemName] = useState("");
 
@@ -296,6 +338,14 @@ export default function Workspace({
      * ============================================================================
      */
 
+    /**
+     * ============================================================================
+     * Press Workspace Item
+     * ----------------------------------------------------------------------------
+     * Opens folders normally and opens files in the document preview panel.
+     * ============================================================================
+     */
+
     function handlePressWorkspaceItem(itemId: string) {
         const pressedItem = visibleWorkspaceItems.find(
             (item) => item.id === itemId
@@ -304,9 +354,22 @@ export default function Workspace({
         if (pageType === "workspace" && pressedItem?.type === "folder") {
             onChangeFolder(pressedItem.id);
             setSelectedItemId(null);
+            setPreviewItemId(null);
 
             return;
         }
+
+        if (pressedItem?.type === "file") {
+            setSelectedItemId(null);
+
+            setPreviewItemId((currentPreviewItemId) =>
+                currentPreviewItemId === itemId ? null : itemId
+            );
+
+            return;
+        }
+
+        setPreviewItemId(null);
 
         setSelectedItemId((currentItemId) =>
             currentItemId === itemId
@@ -319,10 +382,13 @@ export default function Workspace({
      * ============================================================================
      * Toggle Workspace Item Actions
      * ----------------------------------------------------------------------------
-     * Opens or closes the details/actions panel for the selected file or folder.
+     * Opens item details/actions and closes the document preview panel.
      * ============================================================================
      */
+
     function handleOpenWorkspaceItemActions(itemId: string) {
+        setPreviewItemId(null);
+
         setSelectedItemId((currentSelectedItemId) =>
             currentSelectedItemId === itemId ? null : itemId
         );
@@ -355,6 +421,18 @@ export default function Workspace({
 
     function handleCloseWorkspaceItemDetails() {
         setSelectedItemId(null);
+    }
+
+    /**
+     * ============================================================================
+     * Close Document Preview
+     * ----------------------------------------------------------------------------
+     * Closes the selected file preview panel.
+     * ============================================================================
+     */
+
+    function handleCloseDocumentPreview() {
+        setPreviewItemId(null);
     }
 
     function handleRequestDeleteWorkspaceItem(itemId: string) {
@@ -581,6 +659,14 @@ export default function Workspace({
             item.description.toLowerCase().includes(normalizedSearchQuery)
         )
         : pageWorkspaceItems;
+
+    /**
+    * Selected file item shown in the document preview panel.
+    */
+    const previewItem =
+        previewItemId
+            ? visibleWorkspaceItems.find((item) => item.id === previewItemId) ?? null
+            : null;
 
     const selectedWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === selectedItemId
@@ -852,17 +938,40 @@ export default function Workspace({
                                 ]
                                 : styles.workspaceList
                         }>
-                            {visibleWorkspaceItems.map((item) => (
-                                <WorkspaceItemCard
-                                    key={item.id}
-                                    item={item}
-                                    viewMode={viewMode}
-                                    isCompact={isCompactWorkspace}
-                                    isSelected={selectedItemId === item.id}
-                                    onPress={handlePressWorkspaceItem}
-                                    onOpenActions={handleOpenWorkspaceItemActions}
-                                />
-                            ))}
+                            {/**
+                            * ============================================================================
+                            * Workspace Items With Expanded Preview
+                            * ----------------------------------------------------------------------------
+                            * Keeps cards in the normal grid/list flow and renders preview as a full-width
+                            * expanded row directly after the selected file.
+                            * ============================================================================
+                            */}
+
+                            {visibleWorkspaceItems.map((item) => {
+                                const isPreviewOpen = previewItemId === item.id && item.type === "file";
+
+                                return (
+                                    <Fragment key={item.id}>
+                                        <WorkspaceItemCard
+                                            item={item}
+                                            viewMode={viewMode}
+                                            isCompact={isCompactWorkspace}
+                                            isSelected={selectedItemId === item.id || isPreviewOpen}
+                                            onPress={handlePressWorkspaceItem}
+                                            onOpenActions={handleOpenWorkspaceItemActions}
+                                        />
+
+                                        {isPreviewOpen && (
+                                            <View style={styles.workspacePreviewRow}>
+                                                <WorkspaceDocumentPreviewPanel
+                                                    item={item}
+                                                    onClose={handleCloseDocumentPreview}
+                                                />
+                                            </View>
+                                        )}
+                                    </Fragment>
+                                );
+                            })}
                         </View>
                     )}
 
@@ -1569,6 +1678,20 @@ const styles = StyleSheet.create({
         alignItems: "stretch",
 
         gap: spacing.md,
+    },
+
+    /**
+     * ============================================================================
+     * Workspace Preview Row
+     * ----------------------------------------------------------------------------
+     * Makes the expanded preview span the workspace row instead of card width.
+     * ============================================================================
+     */
+
+    workspacePreviewRow: {
+        width: "100%",
+        maxWidth: "100%",
+        flexBasis: "100%",
     },
 
     modalOverlay: {

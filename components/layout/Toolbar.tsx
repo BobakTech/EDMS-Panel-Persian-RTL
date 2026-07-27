@@ -307,59 +307,76 @@ export default function Toolbar({
         </Modal>
     );
 
-    const desktopUploadPanel = isPreparingUpload ? (
-        <View
-            style={[
-                styles.uploadPanel,
-                {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.primary,
-                },
-            ]}
+    /**
+     * ============================================================================
+     * Desktop Upload Panel
+     * ----------------------------------------------------------------------------
+     * Renders upload progress in a transparent modal so it is not clipped by the
+     * toolbar or workspace layout.
+     * ============================================================================
+     */
+
+    const desktopUploadPanel = (
+        <Modal
+            transparent
+            visible={!isMobileHeader && isPreparingUpload}
+            animationType="fade"
         >
-            <Text
-                style={[
-                    styles.uploadPanelTitle,
-                    {
-                        color: colors.text,
-                    },
-                ]}
-                numberOfLines={1}
-            >
-                {uploadFileName ?? "فایل انتخاب‌شده"}
-            </Text>
-
-            <Text
-                style={[
-                    styles.uploadPanelDescription,
-                    {
-                        color: colors.border,
-                    },
-                ]}
-            >
-                {uploadStatusText}
-            </Text>
-
-            <View
-                style={[
-                    styles.uploadProgressTrack,
-                    {
-                        backgroundColor: colors.background,
-                    },
-                ]}
-            >
+            <View style={styles.uploadOverlay}>
                 <View
                     style={[
-                        styles.uploadProgressFill,
+                        styles.uploadPanel,
                         {
-                            width: `${uploadProgress ?? 0}%`,
-                            backgroundColor: colors.primary,
+                            backgroundColor: colors.surface,
+                            borderColor: colors.primary,
                         },
                     ]}
-                />
+                >
+                    <Text
+                        style={[
+                            styles.uploadPanelTitle,
+                            {
+                                color: colors.text,
+                            },
+                        ]}
+                        numberOfLines={1}
+                    >
+                        {uploadFileName ?? "فایل انتخاب‌شده"}
+                    </Text>
+
+                    <Text
+                        style={[
+                            styles.uploadPanelDescription,
+                            {
+                                color: colors.border,
+                            },
+                        ]}
+                    >
+                        {uploadStatusText}
+                    </Text>
+
+                    <View
+                        style={[
+                            styles.uploadProgressTrack,
+                            {
+                                backgroundColor: colors.background,
+                            },
+                        ]}
+                    >
+                        <View
+                            style={[
+                                styles.uploadProgressFill,
+                                {
+                                    width: `${uploadProgress ?? 0}%`,
+                                    backgroundColor: colors.primary,
+                                },
+                            ]}
+                        />
+                    </View>
+                </View>
             </View>
-        </View>
-    ) : null;
+        </Modal>
+    );
 
     const mobileUploadPanel = isPreparingUpload ? (
         <View
@@ -1100,12 +1117,8 @@ const styles = StyleSheet.create({
     },
 
     uploadPanel: {
-        position: "absolute",
-        top: 48,
-        right: 0,
-        zIndex: 10,
-
-        width: 320,
+        width: 360,
+        maxWidth: "86%",
 
         padding: spacing.md,
 
@@ -1119,6 +1132,21 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
         textAlign: "right",
+    },
+
+    /**
+     * ============================================================================
+     * Upload Overlay
+     * ----------------------------------------------------------------------------
+     * Positions desktop upload progress above the full app layout.
+     * ============================================================================
+     */
+
+    uploadOverlay: {
+        flex: 1,
+        alignItems: "center",
+        paddingTop: 92,
+        pointerEvents: "box-none",
     },
 
     uploadPanelDescription: {

@@ -487,17 +487,24 @@ export default function AppLayout() {
                                 },
                             ]}
                         >
-                            <Toolbar
-                                variant="mobile-menu"
-                                activeAction={activeWorkspaceAction}
-                                searchQuery={workspaceSearchQuery}
-                                canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
-                                onChangeSearchQuery={setWorkspaceSearchQuery}
-                                onPressCreateFolder={handlePressCreateFolder}
-                                onDismissAction={handleDismissWorkspaceAction}
-                                onCreateFolder={handleCreateFolderFromMobileMenu}
-                                onCreateFile={handleCreateFileFromMobileMenu}
-                            />
+                            <View style={styles.toolbarLayer}>
+                                <Toolbar
+                                    variant={isMobileShell ? "mobile-header" : "desktop"}
+                                    activeAction={activeWorkspaceAction}
+                                    searchQuery={workspaceSearchQuery}
+                                    canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
+                                    projectInfo={projectInfo}
+                                    isProjectInfoLoading={isProjectInfoLoading}
+                                    projectInfoError={projectInfoError}
+                                    isMobileMenuOpen={isMobileMenuOpen}
+                                    onPressMobileMenu={handleToggleMobileMenu}
+                                    onChangeSearchQuery={setWorkspaceSearchQuery}
+                                    onPressCreateFolder={handlePressCreateFolder}
+                                    onDismissAction={handleDismissWorkspaceAction}
+                                    onCreateFolder={handleCreateFolder}
+                                    onCreateFile={handleCreateFile}
+                                />
+                            </View>
 
                             <Sidebar
                                 variant="drawer"
@@ -588,10 +595,27 @@ const styles = StyleSheet.create({
         padding: spacing.sm,
     },
 
+    /**
+     * ============================================================================
+     * Toolbar Layer
+     * ----------------------------------------------------------------------------
+     * Keeps floating toolbar panels above the workspace content.
+     * ============================================================================
+     */
+
+    toolbarLayer: {
+        position: "relative",
+        zIndex: 20,
+        elevation: 20,
+    },
+
     pageSlot: {
         flex: 1,
         minWidth: 0,
         minHeight: 0,
+
+        position: "relative",
+        zIndex: 1,
 
         overflow: "hidden",
     },
