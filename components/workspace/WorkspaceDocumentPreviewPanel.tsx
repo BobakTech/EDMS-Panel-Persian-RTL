@@ -2,13 +2,19 @@
  * ============================================================================
  * Workspace Document Preview Panel
  * ----------------------------------------------------------------------------
- * Shows a compact renderer-aware preview summary for the selected file item.
- * Real rendering will be added later per file type.
+ * Shows a renderer-aware preview for the selected file item.
+ * Image files render directly when a local URI is available.
  * ============================================================================
  */
 
 import { Feather } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -88,7 +94,7 @@ function getFileStatusLabel(item: WorkspaceItem) {
  * ============================================================================
  * Preview Renderer Detection
  * ----------------------------------------------------------------------------
- * Detects the future preview renderer from extension and MIME type.
+ * Detects the preview renderer from extension and MIME type.
  * ============================================================================
  */
 
@@ -155,7 +161,9 @@ function getPreviewRendererInfo(item: WorkspaceItem): PreviewRendererInfo {
             kind,
             icon: "image",
             title: "پیش‌نمایش تصویر",
-            description: "رندر تصویر در مرحله بعد اضافه می‌شود.",
+            description: item.localUri
+                ? "تصویر انتخاب‌شده آماده نمایش است."
+                : "آدرس محلی تصویر در دسترس نیست.",
         };
     }
 
@@ -198,6 +206,8 @@ export default function WorkspaceDocumentPreviewPanel({
     const { theme } = useSettings();
     const colors = theme.colors;
     const rendererInfo = getPreviewRendererInfo(item);
+    const shouldRenderImage =
+        rendererInfo.kind === "image" && Boolean(item.localUri);
 
     return (
         <View
@@ -253,54 +263,66 @@ export default function WorkspaceDocumentPreviewPanel({
 
             <View
                 style={[
-                    styles.previewRow,
+                    shouldRenderImage
+                        ? styles.imagePreviewFrame
+                        : styles.previewRow,
                     {
                         backgroundColor: colors.background,
                         borderColor: colors.border,
                     },
                 ]}
             >
-                <View
-                    style={[
-                        styles.previewIcon,
-                        {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                >
-                    <Feather
-                        name={rendererInfo.icon}
-                        size={24}
-                        color={colors.primary}
+                {shouldRenderImage ? (
+                    <Image
+                        source={{ uri: item.localUri }}
+                        resizeMode="contain"
+                        style={styles.imagePreview}
                     />
-                </View>
+                ) : (
+                    <>
+                        <View
+                            style={[
+                                styles.previewIcon,
+                                {
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                        >
+                            <Feather
+                                name={rendererInfo.icon}
+                                size={24}
+                                color={colors.primary}
+                            />
+                        </View>
 
-                <View style={styles.previewTextArea}>
-                    <Text
-                        numberOfLines={1}
-                        style={[
-                            styles.previewTitle,
-                            {
-                                color: colors.text,
-                            },
-                        ]}
-                    >
-                        {rendererInfo.title}
-                    </Text>
+                        <View style={styles.previewTextArea}>
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.previewTitle,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                {rendererInfo.title}
+                            </Text>
 
-                    <Text
-                        numberOfLines={1}
-                        style={[
-                            styles.previewDescription,
-                            {
-                                color: colors.text,
-                            },
-                        ]}
-                    >
-                        {rendererInfo.description}
-                    </Text>
-                </View>
+                            <Text
+                                numberOfLines={1}
+                                style={[
+                                    styles.previewDescription,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                {rendererInfo.description}
+                            </Text>
+                        </View>
+                    </>
+                )}
             </View>
 
             <View style={styles.metaRow}>
@@ -450,6 +472,40 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: radius.md,
         borderStyle: "dashed",
+    },
+
+    /**
+     * ============================================================================
+     * Image Preview Frame
+     * ----------------------------------------------------------------------------
+     * Gives uploaded images enough space while keeping them contained.
+     * ============================================================================
+     */
+
+    imagePreviewFrame: {
+        minHeight: 420,
+        alignItems: "center",
+        justifyContent: "center",
+
+        marginBottom: spacing.sm,
+        padding: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+        overflow: "hidden",
+    },
+
+    /**
+     * ============================================================================
+     * Image Preview
+     * ----------------------------------------------------------------------------
+     * Renders the image larger inside the expanded workspace preview.
+     * ============================================================================
+     */
+
+    imagePreview: {
+        width: "100%",
+        height: 520,
     },
 
     previewIcon: {
