@@ -2,7 +2,8 @@
  * ============================================================================
  * Document Preview Page
  * ----------------------------------------------------------------------------
- * Shows a larger preview layout for the selected workspace file.
+ * Displays the standalone preview workspace for a selected document.
+ * Keeps the preview area independent from the main workspace grid/list layout.
  * ============================================================================
  */
 
@@ -187,7 +188,7 @@ export default function DocumentPreviewPage({
                                 },
                             ]}
                         >
-                            برای این نوع فایل، renderer کامل در مرحله بعد اضافه می‌شود.
+                            برای این نوع فایل هنوز نمایشگر اختصاصی اضافه نشده است.
                         </Text>
                     </View>
                 )}

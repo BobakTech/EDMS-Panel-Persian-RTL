@@ -54,7 +54,7 @@ interface WorkspaceDocumentPreviewPanelProps {
     onClose: () => void;
 
     /**
-     * Opens the selected file in the full preview page.
+     * Opens the selected file in the standalone document preview layout.
      */
     onOpenFullPreview?: (item: WorkspaceItem) => void;
 }
@@ -97,9 +97,9 @@ function getFileStatusLabel(item: WorkspaceItem) {
 
 /**
  * ============================================================================
- * Preview Renderer Detection
+ * Preview Type Detection
  * ----------------------------------------------------------------------------
- * Detects the preview renderer from extension and MIME type.
+ * Determines the preview presentation type from file extension and MIME type.
  * ============================================================================
  */
 
@@ -194,7 +194,7 @@ function getPreviewRendererInfo(item: WorkspaceItem): PreviewRendererInfo {
         kind,
         icon: "file",
         title: "پیش‌نمایش فایل",
-        description: "برای این نوع فایل هنوز renderer اختصاصی تعریف نشده است.",
+        description: "برای این نوع فایل هنوز نمایشگر اختصاصی تعریف نشده است.",
     };
 }
 

@@ -107,18 +107,14 @@ export default function AppLayout() {
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
     /**
-     * Tracks the file opened in the full document preview page.
+     * ============================================================================
+     * Full Preview Selection State
+     * ----------------------------------------------------------------------------
+     * Stores the selected workspace item id while switching from the workspace
+     * layout to the standalone document preview page.
+     * ============================================================================
      */
     const [previewPageItemId, setPreviewPageItemId] = useState<string | null>(null);
-
-    /**
-     * ============================================================================
-     * Document Preview Page State
-     * ----------------------------------------------------------------------------
-     * Stores the selected document for the full preview route.
-     * ============================================================================
-     */
-    const [previewItem, setPreviewItem] = useState<WorkspaceItem | null>(null);
 
     /**
      * ============================================================================
@@ -442,7 +438,12 @@ export default function AppLayout() {
     }
 
     /**
-     * Opens a file in the full document preview page.
+     * ============================================================================
+     * Full Preview Navigation
+     * ----------------------------------------------------------------------------
+     * Switches the workspace view into the standalone document preview layout for
+     * the selected file.
+     * ============================================================================
      */
     function handleOpenPreviewPage(item: WorkspaceItem) {
         if (item.type !== "file") {
@@ -452,7 +453,6 @@ export default function AppLayout() {
         setPreviewPageItemId(item.id);
         setActiveWorkspaceAction(null);
         setIsMobileMenuOpen(false);
-        setPreviewItem(item);
     }
 
     /**
