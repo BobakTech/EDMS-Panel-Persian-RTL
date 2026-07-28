@@ -24,6 +24,7 @@ import SettingsPage from "./SettingsPage";
 import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
+import DocumentPreviewPage from "./DocumentPreviewPage";
 
 import { getProjectInfo, type ProjectInfo } from "../project";
 
@@ -106,6 +107,20 @@ export default function AppLayout() {
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
     /**
+     * Tracks the file opened in the full document preview page.
+     */
+    const [previewPageItemId, setPreviewPageItemId] = useState<string | null>(null);
+
+    /**
+     * ============================================================================
+     * Document Preview Page State
+     * ----------------------------------------------------------------------------
+     * Stores the selected document for the full preview route.
+     * ============================================================================
+     */
+    const [previewItem, setPreviewItem] = useState<WorkspaceItem | null>(null);
+
+    /**
      * ============================================================================
      * Initial Page State
      * ----------------------------------------------------------------------------
@@ -128,6 +143,11 @@ export default function AppLayout() {
         activeWorkspacePage === "workspace" ||
         activeWorkspacePage === "archive" ||
         activeWorkspacePage === "trash";
+
+    const previewPageItem =
+        previewPageItemId
+            ? workspaceItems.find((item) => item.id === previewPageItemId) ?? null
+            : null;
 
     /**
      * ============================================================================
@@ -190,6 +210,7 @@ export default function AppLayout() {
         setActiveWorkspacePage(page);
         setActiveWorkspaceAction(null);
         setIsMobileMenuOpen(false);
+        setPreviewPageItemId(null);
 
         if (page !== "workspace") {
             setCurrentFolderId(null);
@@ -420,6 +441,27 @@ export default function AppLayout() {
         );
     }
 
+    /**
+     * Opens a file in the full document preview page.
+     */
+    function handleOpenPreviewPage(item: WorkspaceItem) {
+        if (item.type !== "file") {
+            return;
+        }
+
+        setPreviewPageItemId(item.id);
+        setActiveWorkspaceAction(null);
+        setIsMobileMenuOpen(false);
+        setPreviewItem(item);
+    }
+
+    /**
+     * Closes the full document preview page.
+     */
+    function handleClosePreviewPage() {
+        setPreviewPageItemId(null);
+    }
+
     return (
         <View
             style={[
@@ -520,7 +562,12 @@ export default function AppLayout() {
                 </Modal>
 
                 <View style={styles.pageSlot}>
-                    {isWorkspacePage ? (
+                    {previewPageItem ? (
+                        <DocumentPreviewPage
+                            item={previewPageItem}
+                            onBack={handleClosePreviewPage}
+                        />
+                    ) : isWorkspacePage ? (
                         <Workspace
                             pageType={activeWorkspacePage}
                             currentFolderId={currentFolderId}
@@ -537,6 +584,8 @@ export default function AppLayout() {
                             onMoveItem={handleMoveWorkspaceItem}
                             onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
                             onDropFiles={handleDropWorkspaceFiles}
+                            onOpenPreviewPage={handleOpenPreviewPage}
+                            onOpenFullPreview={handleOpenPreviewPage}
                         />
                     ) : (
                         <ScrollView

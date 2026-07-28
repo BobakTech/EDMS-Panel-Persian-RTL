@@ -52,6 +52,11 @@ interface PreviewRendererInfo {
 interface WorkspaceDocumentPreviewPanelProps {
     item: WorkspaceItem;
     onClose: () => void;
+
+    /**
+     * Opens the selected file in the full preview page.
+     */
+    onOpenFullPreview?: (item: WorkspaceItem) => void;
 }
 
 /**
@@ -202,6 +207,7 @@ function getPreviewRendererInfo(item: WorkspaceItem): PreviewRendererInfo {
 export default function WorkspaceDocumentPreviewPanel({
     item,
     onClose,
+    onOpenFullPreview,
 }: WorkspaceDocumentPreviewPanelProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -233,6 +239,32 @@ export default function WorkspaceDocumentPreviewPanel({
                     ]}
                 >
                     <Feather name="x" size={15} color={colors.text} />
+                </Pressable>
+
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="باز کردن پیش‌نمایش کامل"
+                    onPress={() => onOpenFullPreview?.(item)}
+                    style={[
+                        styles.fullPreviewButton,
+                        {
+                            borderColor: colors.border,
+                            backgroundColor: colors.background,
+                        },
+                    ]}
+                >
+                    <Feather name="maximize-2" size={14} color={colors.primary} />
+
+                    <Text
+                        style={[
+                            styles.fullPreviewButtonText,
+                            {
+                                color: colors.primary,
+                            },
+                        ]}
+                    >
+                        نمایش کامل
+                    </Text>
                 </Pressable>
 
                 <View style={styles.titleArea}>
@@ -560,5 +592,24 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.medium,
         textAlign: "right",
+    },
+
+    fullPreviewButton: {
+        minHeight: 32,
+
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+
+        paddingHorizontal: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    fullPreviewButtonText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
     },
 });

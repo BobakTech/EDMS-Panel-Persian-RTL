@@ -183,6 +183,16 @@ interface WorkspaceProps {
     onMoveItem: (itemId: string, destinationFolderId: string | null) => void;
     onOpenDashboard: () => void;
     onDropFiles: (files: DroppedWorkspaceFile[]) => void;
+    onOpenPreviewPage: (item: WorkspaceItem) => void;
+
+    /**
+     * ============================================================================
+     * Preview Page Callback
+     * ----------------------------------------------------------------------------
+     * Opens the full document preview page.
+     * ============================================================================
+     */
+    onOpenFullPreview?: (item: WorkspaceItem) => void;
 }
 
 /**
@@ -207,6 +217,8 @@ export default function Workspace({
     onMoveItem,
     onOpenDashboard,
     onDropFiles,
+    onOpenFullPreview,
+    onOpenPreviewPage,
 }: WorkspaceProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
@@ -963,9 +975,19 @@ export default function Workspace({
 
                                         {isPreviewOpen && (
                                             <View style={styles.workspacePreviewRow}>
+                                                {/**
+                                                * ============================================================================
+                                                * Full Preview Navigation
+                                                * ----------------------------------------------------------------------------
+                                                * Opens the dedicated document preview page instead of expanding inside the
+                                                * workspace grid.
+                                                * ============================================================================
+                                                */}
+
                                                 <WorkspaceDocumentPreviewPanel
                                                     item={item}
                                                     onClose={handleCloseDocumentPreview}
+                                                    onOpenFullPreview={onOpenPreviewPage}
                                                 />
                                             </View>
                                         )}
