@@ -637,7 +637,8 @@ const styles = StyleSheet.create({
 
         gap: spacing.md,
 
-        overflow: "hidden",
+        // Remove overflow: hidden to allow natural expansion and browser scrolling
+        overflow: "visible",
     },
 
     mobileMain: {

@@ -297,10 +297,11 @@ const styles = StyleSheet.create({
     },
 
     previewShell: {
-        minHeight: 560,
+        minHeight: 0,
+        minWidth: 0,
 
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
 
         padding: spacing.md,
 
@@ -312,7 +313,8 @@ const styles = StyleSheet.create({
 
     imagePreview: {
         width: "100%",
-        height: 620,
+        height: 500,
+        maxHeight: 500,
     },
 
     placeholder: {
