@@ -1,536 +1,155 @@
 # EDMS AI Context
 
-Repository:
-EDMS-Panel-Persian-RTL
+This is the working context for future AI/Codex development of EDMS. Read it with `docs/PMIS_Overview.md` before making changes. That document is authoritative for PMIS and backend facts.
 
-Purpose:
-AI onboarding document for Claude Code Agent.
+## 1. Confirmed decisions and current scope
 
-This file explains the current project architecture, development rules, completed milestones, and future direction.
+- EDMS is an Electronic Document Management System web application.
+- React.js and TypeScript are the definitive frontend technologies.
+- The UI supports responsive desktop and mobile browsers.
+- The frontend must integrate with the existing PMIS backend/API while remaining architecturally separate from the legacy PMIS implementation.
+- Do not infer backend contracts or redesign PMIS from frontend requirements.
 
----
+Current frontend work covers workspace and folder navigation, file browsing and actions, search, responsive shell behavior, inline preview, expanded preview pages, and an extensible renderer architecture.
 
-# 1. Project Overview
-
-## Project Name
-
-EDMS
-
-Electronic Document Management System.
-
----
-
-## Purpose
-
-EDMS is an enterprise document management platform.
-
-The current frontend focuses on:
-
-- Workspace management.
-- Folder navigation.
-- File browsing.
-- Document preview.
-- File rendering architecture.
-- Responsive user experience.
-
----
-
-## Main Goals
-
-The project goals are:
-
-- Provide a professional document management interface.
-- Support file and folder workflows.
-- Build scalable document preview architecture.
-- Maintain compatibility with existing EDMS behavior.
-- Prepare the frontend for future document lifecycle workflows.
-
----
-
-## Current Development Phase
-
-Current phase:
-Frontend workspace and preview architecture development.
-
-Completed:
-
-- Workspace foundation.
-- Document preview foundation.
-- Image preview rendering.
-- Full document preview page.
-- Preview architecture cleanup.
-
----
-
-## Current Priorities
+Implemented foundations include the workspace, image preview, full preview page, dashboard, archive, trash, settings, and responsive desktop/mobile-browser UI. Workspace data is currently frontend/mock state; production backend integration is not established in this repository context.
 
 Current priorities:
 
-1. Improve preview UX.
-2. Allow standalone preview pages to naturally expand.
-3. Allow browser scrollbar when content exceeds viewport.
-4. Add additional document renderers.
+1. Improve document-preview UX.
+2. Let standalone preview content expand naturally and use browser scrolling.
+3. Add renderers only after requirements and browser-compatible approaches are confirmed.
 
-Renderer roadmap:
+## Milestones
 
-- Image renderer.
-- PDF renderer.
-- Office renderer.
-- Text renderer.
+### Overall Milestones
 
----
+- Completed: workspace, responsive shell, core file/folder flows, and image-preview foundations.
+- Current: standalone full-screen document preview.
+- Next: PDF preview support.
+- Planned: Office and text renderers, followed by PMIS integration as contracts are confirmed.
 
-# 2. Technology Stack
+### Current Milestone
 
-## Frontend
+Complete and refine the standalone full-screen document preview page, including responsive layout, natural browser scrolling, consistent preview behavior, and clean integration with the existing renderer boundary.
 
-Framework:
-React Native + Expo Web
+### Next Milestone
 
-Language:
-TypeScript
+Add PDF preview support to the existing preview architecture for the inline and full-screen preview surfaces. The renderer approach remains TBD until browser requirements and available project constraints are confirmed.
 
-UI target:
-- Web.
-- Responsive desktop.
-- Mobile compatibility.
+## 2. Frontend architecture
 
----
+Current component structure:
 
-## Mobile
-
-Technology:
-Expo
-
-Platforms:
-- Web.
-- Android.
-- iOS.
-
----
-
-## Backend
-
-Technology:
-[To be determined based on existing EDMS backend]
-
-Platform:
-[To be determined]
-
-API:
-RESTful API for document management operations
-
----
-
-## Database
-
-Technology:
-[To be determined based on existing EDMS database]
-
-Schema:
-Document entities, folder structures, user permissions, audit logs
-
----
-
-## Development Environment
-
-OS:
-Windows
-
-Terminal:
-Git Bash (recommended), PowerShell, or CMD
-
-Example project path:
-D:\Projects\edms
-
----
-
-## Development Commands
-
-Type checking:
-```bash
-npx tsc --noEmit
-```
-
-Run web:
-```bash
-npm run web
-```
-
-Run Android:
-```bash
-npm run android
-```
-
-Run iOS:
-```bash
-npm run ios
-```
-
-Start development server:
-```bash
-npm start
-```
-
----
-
-# 3. Architecture Overview
-
-Application Structure
-
-Main flow:
-
+```text
 AppLayout
- |
- +-- Sidebar
- |
- +-- Toolbar
- |
- +-- Workspace
- |      |
- |      +-- WorkspaceItemCard
- |      |
- |      +-- WorkspaceDocumentPreviewPanel
- |
- +-- DocumentPreviewPage
- |
- +-- Dashboard
- |
- +-- Settings
-
-Important Components
-
-AppLayout
-
-Location:
-components/layout/AppLayout.tsx
-
-Responsibilities:
-Main application shell.
-Page switching.
-Workspace state.
-Preview navigation.
-Global layout control.
-
-Important state:
-workspaceItems.
-activeWorkspacePage.
-previewPageItemId.
-previewItem.
-
-Workspace
-
-Location:
-components/layout/Workspace.tsx
-
-Responsibilities:
-Folder navigation.
-File rendering.
-Workspace actions.
-Opening previews.
-
-WorkspaceDocumentPreviewPanel
-
-Location:
-components/workspace/WorkspaceDocumentPreviewPanel.tsx
-
-Responsibilities:
-Inline preview.
-Renderer detection.
-Preview state display.
-Opening full preview.
-
-Current supported renderer:
-Images.
-
-Future:
-PDF.
-Office.
-Text.
+|-- Sidebar
+|-- Toolbar
+|-- Dashboard
+|-- Settings
+|-- Workspace
+|   |-- WorkspaceItemCard
+|   `-- WorkspaceDocumentPreviewPanel
+`-- DocumentPreviewPage
+```
 
-DocumentPreviewPage
+Key ownership:
 
-Location:
-components/layout/DocumentPreviewPage.tsx
+- `components/layout/AppLayout.tsx`: application shell, page switching, shared workspace data, preview-page selection, and global layout.
+- `components/layout/Workspace.tsx`: folder navigation, item rendering, workspace interactions, and inline-preview selection.
+- `components/workspace/WorkspaceDocumentPreviewPanel.tsx`: inline preview, renderer detection, preview state, and expanded-preview action.
+- `components/layout/DocumentPreviewPage.tsx`: expanded preview, back navigation, rendering area, and file metadata.
+- `settings/SettingsContext.tsx`: theme and language settings.
+- `theme/`: shared design tokens.
+- `components/project/` and `components/workspace/`: domain types, helpers, and service boundaries.
 
-Responsibilities:
-Full page document preview.
-Larger preview area.
-Back navigation.
-File metadata.
+State currently uses React hooks. Page selection uses application state rather than an established routing library. `AppLayout` owns shared workspace and page state. Inspect the current implementation before changing these boundaries.
 
-Data Flow
+## 3. Document preview and layout rules
 
-Current flow:
+Keep the two preview surfaces separate:
 
-WorkspaceItem
-      |
-      v
-Workspace
-      |
-      +--> Inline Preview
-      |
-      +--> Full Preview Page
-      |
-      v
-AppLayout
+- `WorkspaceDocumentPreviewPanel` is the inline workspace preview.
+- `DocumentPreviewPage` is the expanded standalone preview.
 
----
+Do not merge them. Shared renderer logic may be extracted when it reduces duplication without coupling the presentation surfaces.
 
-# 4. Coding Rules and Conventions
+Images are the only confirmed renderer currently supported. PDF, Office, and text renderers are planned; exact formats, libraries, conversion services, and browser fallbacks are TBD.
 
-Naming
+Layout requirements:
 
-Components:
-PascalCase
+- Prefer natural document flow and browser scrolling.
+- Do not hide overflow when it prevents preview content from expanding.
+- Avoid unnecessary fixed heights and viewport constraints.
+- Preserve responsive desktop and mobile-browser behavior.
 
-Example:
-DocumentPreviewPage
-WorkspaceDocumentPreviewPanel
+## 4. PMIS integration context
 
-Functions:
-camelCase
+Confirmed by `docs/PMIS_Overview.md`:
 
-Example:
-handleOpenPreviewPage
-handleClosePreviewPage
+- PMIS is a long-running legacy project information management system.
+- Its established technologies include PHP across multiple legacy and current versions, MySQL 5.7, Apache on Windows, ADODB, and JavaScript.
+- Compatibility with older PHP environments matters.
+- Performance and memory usage must be considered.
+- Practical, legacy-compatible solutions take priority over unverified architectural changes.
+- Existing-system constraints must be examined before major changes are proposed.
 
-File Organization
+Integration rules:
 
-Layout components:
-components/layout
+- Treat PMIS as an external legacy backend from the EDMS frontend's perspective.
+- Keep PMIS-specific transport, payload mapping, and compatibility logic behind explicit frontend service/adaptor boundaries.
+- Do not put legacy backend implementation details in UI components.
+- Validate API behavior against the real PMIS system or authoritative documentation before implementation.
+- Ask before changes involving backend behavior, API contracts, authentication, database structure, or major architecture.
 
-Workspace components:
-components/workspace
+## 5. Engineering constraints
 
-Shared utilities:
-theme
-settings
-project
+- Prefer small, focused changes that preserve existing behavior.
+- Reuse existing types, helpers, services, component boundaries, and design tokens.
+- Avoid large state updates, unnecessary rerenders, and avoidable memory use, especially for large files and previews.
+- Do not replace the current state flow or remove helpers without inspecting their consumers.
+- Use PascalCase for components and camelCase for functions.
+- Add comments only for intent, constraints, or non-obvious architecture.
+- Run `npx tsc --noEmit` after TypeScript changes and use the repository's current scripts for local development.
+- Do not commit private API URLs, credentials, tokens, or server configuration.
 
-Comments
+## Git milestone workflow
 
-Use structured comments for architecture.
+- Develop each implementation milestone on its own short-lived branch, normally created from the current `main` before milestone code is modified. Do not implement milestones directly on `main` unless explicitly requested.
+- Use concise semantic names such as `feat/fullscreen-preview`, `feat/pdf-preview`, or `refactor/preview-layout`.
+- Do not switch branches with uncommitted changes unless those changes are safely handled first.
+- After a milestone is completed, reviewed, committed, and merged or otherwise confirmed integrated, its branch may be removed.
+- Never delete `main`, force-delete a branch without explicit confirmation, or automatically remove an unmerged branch.
+- Keep milestone commits semantic: use a concise title followed by a short descriptive paragraph.
 
-Example:
-/**
- * ============================================================================
- * Section Title
- * ----------------------------------------------------------------------------
- * Description
- * ============================================================================
- */
+## 6. Functional direction
 
-Comments should explain:
-Why something exists.
-Architecture decisions.
-Future intent.
+Current frontend capabilities:
 
-Do not add comments for obvious code.
+- File and folder browsing and folder navigation.
+- Workspace actions and search filtering.
+- Inline and expanded file preview.
+- Archive and trash UI flows.
 
-Performance Rules
+Planned capabilities, subject to confirmed requirements and backend contracts:
 
-Avoid:
-Large unnecessary state changes.
-Breaking component boundaries.
-Removing existing optimizations.
+- PMIS-backed document and folder operations.
+- Authentication and permissions.
+- Approval and document-lifecycle workflows.
+- Versioning and metadata management.
+- Audit and external-system integration.
 
-Prefer:
-Small focused changes.
-Existing helpers.
-Existing patterns.
+## 7. Open decisions and TBD items
 
----
+The following are not established by the current project context and must not be invented:
 
-# 5. Existing Project Rules
-
-Compatibility
-
-Do not:
-Rewrite architecture without discussion.
-Replace existing state flow.
-Remove existing helpers.
-
-Preview Architecture Rule
-
-Keep these separate:
-
-WorkspaceDocumentPreviewPanel:
-Purpose:
-Inline preview.
-
-DocumentPreviewPage:
-Purpose:
-Expanded standalone preview.
-
-Do not merge them.
-
-Layout Rule
-
-Avoid hiding overflow when it prevents natural browser scrolling.
-
-Preferred:
-Content grows naturally.
-Browser scrollbar appears when needed.
-
-Avoid:
-Artificial fixed heights.
-Blocking overflow.
-
----
-
-# 6. Database Knowledge
-
-[To be filled based on existing EDMS database schema]
-
-Key tables/documents:
-- Documents
-- Folders
-- Users
-- Permissions
-- Audit logs
-
-Relationships:
-Documents belong to folders, folders can be nested, users have permissions on documents/folders
-
----
-
-# 7. Backend Details
-
-Framework:
-[To be determined based on existing EDMS backend - possibly .NET, Node.js, or Java]
-
-Classes:
-[To be determined based on existing EDMS backend]
-
-APIs:
-Document management endpoints:
-- GET /api/documents - List documents
-- GET /api/documents/{id} - Get document details
-- POST /api/documents - Upload document
-- PUT /api/documents/{id} - Update document
-- DELETE /api/documents/{id} - Delete document
-- GET /api/documents/{id}/preview - Get document preview
-- GET /api/folders - List folders
-- POST /api/folders - Create folder
-
----
-
-# 8. Frontend Details
-
-UI Framework
-React Native + Expo Web.
-
-State Management
-Current approach:
-React hooks.
-
-Main ownership:
-AppLayout.
-
-Routing
-Current routing uses application state.
-
-Example:
-activeWorkspacePage
-previewPageItemId
-
----
-
-# 9. EDMS Functional Requirements
-
-Current:
-File browsing.
-Folder navigation.
-Workspace actions.
-File preview.
-
-Future:
-Permissions.
-Approval workflows.
-Document lifecycle.
-Search/filter.
-Versioning.
-Metadata management.
-Integration with external systems.
-
----
-
-# 10. Current Progress
-
-Completed Commits
-
-Document preview foundation:
-196c361 feat(workspace): added document preview foundation
-
-Image preview:
-2cbc240 feat(workspace): rendered image previews
-
-Full preview page:
-1851270 feat(preview): added full document preview page
-
-Comment cleanup:
-4bcd090 docs(preview): refined preview architecture comments
-
-Recent Files
-components/layout/AppLayout.tsx
-components/layout/Workspace.tsx
-components/layout/DocumentPreviewPage.tsx
-components/workspace/WorkspaceDocumentPreviewPanel.tsx
-
-Pending Work
-
-Next milestone:
-Preview scrolling UX.
-
-Problem:
-Parent layout containers currently restrict expansion.
-
-Goal:
-Allow preview pages to expand and activate browser scrolling.
-
----
-
-# 11. AI Assistant Instructions
-
-Before modifying code:
-Inspect existing implementation.
-Understand ownership.
-Check related components.
-Avoid assumptions.
-
-Before risky changes ask first:
-Database changes.
-API changes.
-Authentication changes.
-Major refactors.
-
-Always:
-Prefer small milestones.
-Preserve compatibility.
-Explain impact.
-Keep commits focused.
-
----
-
-# 12. Future Roadmap
-
-Preview System
-Improve:
-Full page experience.
-Browser scrolling.
-Renderer architecture.
-
-Renderers
-Add:
-PDF.
-Office.
-Text.
-
-Backend Integration
-Connect to existing EDMS backend APIs for:
-Document upload/retrieval
-Folder management
-User authentication and permissions
-Audit logging
-Version control
+- PMIS API URLs, endpoints, request/response schemas, and error conventions.
+- Authentication and authorization mechanisms.
+- EDMS persistence model and database schema.
+- Backend classes and internal architecture.
+- Upload, download, preview, and file-storage contracts.
+- Production deployment and environment configuration.
+- Libraries or services for PDF, Office, and text rendering.
+- Final routing and broader frontend state-management choices.
+
+When work depends on one of these items, inspect the implementation or authoritative documentation first. If it remains unclear and affects architecture or external behavior, ask for direction rather than assuming.
