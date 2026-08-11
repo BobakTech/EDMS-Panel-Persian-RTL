@@ -145,6 +145,41 @@ export default function AppLayout() {
             ? workspaceItems.find((item) => item.id === previewPageItemId) ?? null
             : null;
 
+    const previewPageItems = workspaceItems.filter((item) => {
+        const matchesPage =
+            (activeWorkspacePage === "workspace" && item.status === "active") ||
+            (activeWorkspacePage === "archive" && item.status === "archived") ||
+            (activeWorkspacePage === "trash" && item.status === "trashed");
+
+        if (item.type !== "file" || !matchesPage) {
+            return false;
+        }
+
+        if (
+            activeWorkspacePage === "workspace" &&
+            (item.parentFolderId ?? null) !== currentFolderId
+        ) {
+            return false;
+        }
+
+        const normalizedSearchQuery = workspaceSearchQuery.trim().toLowerCase();
+        return (
+            !normalizedSearchQuery ||
+            item.name.toLowerCase().includes(normalizedSearchQuery) ||
+            item.description.toLowerCase().includes(normalizedSearchQuery)
+        );
+    });
+
+    const previewPageItemIndex = previewPageItem
+        ? previewPageItems.findIndex((item) => item.id === previewPageItem.id)
+        : -1;
+    const previousPreviewPageItem =
+        previewPageItemIndex > 0 ? previewPageItems[previewPageItemIndex - 1] : null;
+    const nextPreviewPageItem =
+        previewPageItemIndex >= 0 && previewPageItemIndex < previewPageItems.length - 1
+            ? previewPageItems[previewPageItemIndex + 1]
+            : null;
+
     /**
      * ============================================================================
      * Project Info Loading
@@ -531,7 +566,7 @@ export default function AppLayout() {
                         >
                             <View style={styles.toolbarLayer}>
                                 <Toolbar
-                                    variant={isMobileShell ? "mobile-header" : "desktop"}
+                                    variant="mobile-menu"
                                     activeAction={activeWorkspaceAction}
                                     searchQuery={workspaceSearchQuery}
                                     canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
@@ -566,6 +601,16 @@ export default function AppLayout() {
                         <DocumentPreviewPage
                             item={previewPageItem}
                             onBack={handleClosePreviewPage}
+                            onPrevious={
+                                previousPreviewPageItem
+                                    ? () => setPreviewPageItemId(previousPreviewPageItem.id)
+                                    : undefined
+                            }
+                            onNext={
+                                nextPreviewPageItem
+                                    ? () => setPreviewPageItemId(nextPreviewPageItem.id)
+                                    : undefined
+                            }
                         />
                     ) : isWorkspacePage ? (
                         <Workspace

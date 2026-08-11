@@ -10,10 +10,13 @@
 import { Feather } from "@expo/vector-icons";
 import {
     Image,
+    Linking,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View,
 } from "react-native";
 
@@ -31,6 +34,8 @@ import type { WorkspaceItem } from "../workspace";
 interface DocumentPreviewPageProps {
     item: WorkspaceItem;
     onBack: () => void;
+    onPrevious?: () => void;
+    onNext?: () => void;
 }
 
 /**
@@ -68,11 +73,39 @@ function getFileTypeLabel(item: WorkspaceItem) {
 export default function DocumentPreviewPage({
     item,
     onBack,
+    onPrevious,
+    onNext,
 }: DocumentPreviewPageProps) {
     const { theme } = useSettings();
+    const { width } = useWindowDimensions();
     const colors = theme.colors;
+    const isPhonePreview = width < 430;
 
     const shouldRenderImage = isImageFile(item) && Boolean(item.localUri);
+    const canAccessOriginal = Boolean(item.localUri);
+
+    function handleOpenOriginal() {
+        if (item.localUri) {
+            void Linking.openURL(item.localUri);
+        }
+    }
+
+    function handleDownloadOriginal() {
+        if (!item.localUri) {
+            return;
+        }
+
+        if (Platform.OS !== "web") {
+            void Linking.openURL(item.localUri);
+            return;
+        }
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = item.localUri;
+        downloadLink.download = item.name;
+        downloadLink.rel = "noopener";
+        downloadLink.click();
+    }
 
     return (
         <ScrollView
@@ -84,6 +117,7 @@ export default function DocumentPreviewPage({
             <View
                 style={[
                     styles.header,
+                    isPhonePreview && styles.phoneHeader,
                     {
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
@@ -94,21 +128,23 @@ export default function DocumentPreviewPage({
                     accessibilityRole="button"
                     accessibilityLabel="بازگشت به فضای کاری"
                     onPress={onBack}
-                    style={[
+                    style={({ pressed }) => [
                         styles.backButton,
+                        isPhonePreview && styles.phoneBackButton,
                         {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
                         },
+                        pressed && styles.pressedBackButton,
                     ]}
                 >
-                    <Feather name="arrow-right" size={16} color={colors.text} />
+                    <Feather name="arrow-right" size={16} color={colors.surface} />
 
                     <Text
                         style={[
                             styles.backButtonText,
                             {
-                                color: colors.text,
+                                color: colors.surface,
                             },
                         ]}
                     >
@@ -142,9 +178,80 @@ export default function DocumentPreviewPage({
                 </View>
             </View>
 
+            <View style={[styles.actionsPanel, isPhonePreview && styles.phoneActionsPanel]}>
+                <View style={styles.actionGroup}>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="باز کردن فایل اصلی"
+                        disabled={!canAccessOriginal}
+                        onPress={handleOpenOriginal}
+                        style={({ pressed }) => [
+                            styles.actionButton,
+                            { backgroundColor: colors.primary, borderColor: colors.primary },
+                            !canAccessOriginal && styles.disabledAction,
+                            pressed && canAccessOriginal && styles.pressedBackButton,
+                        ]}
+                    >
+                        <Feather name="external-link" size={16} color={colors.surface} />
+                        <Text style={[styles.actionButtonText, { color: colors.surface }]}>باز کردن</Text>
+                    </Pressable>
+
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="دانلود فایل اصلی"
+                        disabled={!canAccessOriginal}
+                        onPress={handleDownloadOriginal}
+                        style={({ pressed }) => [
+                            styles.actionButton,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                            !canAccessOriginal && styles.disabledAction,
+                            pressed && canAccessOriginal && styles.pressedBackButton,
+                        ]}
+                    >
+                        <Feather name="download" size={16} color={colors.text} />
+                        <Text style={[styles.actionButtonText, { color: colors.text }]}>دانلود</Text>
+                    </Pressable>
+                </View>
+
+                <View style={styles.actionGroup}>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="فایل قبلی"
+                        disabled={!onPrevious}
+                        onPress={onPrevious}
+                        style={({ pressed }) => [
+                            styles.actionButton,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                            !onPrevious && styles.disabledAction,
+                            pressed && Boolean(onPrevious) && styles.pressedBackButton,
+                        ]}
+                    >
+                        <Feather name="chevron-right" size={16} color={colors.text} />
+                        <Text style={[styles.actionButtonText, { color: colors.text }]}>قبلی</Text>
+                    </Pressable>
+
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="فایل بعدی"
+                        disabled={!onNext}
+                        onPress={onNext}
+                        style={({ pressed }) => [
+                            styles.actionButton,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                            !onNext && styles.disabledAction,
+                            pressed && Boolean(onNext) && styles.pressedBackButton,
+                        ]}
+                    >
+                        <Text style={[styles.actionButtonText, { color: colors.text }]}>بعدی</Text>
+                        <Feather name="chevron-left" size={16} color={colors.text} />
+                    </Pressable>
+                </View>
+            </View>
+
             <View
                 style={[
                     styles.previewShell,
+                    isPhonePreview && styles.phonePreviewShell,
                     {
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
@@ -155,12 +262,16 @@ export default function DocumentPreviewPage({
                     <Image
                         source={{ uri: item.localUri }}
                         resizeMode="contain"
-                        style={styles.imagePreview}
+                        style={[
+                            styles.imagePreview,
+                            isPhonePreview && styles.phoneImagePreview,
+                        ]}
                     />
                 ) : (
                     <View
                         style={[
                             styles.placeholder,
+                            isPhonePreview && styles.phonePlaceholder,
                             {
                                 backgroundColor: colors.background,
                                 borderColor: colors.border,
@@ -197,6 +308,7 @@ export default function DocumentPreviewPage({
             <View
                 style={[
                     styles.metaPanel,
+                    isPhonePreview && styles.phoneMetaPanel,
                     {
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
@@ -258,8 +370,14 @@ const styles = StyleSheet.create({
         ...shadows.sm,
     },
 
+    phoneHeader: {
+        alignItems: "stretch",
+        flexDirection: "column-reverse",
+    },
+
     backButton: {
-        minHeight: 38,
+        minWidth: 88,
+        height: 40,
 
         flexDirection: "row-reverse",
         alignItems: "center",
@@ -270,6 +388,55 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.md,
+
+        ...shadows.sm,
+    },
+
+    phoneBackButton: {
+        alignSelf: "flex-start",
+    },
+
+    pressedBackButton: {
+        opacity: 0.82,
+    },
+
+    actionsPanel: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: spacing.sm,
+        flexWrap: "wrap",
+    },
+
+    phoneActionsPanel: {
+        alignItems: "stretch",
+        flexDirection: "column",
+    },
+
+    actionGroup: {
+        flexDirection: "row-reverse",
+        gap: spacing.sm,
+    },
+
+    actionButton: {
+        minWidth: 96,
+        height: 40,
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.md,
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    actionButtonText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    disabledAction: {
+        opacity: 0.45,
     },
 
     backButtonText: {
@@ -311,10 +478,19 @@ const styles = StyleSheet.create({
         ...shadows.sm,
     },
 
+    phonePreviewShell: {
+        padding: spacing.sm,
+    },
+
     imagePreview: {
         width: "100%",
         height: 500,
         maxHeight: 500,
+    },
+
+    phoneImagePreview: {
+        height: 360,
+        maxHeight: 360,
     },
 
     placeholder: {
@@ -330,6 +506,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: radius.lg,
         borderStyle: "dashed",
+    },
+
+    phonePlaceholder: {
+        minHeight: 300,
     },
 
     placeholderTitle: {
@@ -353,6 +533,10 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.lg,
+    },
+
+    phoneMetaPanel: {
+        flexDirection: "column",
     },
 
     metaItem: {

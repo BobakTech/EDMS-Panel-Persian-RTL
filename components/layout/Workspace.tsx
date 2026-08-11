@@ -888,12 +888,13 @@ export default function Workspace({
                             accessibilityRole="button"
                             accessibilityLabel="بازگشت به فضای کاری"
                             onPress={handleReturnToPreviousFolder}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.folderBackButton,
                                 {
                                     backgroundColor: colors.primary,
                                     borderColor: colors.primary,
                                 },
+                                pressed && styles.pressedFolderBackButton,
                             ]}
                         >
                             <Text
@@ -1670,6 +1671,10 @@ const styles = StyleSheet.create({
     folderBackButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
+    },
+
+    pressedFolderBackButton: {
+        opacity: 0.82,
     },
 
     workspaceBody: {
