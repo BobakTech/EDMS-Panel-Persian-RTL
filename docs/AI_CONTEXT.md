@@ -16,26 +16,26 @@ Implemented foundations include the workspace, image preview, full preview page,
 
 Current priorities:
 
-1. Improve document-preview UX.
-2. Let standalone preview content expand naturally and use browser scrolling.
-3. Add renderers only after requirements and browser-compatible approaches are confirmed.
+1. Confirm PDF browser requirements and select a compatible renderer approach.
+2. Add PDF rendering to the inline and standalone preview surfaces.
+3. Add further renderers only after their requirements are confirmed.
 
 ## Milestones
 
 ### Overall Milestones
 
-- Completed: workspace, responsive shell, core file/folder flows, and image-preview foundations.
-- Current: standalone full-screen document preview.
-- Next: PDF preview support.
-- Planned: Office and text renderers, followed by PMIS integration as contracts are confirmed.
+- Completed: workspace, responsive shell, core file/folder flows, image-preview foundations, and standalone full-screen document preview.
+- Current: PDF preview support.
+- Next: Office and text renderers.
+- Planned: PMIS integration as contracts are confirmed.
 
 ### Current Milestone
 
-Complete and refine the standalone full-screen document preview page, including responsive layout, natural browser scrolling, consistent preview behavior, and clean integration with the existing renderer boundary.
+Confirm browser requirements and the renderer approach, then add PDF support to the inline and standalone preview surfaces.
 
 ### Next Milestone
 
-Add PDF preview support to the existing preview architecture for the inline and full-screen preview surfaces. The renderer approach remains TBD until browser requirements and available project constraints are confirmed.
+Add Office and text renderers after their formats, browser fallbacks, and project constraints are confirmed.
 
 ## 2. Frontend architecture
 
