@@ -113,13 +113,38 @@ Integration rules:
 - Run `npx tsc --noEmit` after TypeScript changes and use the repository's current scripts for local development.
 - Do not commit private API URLs, credentials, tokens, or server configuration.
 
+## AI decision prioritization
+
+- Before acting on any new request, suggestion, or proposed change, classify it with a brief reason: **Do now** when it supports the current milestone, removes a blocker, or prevents rework; **Do later** when valuable but unnecessary for the current milestone and suitable for future planning; or **Not necessary** when it adds little value, duplicates capability, or creates unjustified complexity.
+- Consider the current milestone, project goals, technical impact, and maintenance cost. Avoid unjustified scope expansion and prioritize completing the current milestone over unrelated improvements.
+
+## Token efficiency
+
+- Minimize token use: be concise and do not repeat known context, instructions, unchanged code/documentation, file contents, command output, or explanations.
+- Inspect only files and dependencies needed for the task; prefer targeted searches, diffs, commands, and focused edits over repository-wide review.
+- Keep status reports and summaries brief. Use additional context only when correctness, safety, debugging, or dependency understanding requires it.
+- Token efficiency must never reduce code completeness, correctness, required testing, or preservation of project rules.
+
+## README maintenance
+
+- Update `README.md` when significant changes to setup, architecture, development workflow, commands, milestones, or usage make it inaccurate or incomplete; skip minor internal changes that do not affect users or developers.
+- Keep it concise and aligned with the repository. Do not duplicate detailed AI context; keep project-specific AI rules in `docs/AI_CONTEXT.md`.
+
+## Local chat history
+
+- The existing root `.chat-history.md` is the local chat-history (LCH) file. Keep it local and Git-ignored; never stage or commit it.
+- Store exact user/Codex messages verbatim. Never summarize, paraphrase, merge, reconstruct, or invent message content.
+- Separate history into clear chat sections and keep messages chronological within each section. Put entries that cannot be classified confidently under `Unclassified`.
+- Record each message's actual system timestamp with timezone offset and region when available, for example `2026-08-10 14:52:00 +03:30 (Asia/Tehran)`. Never invent unavailable timestamp or timezone data.
+- Append future relevant EDMS development conversations using the same structure.
+
 ## Git milestone workflow
 
 - Develop each implementation milestone on its own short-lived branch, normally created from the current `main` before milestone code is modified. Do not implement milestones directly on `main` unless explicitly requested.
-- Use concise semantic names such as `feat/fullscreen-preview`, `feat/pdf-preview`, or `refactor/preview-layout`.
+- Name milestone branches `<username>/<operation>/<subject>` using concise lowercase kebab-case segments, for example `bobaktech/feature/standalone-preview`.
 - Do not switch branches with uncommitted changes unless those changes are safely handled first.
-- After a milestone is completed, reviewed, committed, and merged or otherwise confirmed integrated, its branch may be removed.
-- Never delete `main`, force-delete a branch without explicit confirmation, or automatically remove an unmerged branch.
+- Remove stale milestone branches when they are no longer needed, but only when merged, abandoned, or explicitly confirmed unnecessary.
+- Never delete `main` or force-delete unmerged work without confirmation.
 - Keep milestone commits semantic: use a concise title followed by a short descriptive paragraph.
 
 ## 6. Functional direction
