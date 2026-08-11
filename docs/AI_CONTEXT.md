@@ -16,26 +16,26 @@ Implemented foundations include the workspace, image preview, full preview page,
 
 Current priorities:
 
-1. Confirm PDF browser requirements and select a compatible renderer approach.
-2. Add PDF rendering to the inline and standalone preview surfaces.
-3. Add further renderers only after their requirements are confirmed.
+1. Confirm Office and text format requirements and browser fallbacks.
+2. Add further renderers only after their requirements are confirmed.
+3. Preserve the lightweight, PMIS-compatible preview architecture.
 
 ## Milestones
 
 ### Overall Milestones
 
-- Completed: workspace, responsive shell, core file/folder flows, image-preview foundations, and standalone full-screen document preview.
-- Current: PDF preview support.
-- Next: Office and text renderers.
+- Completed: workspace, responsive shell, core file/folder flows, image/PDF preview support, and standalone full-screen document preview.
+- Current: Office and text renderer planning.
+- Next: Office and text renderer implementation after requirements are confirmed.
 - Planned: PMIS integration as contracts are confirmed.
 
 ### Current Milestone
 
-Confirm browser requirements and the renderer approach, then add PDF support to the inline and standalone preview surfaces.
+Confirm Office and text formats, browser fallbacks, and size constraints before implementation.
 
 ### Next Milestone
 
-Add Office and text renderers after their formats, browser fallbacks, and project constraints are confirmed.
+Add Office and text renderers after their requirements are confirmed.
 
 ## 2. Frontend architecture
 
@@ -74,7 +74,7 @@ Keep the two preview surfaces separate:
 
 Do not merge them. Shared renderer logic may be extracted when it reduces duplication without coupling the presentation surfaces.
 
-Images are the only confirmed renderer currently supported. PDF, Office, and text renderers are planned; exact formats, libraries, conversion services, and browser fallbacks are TBD.
+Image and dependency-free browser-native PDF renderers are supported. Office and text renderers remain planned; exact formats, libraries, conversion services, and browser fallbacks are TBD.
 
 Layout requirements:
 
@@ -82,6 +82,7 @@ Layout requirements:
 - Do not hide overflow when it prevents preview content from expanding.
 - Avoid unnecessary fixed heights and viewport constraints.
 - Preserve responsive desktop and mobile-browser behavior.
+- Browser-scrollbar experiments caused missing workspace content and a complete white page. Before revisiting scrollbar changes, explain this regression and obtain explicit confirmation to proceed.
 
 ## 4. PMIS integration context
 

@@ -18,6 +18,7 @@ import {
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import PdfPreviewRenderer from "../preview/PdfPreviewRenderer";
 
 import type { WorkspaceItem } from "./workspace.types";
 
@@ -214,6 +215,8 @@ export default function WorkspaceDocumentPreviewPanel({
     const rendererInfo = getPreviewRendererInfo(item);
     const shouldRenderImage =
         rendererInfo.kind === "image" && Boolean(item.localUri);
+    const shouldRenderPdf =
+        rendererInfo.kind === "pdf" && Boolean(item.localUri);
 
     return (
         <View
@@ -295,7 +298,7 @@ export default function WorkspaceDocumentPreviewPanel({
 
             <View
                 style={[
-                    shouldRenderImage
+                    shouldRenderImage || shouldRenderPdf
                         ? styles.imagePreviewFrame
                         : styles.previewRow,
                     {
@@ -309,6 +312,14 @@ export default function WorkspaceDocumentPreviewPanel({
                         source={{ uri: item.localUri }}
                         resizeMode="contain"
                         style={styles.imagePreview}
+                    />
+                ) : shouldRenderPdf && item.localUri ? (
+                    <PdfPreviewRenderer
+                        uri={item.localUri}
+                        title={item.name}
+                        height={520}
+                        backgroundColor={colors.background}
+                        borderColor={colors.border}
                     />
                 ) : (
                     <>

@@ -40,6 +40,8 @@ Backend integration is intentionally not included in this public repository. API
 - Restore from trash
 - Permanent delete confirmation
 - Undo-style feedback for key actions
+- Inline and full-screen image/PDF previews
+- Original-file open/download and previous/next preview navigation
 - Mock workspace data for frontend demonstration
 
 ## Demo Pages

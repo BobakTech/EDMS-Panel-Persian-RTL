@@ -22,6 +22,7 @@ import {
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import PdfPreviewRenderer from "../preview/PdfPreviewRenderer";
 
 import type { WorkspaceItem } from "../workspace";
 
@@ -58,6 +59,13 @@ function isImageFile(item: WorkspaceItem) {
     );
 }
 
+function isPdfFile(item: WorkspaceItem) {
+    const extension = getNormalizedExtension(item);
+    const mimeType = item.mimeType?.toLowerCase() ?? "";
+
+    return extension === "pdf" || mimeType.includes("pdf");
+}
+
 function getFileTypeLabel(item: WorkspaceItem) {
     const extension = getNormalizedExtension(item);
 
@@ -82,6 +90,7 @@ export default function DocumentPreviewPage({
     const isPhonePreview = width < 430;
 
     const shouldRenderImage = isImageFile(item) && Boolean(item.localUri);
+    const shouldRenderPdf = isPdfFile(item) && Boolean(item.localUri);
     const canAccessOriginal = Boolean(item.localUri);
 
     function handleOpenOriginal() {
@@ -266,6 +275,14 @@ export default function DocumentPreviewPage({
                             styles.imagePreview,
                             isPhonePreview && styles.phoneImagePreview,
                         ]}
+                    />
+                ) : shouldRenderPdf && item.localUri ? (
+                    <PdfPreviewRenderer
+                        uri={item.localUri}
+                        title={item.name}
+                        height={isPhonePreview ? 520 : 720}
+                        backgroundColor={colors.background}
+                        borderColor={colors.border}
                     />
                 ) : (
                     <View
