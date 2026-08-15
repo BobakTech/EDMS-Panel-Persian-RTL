@@ -7,6 +7,7 @@
  */
 
 import { Feather } from "../../web/icons";
+import { useState } from "react";
 
 import {
     Pressable,
@@ -15,7 +16,7 @@ import {
     View,
 } from "../../web/ui";
 
-import { radius, shadows, spacing, typography } from "../../theme";
+import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
 import type {
@@ -88,11 +89,23 @@ export default function WorkspaceItemCard({
 }: WorkspaceItemCardProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
+    const [isHovered, setIsHovered] = useState(false);
+    const [isPressed, setIsPressed] = useState(false);
 
     const isListMode = viewMode === "list";
+    const depthColor = `color-mix(in srgb, ${colors.primary} 28%, ${colors.border})`;
+    const ambientShadow = "rgba(0, 0, 0, 0.18)";
 
     return (
         <View
+            onPointerEnter={() => setIsHovered(true)}
+            onPointerLeave={() => {
+                setIsHovered(false);
+                setIsPressed(false);
+            }}
+            onPointerDown={() => setIsPressed(true)}
+            onPointerUp={() => setIsPressed(false)}
+            onPointerCancel={() => setIsPressed(false)}
             style={[
                 styles.card,
                 isListMode ? styles.listCard : styles.gridCard,
@@ -102,6 +115,16 @@ export default function WorkspaceItemCard({
                     borderColor: isSelected
                         ? colors.primary
                         : `color-mix(in srgb, ${colors.primary} 38%, ${colors.border})`,
+                    boxShadow: isPressed
+                        ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 1px 0 ${depthColor}, 0 3px 7px ${ambientShadow}`
+                        : isHovered
+                            ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 5px 0 ${depthColor}, 0 12px 22px ${ambientShadow}`
+                            : `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 3px 0 ${depthColor}, 0 7px 14px ${ambientShadow}`,
+                    transform: isPressed
+                        ? "translateY(2px)"
+                        : isHovered
+                            ? "translateY(-2px)"
+                            : "translateY(0)",
                 },
                 isSelected && styles.selectedCard,
             ]}
@@ -232,8 +255,8 @@ const styles = StyleSheet.create({
 
         borderWidth: 1.5,
         borderRadius: radius.lg,
-
-        ...shadows.sm,
+        transition: "transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease",
+        willChange: "transform, box-shadow",
     },
 
     gridCard: {
