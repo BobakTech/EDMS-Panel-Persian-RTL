@@ -139,6 +139,12 @@ Integration rules:
 - Record each message's actual system timestamp with timezone offset and region when available, for example `2026-08-10 14:52:00 +03:30 (Asia/Tehran)`. Never invent unavailable timestamp or timezone data.
 - Append future relevant EDMS development conversations using the same structure.
 
+## Resilient execution
+
+- For large or long-running tasks, keep the overall goal and remaining work clear, and split execution into small, independently completable milestones; do not fragment small tasks unnecessarily.
+- Complete, verify, and preserve each milestone before starting the next. Prefer incremental edits and validation, with milestones small enough to reduce timeout, connection-loss, and recovery risk.
+- If interrupted, resume from the last successfully completed milestone without repeating completed work.
+
 ## Git milestone workflow
 
 - Develop each implementation milestone on its own short-lived branch, normally created from the current `main` before milestone code is modified. Do not implement milestones directly on `main` unless explicitly requested.
