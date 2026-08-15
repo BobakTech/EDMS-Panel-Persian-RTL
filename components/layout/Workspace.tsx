@@ -29,6 +29,7 @@ import {
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import type { TranslationKey } from "../../locales";
 
 /**
  * ============================================================================
@@ -100,38 +101,40 @@ interface WorkspacePageContent {
  * ============================================================================
  */
 
-function getWorkspacePageContent(pageType: WorkspacePageType): WorkspacePageContent {
+type Translate = (key: TranslationKey) => string;
+
+function getWorkspacePageContent(pageType: WorkspacePageType, t: Translate): WorkspacePageContent {
     if (pageType === "archive") {
         return {
-            breadcrumbLabel: "آرشیو",
-            title: "آرشیو",
-            subtitle: "مشاهده پوشه‌ها و فایل‌های آرشیو شده",
+            breadcrumbLabel: t("archive"),
+            title: t("archive"),
+            subtitle: t("archiveSubtitle"),
             emptyIcon: "A",
-            emptyTitle: "آرشیوی وجود ندارد",
-            emptyDescription: "فایل‌ها و پوشه‌هایی که آرشیو می‌شوند در این بخش نمایش داده خواهند شد.",
+            emptyTitle: t("emptyArchiveTitle"),
+            emptyDescription: t("emptyArchiveDescription"),
             visibleStatus: "archived",
         };
     }
 
     if (pageType === "trash") {
         return {
-            breadcrumbLabel: "سطل زباله",
-            title: "سطل زباله",
-            subtitle: "مشاهده فایل‌ها و پوشه‌های حذف‌شده",
+            breadcrumbLabel: t("trash"),
+            title: t("trash"),
+            subtitle: t("trashSubtitle"),
             emptyIcon: "T",
-            emptyTitle: "سطل زباله خالی است",
-            emptyDescription: "فایل‌ها و پوشه‌هایی که حذف می‌شوند در این بخش نمایش داده خواهند شد.",
+            emptyTitle: t("emptyTrashTitle"),
+            emptyDescription: t("emptyTrashDescription"),
             visibleStatus: "trashed",
         };
     }
 
     return {
-        breadcrumbLabel: "اسناد من",
-        title: "فضای کاری",
-        subtitle: "مدیریت پوشه‌ها، فایل‌ها و اسناد سازمانی",
+        breadcrumbLabel: t("myDocuments"),
+        title: t("workspace"),
+        subtitle: t("workspaceSubtitle"),
         emptyIcon: "+",
-        emptyTitle: "هنوز سندی وجود ندارد",
-        emptyDescription: "برای شروع، یک پوشه جدید بسازید یا فایل‌های خود را بارگذاری کنید.",
+        emptyTitle: t("emptyWorkspaceTitle"),
+        emptyDescription: t("emptyWorkspaceDescription"),
         visibleStatus: "active",
     };
 }
@@ -149,7 +152,13 @@ function isWorkspaceItemVisibleOnPage(
     item: WorkspaceItem,
     pageType: WorkspacePageType
 ) {
-    return item.status === getWorkspacePageContent(pageType).visibleStatus;
+    const visibleStatus = pageType === "archive"
+        ? "archived"
+        : pageType === "trash"
+            ? "trashed"
+            : "active";
+
+    return item.status === visibleStatus;
 }
 
 /**
@@ -181,6 +190,7 @@ interface WorkspaceProps {
     onRenameItem: (itemId: string, newName: string) => void;
     onDeleteItem: (itemId: string) => void;
     onMoveItem: (itemId: string, destinationFolderId: string | null) => void;
+    onTogglePinnedItem: (itemId: string) => void;
     onOpenDashboard: () => void;
     onDropFiles: (files: DroppedWorkspaceFile[]) => void;
     onOpenPreviewPage: (item: WorkspaceItem) => void;
@@ -215,12 +225,13 @@ export default function Workspace({
     onRenameItem,
     onDeleteItem,
     onMoveItem,
+    onTogglePinnedItem,
     onOpenDashboard,
     onDropFiles,
     onOpenFullPreview,
     onOpenPreviewPage,
 }: WorkspaceProps) {
-    const { theme } = useSettings();
+    const { t, theme } = useSettings();
     const colors = theme.colors;
 
     const dangerColor = "#DC2626";
@@ -237,7 +248,7 @@ export default function Workspace({
             : spacing.xl;
     const workspaceTopPadding = spacing.none;
 
-    const pageContent = getWorkspacePageContent(pageType);
+    const pageContent = getWorkspacePageContent(pageType, t);
 
     const workspaceFolders = workspaceItems.filter(
         (item) => item.type === "folder"
@@ -665,12 +676,17 @@ export default function Workspace({
         return (item.parentFolderId ?? null) === currentFolderId;
     });
 
-    const visibleWorkspaceItems = normalizedSearchQuery
+    const filteredWorkspaceItems = normalizedSearchQuery
         ? pageWorkspaceItems.filter((item) =>
             item.name.toLowerCase().includes(normalizedSearchQuery) ||
             item.description.toLowerCase().includes(normalizedSearchQuery)
         )
         : pageWorkspaceItems;
+
+    const visibleWorkspaceItems = [...filteredWorkspaceItems].sort(
+        (firstItem, secondItem) =>
+            Number(Boolean(secondItem.isPinned)) - Number(Boolean(firstItem.isPinned))
+    );
 
     /**
     * Selected file item shown in the document preview panel.
@@ -840,7 +856,7 @@ export default function Workspace({
 
     const breadcrumbItems = [
         {
-            label: "خانه",
+            label: t("home"),
             accessibilityLabel: "رفتن به داشبورد",
             onPress: onOpenDashboard,
         },
@@ -886,7 +902,7 @@ export default function Workspace({
                     {currentWorkspaceFolder && (
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="بازگشت به فضای کاری"
+                            accessibilityLabel={t("back")}
                             onPress={handleReturnToPreviousFolder}
                             style={({ pressed }) => [
                                 styles.folderBackButton,
@@ -905,7 +921,7 @@ export default function Workspace({
                                     },
                                 ]}
                             >
-                                ↩ بازگشت
+                                ↩ {t("back")}
                             </Text>
                         </Pressable>
                     )}
@@ -915,7 +931,7 @@ export default function Workspace({
                     title={currentWorkspaceFolder?.name ?? pageContent.title}
                     subtitle={
                         currentWorkspaceFolder
-                            ? "مشاهده فایل‌ها و پوشه‌های داخل این پوشه"
+                            ? t("folderContentsSubtitle")
                             : pageContent.subtitle
                     }
                 >
@@ -972,6 +988,7 @@ export default function Workspace({
                                             isSelected={selectedItemId === item.id || isPreviewOpen}
                                             onPress={handlePressWorkspaceItem}
                                             onOpenActions={handleOpenWorkspaceItemActions}
+                                            onTogglePinned={onTogglePinnedItem}
                                         />
 
                                         {isPreviewOpen && (

@@ -18,6 +18,7 @@ import {
 
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import type { TranslationKey } from "../../locales";
 
 import type {
     WorkspaceItem,
@@ -45,6 +46,7 @@ interface WorkspaceItemCardProps {
     isSelected: boolean;
     onPress: (itemId: string) => void;
     onOpenActions?: (itemId: string) => void;
+    onTogglePinned: (itemId: string) => void;
 }
 
 /**
@@ -57,20 +59,22 @@ function getItemIconName(item: WorkspaceItem): FeatherIconName {
     return item.type === "folder" ? "folder" : "file-text";
 }
 
-function getItemTypeLabel(item: WorkspaceItem) {
+type Translate = (key: TranslationKey) => string;
+
+function getItemTypeLabel(item: WorkspaceItem, t: Translate) {
     if (item.type === "folder") {
-        return "پوشه";
+        return t("folder");
     }
 
-    return item.extension?.toUpperCase() ?? "فایل";
+    return item.extension?.toUpperCase() ?? t("file");
 }
 
-function getItemMetaLabel(item: WorkspaceItem) {
+function getItemMetaLabel(item: WorkspaceItem, t: Translate) {
     if (item.type === "folder") {
-        return `${item.childrenCount ?? 0} آیتم`;
+        return `${item.childrenCount ?? 0} ${t("items")}`;
     }
 
-    return item.sizeLabel ?? "نامشخص";
+    return item.sizeLabel ?? t("unknown");
 }
 
 /**
@@ -86,8 +90,9 @@ export default function WorkspaceItemCard({
     isSelected,
     onPress,
     onOpenActions,
+    onTogglePinned,
 }: WorkspaceItemCardProps) {
-    const { theme } = useSettings();
+    const { t, theme } = useSettings();
     const colors = theme.colors;
     const [isHovered, setIsHovered] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
@@ -131,7 +136,29 @@ export default function WorkspaceItemCard({
         >
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`نمایش گزینه‌های ${item.name}`}
+                accessibilityLabel={item.isPinned ? t("unpinItem") : t("pinItem")}
+                accessibilityState={{ selected: Boolean(item.isPinned) }}
+                onPress={() => onTogglePinned(item.id)}
+                style={({ pressed }) => [
+                    styles.pinButton,
+                    isListMode && styles.listPinButton,
+                    {
+                        backgroundColor: colors.background,
+                        borderColor: item.isPinned ? colors.primary : colors.border,
+                    },
+                    pressed && styles.pressedButton,
+                ]}
+            >
+                <Feather
+                    name="star"
+                    size={15}
+                    color={item.isPinned ? colors.primary : colors.text}
+                />
+            </Pressable>
+
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${t("showItemActions")} ${item.name}`}
                 onPress={() => onOpenActions?.(item.id)}
                 style={({ pressed }) => [
                     styles.actionsButton,
@@ -152,7 +179,7 @@ export default function WorkspaceItemCard({
 
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`باز کردن ${item.name}`}
+                accessibilityLabel={`${t("openItem")} ${item.name}`}
                 onPress={() => onPress(item.id)}
                 style={[
                     styles.contentButton,
@@ -191,7 +218,7 @@ export default function WorkspaceItemCard({
                             ]}
                             numberOfLines={1}
                         >
-                            {getItemTypeLabel(item)}
+                            {getItemTypeLabel(item, t)}
                         </Text>
                     </View>
                 </View>
@@ -235,7 +262,7 @@ export default function WorkspaceItemCard({
                         ]}
                         numberOfLines={1}
                     >
-                        {getItemMetaLabel(item)}
+                        {getItemMetaLabel(item, t)}
                     </Text>
                 </View>
             </Pressable>
@@ -292,6 +319,26 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.pill,
+    },
+
+    pinButton: {
+        position: "absolute",
+        top: spacing.sm,
+        left: spacing.sm,
+        zIndex: 2,
+
+        width: 30,
+        height: 30,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+    },
+
+    listPinButton: {
+        left: 46,
     },
 
     listActionsButton: {

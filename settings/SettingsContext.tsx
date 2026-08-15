@@ -15,7 +15,7 @@ import {
 } from "react";
 
 import { DEFAULT_LANGUAGE, DEFAULT_THEME } from "../constants/app";
-import { translations, Language } from "../locales";
+import { translations, Language, type TranslationKey } from "../locales";
 import { darkTheme, lightTheme } from "../theme";
 
 export type ThemeMode = "light" | "dark";
@@ -31,7 +31,7 @@ interface SettingsContextValue {
 
     setLanguage: (language: Language) => void;
 
-    t: (key: keyof typeof translations.fa) => string;
+    t: (key: TranslationKey) => string;
 }
 
 /**
@@ -62,7 +62,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
             ? lightTheme
             : darkTheme;
 
-    const t = (key: keyof typeof translations.fa) =>
+    const t = (key: TranslationKey) =>
         translations[language][key];
 
     const value = useMemo(

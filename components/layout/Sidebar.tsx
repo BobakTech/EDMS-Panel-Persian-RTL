@@ -18,6 +18,7 @@ import {
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import type { TranslationKey } from "../../locales";
 
 import type { ProjectInfo } from "../project";
 
@@ -43,8 +44,8 @@ type FeatherIconName = keyof typeof Feather.glyphMap;
 interface NavigationItemConfig {
     page: AppPageType;
     icon: FeatherIconName;
-    label: string;
-    accessibilityLabel: string;
+    labelKey: TranslationKey;
+    accessibilityLabelKey: TranslationKey;
 }
 
 /**
@@ -78,26 +79,26 @@ const navigationItems: NavigationItemConfig[] = [
     {
         page: "dashboard",
         icon: "grid",
-        label: "داشبورد",
-        accessibilityLabel: "نمایش داشبورد",
+        labelKey: "dashboard",
+        accessibilityLabelKey: "showDashboard",
     },
     {
         page: "workspace",
         icon: "file-text",
-        label: "اسناد من",
-        accessibilityLabel: "نمایش اسناد من",
+        labelKey: "myDocuments",
+        accessibilityLabelKey: "showMyDocuments",
     },
     {
         page: "archive",
         icon: "archive",
-        label: "آرشیو",
-        accessibilityLabel: "نمایش آرشیو",
+        labelKey: "archive",
+        accessibilityLabelKey: "showArchive",
     },
     {
         page: "trash",
         icon: "trash-2",
-        label: "سطل زباله",
-        accessibilityLabel: "نمایش سطل زباله",
+        labelKey: "trash",
+        accessibilityLabelKey: "showTrash",
     },
 ];
 
@@ -116,7 +117,7 @@ export default function Sidebar({
     variant = "desktop",
     showBrand = true,
 }: SidebarProps) {
-    const { theme } = useSettings();
+    const { t, theme } = useSettings();
     const colors = theme.colors;
 
     const { height } = useWindowDimensions();
@@ -124,12 +125,12 @@ export default function Sidebar({
     const isShortSidebar = height < 720;
 
     const projectSubtitle = isProjectInfoLoading
-        ? "در حال دریافت اطلاعات پروژه..."
+        ? t("loadingProjectInfo")
         : projectInfo
             ? `${projectInfo.projectName}${projectInfo.projectCode ? ` · ${projectInfo.projectCode}` : ""}`
             : projectInfoError
-                ? "اطلاعات پروژه در دسترس نیست."
-                : "سامانه مدیریت اسناد سازمانی";
+                ? t("projectInfoUnavailable")
+                : t("appName");
 
     return (
         <View
@@ -211,7 +212,7 @@ export default function Sidebar({
                         <Pressable
                             key={item.page}
                             accessibilityRole="button"
-                            accessibilityLabel={item.accessibilityLabel}
+                            accessibilityLabel={t(item.accessibilityLabelKey)}
                             onPress={() => onChangePage(item.page)}
                             style={({ pressed }) => [
                                 styles.navigationButton,
@@ -239,7 +240,7 @@ export default function Sidebar({
                                         },
                                     ]}
                                 >
-                                    {item.label}
+                                    {t(item.labelKey)}
                                 </Text>
                             </View>
                         </Pressable>
@@ -263,7 +264,7 @@ export default function Sidebar({
                             },
                         ]}
                     >
-                        اسناد مشترک
+                        {t("sharedDocuments")}
                     </Text>
                 </View>
             </View>
@@ -271,7 +272,7 @@ export default function Sidebar({
             <View style={styles.utilities}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="نمایش تنظیمات"
+                    accessibilityLabel={t("showSettings")}
                     onPress={() => onChangePage("settings")}
                     style={({ pressed }) => [
                         styles.utilityButton,
@@ -306,7 +307,7 @@ export default function Sidebar({
                                 },
                             ]}
                         >
-                            تنظیمات
+                            {t("settings")}
                         </Text>
                     </View>
                 </Pressable>
@@ -329,7 +330,7 @@ export default function Sidebar({
                                 },
                             ]}
                         >
-                            فضای ذخیره‌سازی
+                            {t("storageSpace")}
                         </Text>
 
                         <Text
@@ -405,7 +406,7 @@ export default function Sidebar({
                                 },
                             ]}
                         >
-                            سایر فایل‌ها · ۶٪
+                            {t("otherFiles")} · ۶٪
                         </Text>
                     </View>
                 </View>

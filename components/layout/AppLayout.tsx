@@ -84,7 +84,7 @@ function getFileSizeLabel(fileSize?: number) {
  */
 
 export default function AppLayout() {
-    const { theme } = useSettings();
+    const { language, theme } = useSettings();
     const colors = theme.colors;
 
     const { width } = useWindowDimensions();
@@ -482,6 +482,16 @@ export default function AppLayout() {
         );
     }
 
+    function handleTogglePinnedWorkspaceItem(itemId: string) {
+        setWorkspaceItems((currentItems) =>
+            currentItems.map((item) =>
+                item.id === itemId
+                    ? { ...item, isPinned: !item.isPinned }
+                    : item
+            )
+        );
+    }
+
     /**
      * ============================================================================
      * Full Preview Navigation
@@ -514,6 +524,7 @@ export default function AppLayout() {
                 isMobileShell && styles.mobileContainer,
                 {
                     backgroundColor: colors.background,
+                    direction: language === "fa" ? "rtl" : "ltr",
                 },
             ]}
         >
@@ -637,6 +648,7 @@ export default function AppLayout() {
                             onRenameItem={handleRenameWorkspaceItem}
                             onDeleteItem={handleDeleteWorkspaceItem}
                             onMoveItem={handleMoveWorkspaceItem}
+                            onTogglePinnedItem={handleTogglePinnedWorkspaceItem}
                             onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
                             onDropFiles={handleDropWorkspaceFiles}
                             onOpenPreviewPage={handleOpenPreviewPage}

@@ -13,7 +13,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "../../web/ui";
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings, type ThemeMode } from "../../settings/SettingsContext";
 
-import type { Language } from "../../locales";
+import type { Language, TranslationKey } from "../../locales";
 
 /**
  * ============================================================================
@@ -22,29 +22,29 @@ import type { Language } from "../../locales";
  */
 
 const themeChoices: Array<{
-    label: string;
+    labelKey: TranslationKey;
     value: ThemeMode;
 }> = [
     {
-        label: "تیره",
+        labelKey: "dark",
         value: "dark",
     },
     {
-        label: "روشن",
+        labelKey: "light",
         value: "light",
     },
 ];
 
 const languageChoices: Array<{
-    label: string;
+    labelKey: TranslationKey;
     value: Language;
 }> = [
     {
-        label: "فارسی",
+        labelKey: "persian",
         value: "fa",
     },
     {
-        label: "English",
+        labelKey: "english",
         value: "en",
     },
 ];
@@ -66,6 +66,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         language,
         setThemeMode,
         setLanguage,
+        t,
     } = useSettings();
 
     const colors = theme.colors;
@@ -91,7 +92,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
             <View style={styles.overlay}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="بستن تنظیمات"
+                    accessibilityLabel={t("closeSettings")}
                     onPress={onClose}
                     style={styles.backdrop}
                 />
@@ -109,7 +110,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     <View style={styles.headerTitleRow}>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="بستن تنظیمات"
+                            accessibilityLabel={t("closeSettings")}
                             onPress={onClose}
                             style={[
                                 styles.closeButton,
@@ -130,7 +131,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 },
                             ]}
                         >
-                            تنظیمات
+                            {t("settings")}
                         </Text>
                     </View>
 
@@ -142,7 +143,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                             },
                         ]}
                     >
-                        مدیریت تنظیمات نمایشی و ترجیحات پنل
+                        {t("settingsDescription")}
                     </Text>
                 </View>
 
@@ -156,7 +157,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 },
                             ]}
                         >
-                            ظاهر پنل
+                            {t("appearance")}
                         </Text>
 
                         <Text
@@ -167,7 +168,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 },
                             ]}
                         >
-                            حالت نمایش پنل را انتخاب کنید.
+                            {t("appearanceDescription")}
                         </Text>
                     </View>
 
@@ -187,7 +188,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 <Pressable
                                     key={choice.value}
                                     accessibilityRole="button"
-                                    accessibilityLabel={`انتخاب حالت ${choice.label}`}
+                                    accessibilityLabel={t(choice.labelKey)}
                                     onPress={() => setThemeMode(choice.value)}
                                     style={({ pressed }) => [
                                         styles.segmentedButton,
@@ -207,7 +208,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                             },
                                         ]}
                                     >
-                                        {choice.label}
+                                        {t(choice.labelKey)}
                                     </Text>
                                 </Pressable>
                             );
@@ -225,7 +226,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 },
                             ]}
                         >
-                            زبان
+                            {t("language")}
                         </Text>
 
                         <Text
@@ -236,7 +237,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 },
                             ]}
                         >
-                            زبان نمایش برچسب‌های اصلی پنل را انتخاب کنید.
+                            {t("languageDescription")}
                         </Text>
                     </View>
 
@@ -256,7 +257,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 <Pressable
                                     key={choice.value}
                                     accessibilityRole="button"
-                                    accessibilityLabel={`انتخاب زبان ${choice.label}`}
+                                    accessibilityLabel={`${t("selectLanguage")} ${t(choice.labelKey)}`}
                                     onPress={() => setLanguage(choice.value)}
                                     style={({ pressed }) => [
                                         styles.segmentedButton,
@@ -276,7 +277,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                             },
                                         ]}
                                     >
-                                        {choice.label}
+                                        {t(choice.labelKey)}
                                     </Text>
                                 </Pressable>
                             );
@@ -301,7 +302,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                             },
                         ]}
                     >
-                        وضعیت فعلی
+                        {t("currentStatus")}
                     </Text>
 
                     <Text
@@ -312,8 +313,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                             },
                         ]}
                     >
-                        تنظیمات در این نسخه به‌صورت فرانت‌اندی و موقت اعمال می‌شوند.
-                        ذخیره‌سازی دائمی و اتصال به پنل اصلی بعداً اضافه می‌شود.
+                        {t("temporarySettingsNotice")}
                     </Text>
                 </View>
             </View>
