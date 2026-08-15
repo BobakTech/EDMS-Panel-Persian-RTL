@@ -21,6 +21,7 @@ export interface WorkspaceItem {
     description: string;
     updatedAt: string;
     status: WorkspaceItemStatus;
+    isPinned?: boolean;
     parentFolderId?: string | null;
     extension?: string;
     sizeLabel?: string;

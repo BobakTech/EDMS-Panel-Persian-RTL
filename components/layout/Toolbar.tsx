@@ -94,7 +94,7 @@ export default function Toolbar({
     isMobileMenuOpen = false,
     onPressMobileMenu,
 }: ToolbarProps) {
-    const { theme } = useSettings();
+    const { t, theme } = useSettings();
     const colors = theme.colors;
 
     const newFolderInputRef = useRef<TextInput>(null);
@@ -113,12 +113,12 @@ export default function Toolbar({
     const isMobileMenu = variant === "mobile-menu";
 
     const projectSubtitle = isProjectInfoLoading
-        ? "در حال دریافت اطلاعات پروژه..."
+        ? t("loadingProjectInfo")
         : projectInfo
             ? `${projectInfo.projectName}${projectInfo.projectCode ? ` · ${projectInfo.projectCode}` : ""}`
             : projectInfoError
-                ? "اطلاعات پروژه در دسترس نیست."
-                : "سامانه مدیریت اسناد سازمانی";
+                ? t("projectInfoUnavailable")
+                : t("appName");
 
     /**
      * ============================================================================
@@ -170,17 +170,17 @@ export default function Toolbar({
         const selectedFile = result.assets[0];
 
         setUploadFileName(selectedFile.name);
-        setUploadStatusText("در حال آماده‌سازی فایل...");
+        setUploadStatusText(t("preparingFile"));
         setUploadProgress(15);
 
         await wait(250);
 
-        setUploadStatusText("در حال خواندن اطلاعات فایل...");
+        setUploadStatusText(t("readingFile"));
         setUploadProgress(55);
 
         await wait(250);
 
-        setUploadStatusText("در حال افزودن به فضای کاری...");
+        setUploadStatusText(t("addingToWorkspace"));
         setUploadProgress(90);
 
         await wait(200);
@@ -236,12 +236,12 @@ export default function Toolbar({
                             },
                         ]}
                     >
-                        ساخت پوشه جدید
+                        {t("createNewFolder")}
                     </Text>
 
                     <TextInput
                         ref={newFolderInputRef}
-                        placeholder="نام پوشه"
+                        placeholder={t("folderName")}
                         placeholderTextColor={colors.border}
                         value={newFolderName}
                         onChangeText={setNewFolderName}
@@ -258,7 +258,7 @@ export default function Toolbar({
                     <View style={styles.actionPanelButtons}>
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="ایجاد پوشه"
+                            accessibilityLabel={t("createNewFolder")}
                             onPress={handleCreateFolder}
                             style={[
                                 styles.actionPanelPrimaryButton,
@@ -280,13 +280,13 @@ export default function Toolbar({
                                     },
                                 ]}
                             >
-                                ایجاد
+                                {t("create")}
                             </Text>
                         </Pressable>
 
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="بستن فرم"
+                            accessibilityLabel={t("closeForm")}
                             onPress={onDismissAction}
                             style={[
                                 styles.actionPanelSecondaryButton,
@@ -308,7 +308,7 @@ export default function Toolbar({
                                     },
                                 ]}
                             >
-                                لغو
+                                {t("cancel")}
                             </Text>
                         </Pressable>
                     </View>
@@ -351,7 +351,7 @@ export default function Toolbar({
                         ]}
                         numberOfLines={1}
                     >
-                        {uploadFileName ?? "فایل انتخاب‌شده"}
+                        {uploadFileName ?? t("selectedFile")}
                     </Text>
 
                     <Text
@@ -407,7 +407,7 @@ export default function Toolbar({
                 ]}
                 numberOfLines={1}
             >
-                {uploadFileName ?? "فایل انتخاب‌شده"}
+                {uploadFileName ?? t("selectedFile")}
             </Text>
 
             <Text
@@ -688,7 +688,7 @@ export default function Toolbar({
                 <TextInput
                     value={searchQuery}
                     onChangeText={onChangeSearchQuery}
-                    placeholder="جست‌وجو..."
+                    placeholder={t("search")}
                     placeholderTextColor={colors.border}
                     style={[
                         styles.searchInput,
@@ -706,7 +706,7 @@ export default function Toolbar({
                         <View style={styles.mobileMenuActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="بارگذاری فایل"
+                                accessibilityLabel={t("uploadFile")}
                                 onPress={handlePickFile}
                                 disabled={isPreparingUpload}
                                 style={({ pressed }) => [
@@ -735,13 +735,13 @@ export default function Toolbar({
                                         },
                                     ]}
                                 >
-                                    بارگذاری
+                                    {t("upload")}
                                 </Text>
                             </Pressable>
 
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="ساخت پوشه جدید"
+                                accessibilityLabel={t("createNewFolder")}
                                 onPress={onPressCreateFolder}
                                 style={({ pressed }) => [
                                     styles.actionSegmentButton,
@@ -766,7 +766,7 @@ export default function Toolbar({
                                         },
                                     ]}
                                 >
-                                    پوشه جدید
+                                    {t("newFolder")}
                                 </Text>
                             </Pressable>
                         </View>
@@ -831,7 +831,7 @@ export default function Toolbar({
                             },
                         ]}
                     >
-                        توسعه‌دهنده نرم‌افزار
+                        {t("softwareDeveloper")}
                     </Text>
                 </View>
             </View>
@@ -849,7 +849,7 @@ export default function Toolbar({
                     >
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="بارگذاری فایل"
+                            accessibilityLabel={t("uploadFile")}
                             onPress={handlePickFile}
                             disabled={isPreparingUpload}
                             style={({ pressed }) => [
@@ -875,7 +875,7 @@ export default function Toolbar({
                                     },
                                 ]}
                             >
-                                بارگذاری
+                                {t("upload")}
                             </Text>
                         </Pressable>
 
@@ -890,7 +890,7 @@ export default function Toolbar({
 
                         <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel="ساخت پوشه جدید"
+                            accessibilityLabel={t("createNewFolder")}
                             onPress={onPressCreateFolder}
                             style={({ pressed }) => [
                                 styles.actionSegmentButton,
@@ -910,7 +910,7 @@ export default function Toolbar({
                                     },
                                 ]}
                             >
-                                پوشه جدید
+                                {t("newFolder")}
                             </Text>
                         </Pressable>
                     </View>
@@ -923,7 +923,7 @@ export default function Toolbar({
             <TextInput
                 value={searchQuery}
                 onChangeText={onChangeSearchQuery}
-                placeholder="جست‌وجو..."
+                placeholder={t("search")}
                 placeholderTextColor={colors.border}
                 style={[
                     styles.searchInput,

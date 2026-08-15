@@ -8,6 +8,7 @@
 
 import en from "./en";
 import fa from "./fa";
+export type { TranslationKey } from "./fa";
 
 export const translations = {
     fa,

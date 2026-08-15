@@ -11,7 +11,7 @@ This is the working context for future AI/Codex development of EDMS. Read it wit
 - The current deliverable is a self-contained frontend UI template using local/mock data. Future PMIS integration must remain architecturally separate from the legacy implementation.
 - Do not infer backend contracts or redesign PMIS from frontend requirements.
 
-Current frontend work covers workspace and folder navigation, file browsing and actions, search, responsive shell behavior, inline preview, expanded preview pages, and an extensible renderer architecture.
+Current frontend work covers workspace and folder navigation, file browsing and actions, pinned-item ordering, search, Persian/English localization, responsive shell behavior, inline preview, expanded preview pages, and an extensible renderer architecture.
 
 Implemented foundations include the workspace, image preview, full preview page, dashboard, archive, trash, settings, and responsive desktop/mobile-browser UI. Workspace data is currently frontend/mock state; production backend integration is not established in this repository context.
 
@@ -62,6 +62,7 @@ Key ownership:
 - `components/workspace/WorkspaceDocumentPreviewPanel.tsx`: inline preview, renderer detection, preview state, and expanded-preview action.
 - `components/layout/DocumentPreviewPage.tsx`: expanded preview, back navigation, rendering area, and file metadata.
 - `settings/SettingsContext.tsx`: theme and language settings.
+- `locales/`: typed Persian/English interface dictionaries. Translate interface labels through `t`; never translate user-created names or document content.
 - `theme/`: shared design tokens.
 - `web/`: browser UI primitives, icons, global CSS, and file-picker adapters used by the migrated React components.
 - `components/project/` and `components/workspace/`: domain types, helpers, and service boundaries.
@@ -165,6 +166,8 @@ Integration rules:
 Current frontend capabilities:
 
 - File and folder browsing and folder navigation.
+- Pinning files and folders with pinned-first ordering within the current page/folder.
+- Instant Persian/English interface switching through maintained local dictionaries.
 - Workspace actions and search filtering.
 - Inline and expanded file preview.
 - Archive and trash UI flows.

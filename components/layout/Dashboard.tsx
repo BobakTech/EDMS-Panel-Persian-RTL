@@ -15,6 +15,7 @@ import {
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import type { TranslationKey } from "../../locales";
 
 import type { WorkspaceItem } from "../workspace";
 
@@ -34,20 +35,22 @@ interface DashboardProps {
  * ============================================================================
  */
 
-function getDashboardItemTypeLabel(item: WorkspaceItem) {
-    return item.type === "folder" ? "پوشه" : "فایل";
+type Translate = (key: TranslationKey) => string;
+
+function getDashboardItemTypeLabel(item: WorkspaceItem, t: Translate) {
+    return item.type === "folder" ? t("folder") : t("file");
 }
 
-function getDashboardStatusLabel(item: WorkspaceItem) {
+function getDashboardStatusLabel(item: WorkspaceItem, t: Translate) {
     if (item.status === "active") {
-        return "فعال";
+        return t("active");
     }
 
     if (item.status === "archived") {
-        return "آرشیو شده";
+        return t("archived");
     }
 
-    return "سطل زباله";
+    return t("trash");
 }
 
 /**
@@ -59,7 +62,7 @@ function getDashboardStatusLabel(item: WorkspaceItem) {
 export default function Dashboard({
     workspaceItems,
 }: DashboardProps) {
-    const { theme } = useSettings();
+    const { t, theme } = useSettings();
     const colors = theme.colors;
 
     const { width } = useWindowDimensions();
@@ -91,24 +94,24 @@ export default function Dashboard({
 
     const summaryCards = [
         {
-            label: "آیتم‌های فعال",
+            label: t("activeItems"),
             value: activeItems.length,
-            description: "فایل‌ها و پوشه‌های فعال در فضای کاری",
+            description: t("activeItemsDescription"),
         },
         {
-            label: "پوشه‌ها",
+            label: t("folders"),
             value: folders.length,
-            description: "گروه‌بندی و سازماندهی اسناد",
+            description: t("foldersDescription"),
         },
         {
-            label: "آرشیو",
+            label: t("archive"),
             value: archivedItems.length,
-            description: "آیتم‌های نگهداری‌شده برای بررسی بعدی",
+            description: t("archivedItemsDescription"),
         },
         {
-            label: "سطل زباله",
+            label: t("trash"),
             value: trashedItems.length,
-            description: "آیتم‌های در انتظار بازیابی یا حذف",
+            description: t("trashedItemsDescription"),
         },
     ];
 
@@ -141,7 +144,7 @@ export default function Dashboard({
                             },
                         ]}
                     >
-                        داشبورد
+                        {t("dashboard")}
                     </Text>
 
                     <Text
@@ -152,7 +155,7 @@ export default function Dashboard({
                             },
                         ]}
                     >
-                        نمای کلی وضعیت اسناد، پوشه‌ها و فعالیت‌های اخیر
+                        {t("dashboardSubtitle")}
                     </Text>
                 </View>
 
@@ -221,7 +224,7 @@ export default function Dashboard({
                             },
                         ]}
                     >
-                        فعالیت‌های اخیر
+                        {t("recentActivity")}
                     </Text>
 
                     <View style={styles.activityList}>
@@ -255,7 +258,7 @@ export default function Dashboard({
                                             },
                                         ]}
                                     >
-                                        {getDashboardItemTypeLabel(item)} · {getDashboardStatusLabel(item)}
+                                        {getDashboardItemTypeLabel(item, t)} · {getDashboardStatusLabel(item, t)}
                                     </Text>
                                 </View>
 
@@ -267,7 +270,7 @@ export default function Dashboard({
                                         },
                                     ]}
                                 >
-                                    {getDashboardStatusLabel(item)}
+                                    {getDashboardStatusLabel(item, t)}
                                 </Text>
                             </View>
                         ))}
