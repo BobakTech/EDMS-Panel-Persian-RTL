@@ -94,8 +94,6 @@ export const View = forwardRef<HTMLDivElement, PrimitiveProps>(function View(
     return <div ref={ref} style={{ display: "flex", flexDirection: "column", alignItems: "stretch", position: "relative", ...flattenStyle(style as StyleValue), pointerEvents: webPointerEvents }} {...ariaProps({ accessibilityLabel, accessibilityRole, accessibilityState })} {...props}>{children}</div>;
 });
 
-export const SafeAreaView = View;
-
 export const Text = forwardRef<HTMLSpanElement, PrimitiveProps>(function Text(
     { children, style, numberOfLines, accessibilityLabel, accessibilityRole, accessibilityState, ...props },
     ref,
@@ -170,9 +168,6 @@ export function ActivityIndicator({ color = "currentColor", size = 20, style }: 
     const diameter = size === "small" ? 16 : size === "large" ? 32 : size;
     return <span aria-label="در حال بارگذاری" style={{ width: diameter, height: diameter, display: "inline-block", border: `2px solid ${color}33`, borderTopColor: color, borderRadius: "50%", animation: "edms-spin .8s linear infinite", ...flattenStyle(style as StyleValue) }} />;
 }
-
-export const Platform = { OS: "web", select: <T,>(options: { web?: T; default?: T }) => options.web ?? options.default };
-export const Linking = { openURL: async (url: string) => { window.open(url, "_blank", "noopener,noreferrer"); } };
 
 export function useWindowDimensions() {
     const getSize = () => ({ width: window.innerWidth, height: window.innerHeight, scale: window.devicePixelRatio, fontScale: 1 });

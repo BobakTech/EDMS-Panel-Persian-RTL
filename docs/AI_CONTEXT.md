@@ -5,9 +5,10 @@ This is the working context for future AI/Codex development of EDMS. Read it wit
 ## 1. Confirmed decisions and current scope
 
 - EDMS is an Electronic Document Management System web application.
-- React.js and TypeScript are the definitive frontend technologies.
+- React 19, TypeScript, and Vite are the definitive frontend stack.
+- EDMS is a browser-only React application. Do not add React Native, Expo, Metro, native platform files, or native compatibility branches.
 - The UI supports responsive desktop and mobile browsers.
-- The frontend must integrate with the existing PMIS backend/API while remaining architecturally separate from the legacy PMIS implementation.
+- The current deliverable is a self-contained frontend UI template using local/mock data. Future PMIS integration must remain architecturally separate from the legacy implementation.
 - Do not infer backend contracts or redesign PMIS from frontend requirements.
 
 Current frontend work covers workspace and folder navigation, file browsing and actions, search, responsive shell behavior, inline preview, expanded preview pages, and an extensible renderer architecture.
@@ -16,26 +17,27 @@ Implemented foundations include the workspace, image preview, full preview page,
 
 Current priorities:
 
-1. Confirm Office and text format requirements and browser fallbacks.
-2. Add further renderers only after their requirements are confirmed.
-3. Preserve the lightweight, PMIS-compatible preview architecture.
+1. Finish and validate the desktop browser UI.
+2. Refine mobile-sized browser layouts after desktop approval.
+3. Preserve the lightweight preview architecture and keep future PMIS integration behind service boundaries.
 
 ## Milestones
 
 ### Overall Milestones
 
 - Completed: workspace, responsive shell, core file/folder flows, image/PDF preview support, and standalone full-screen document preview.
-- Current: Office and text renderer planning.
-- Next: Office and text renderer implementation after requirements are confirmed.
+- Current: desktop UI validation, RTL consistency, and React/Vite cleanup.
+- Next: mobile-sized browser refinement after desktop approval.
+- Later: Office and text renderer planning after format requirements are confirmed.
 - Planned: PMIS integration as contracts are confirmed.
 
 ### Current Milestone
 
-Confirm Office and text formats, browser fallbacks, and size constraints before implementation.
+Complete and validate the desktop React/Vite UI template.
 
 ### Next Milestone
 
-Add Office and text renderers after their requirements are confirmed.
+Refine mobile-sized browser layouts after desktop approval.
 
 ## 2. Frontend architecture
 
@@ -46,7 +48,7 @@ AppLayout
 |-- Sidebar
 |-- Toolbar
 |-- Dashboard
-|-- Settings
+|-- Settings modal
 |-- Workspace
 |   |-- WorkspaceItemCard
 |   `-- WorkspaceDocumentPreviewPanel
@@ -61,9 +63,10 @@ Key ownership:
 - `components/layout/DocumentPreviewPage.tsx`: expanded preview, back navigation, rendering area, and file metadata.
 - `settings/SettingsContext.tsx`: theme and language settings.
 - `theme/`: shared design tokens.
+- `web/`: browser UI primitives, icons, global CSS, and file-picker adapters used by the migrated React components.
 - `components/project/` and `components/workspace/`: domain types, helpers, and service boundaries.
 
-State currently uses React hooks. Page selection uses application state rather than an established routing library. `AppLayout` owns shared workspace and page state. Inspect the current implementation before changing these boundaries.
+State currently uses React hooks. Page selection uses application state rather than an established routing library. `AppLayout` owns shared workspace and page state. Vite starts from `index.html` and `index.ts`. Inspect the current implementation before changing these boundaries.
 
 ## 3. Document preview and layout rules
 
@@ -81,7 +84,7 @@ Layout requirements:
 - Prefer natural document flow and browser scrolling.
 - Do not hide overflow when it prevents preview content from expanding.
 - Avoid unnecessary fixed heights and viewport constraints.
-- Preserve responsive desktop and mobile-browser behavior.
+- Treat desktop and mobile-sized browser layouts as separate validation stages; finish desktop first unless the user changes priority.
 - Browser-scrollbar experiments caused missing workspace content and a complete white page. Before revisiting scrollbar changes, explain this regression and obtain explicit confirmation to proceed.
 
 ## 4. PMIS integration context
@@ -106,12 +109,14 @@ Integration rules:
 ## 5. Engineering constraints
 
 - Prefer small, focused changes that preserve existing behavior.
+- Use browser APIs and the existing `web/` adapters directly; do not recreate React Native platform abstractions.
+- Remove generated, native-only, or compatibility files only after confirming they have no imports, runtime references, or build role.
 - Reuse existing types, helpers, services, component boundaries, and design tokens.
 - Avoid large state updates, unnecessary rerenders, and avoidable memory use, especially for large files and previews.
 - Do not replace the current state flow or remove helpers without inspecting their consumers.
 - Use PascalCase for components and camelCase for functions.
 - Add comments only for intent, constraints, or non-obvious architecture.
-- Run `npx tsc --noEmit` after TypeScript changes and use the repository's current scripts for local development.
+- Run `npm run build` after implementation changes; use `npm run dev` for local browser development on port 8092.
 - Do not commit private API URLs, credentials, tokens, or server configuration.
 
 ## AI decision prioritization
@@ -138,6 +143,7 @@ Integration rules:
 - Separate history into clear chat sections and keep messages chronological within each section. Put entries that cannot be classified confidently under `Unclassified`.
 - Record each message's actual system timestamp with timezone offset and region when available, for example `2026-08-10 14:52:00 +03:30 (Asia/Tehran)`. Never invent unavailable timestamp or timezone data.
 - Append future relevant EDMS development conversations using the same structure.
+- For transient/copy-pasted web UI preview screenshots, store a brief factual development-state description instead of the image; keep actual-file attachment rules unchanged.
 
 ## Resilient execution
 
@@ -181,7 +187,7 @@ The following are not established by the current project context and must not be
 - Backend classes and internal architecture.
 - Upload, download, preview, and file-storage contracts.
 - Production deployment and environment configuration.
-- Libraries or services for PDF, Office, and text rendering.
+- Libraries or services for Office and text rendering.
 - Final routing and broader frontend state-management choices.
 
 When work depends on one of these items, inspect the implementation or authoritative documentation first. If it remains unclear and affects architecture or external behavior, ask for direction rather than assuming.

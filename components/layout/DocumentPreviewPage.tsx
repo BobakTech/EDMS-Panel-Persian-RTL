@@ -10,8 +10,6 @@
 import { Feather } from "../../web/icons";
 import {
     Image,
-    Linking,
-    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -98,11 +96,6 @@ export default function DocumentPreviewPage({
             return;
         }
 
-        if (Platform.OS !== "web") {
-            void Linking.openURL(item.localUri);
-            return;
-        }
-
         const openLink = document.createElement("a");
         openLink.href = item.localUri;
         openLink.target = "_blank";
@@ -114,11 +107,6 @@ export default function DocumentPreviewPage({
 
     function handleDownloadOriginal() {
         if (!item.localUri) {
-            return;
-        }
-
-        if (Platform.OS !== "web") {
-            void Linking.openURL(item.localUri);
             return;
         }
 

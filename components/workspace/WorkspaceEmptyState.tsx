@@ -16,7 +16,6 @@ import React, {
 import { Feather } from "../../web/icons";
 
 import {
-    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -69,11 +68,7 @@ function getDroppedWorkspaceFiles(
     return Array.from(fileList, (file) => {
         let fileUri: string | undefined;
 
-        if (
-            Platform.OS === "web" &&
-            typeof URL !== "undefined" &&
-            typeof URL.createObjectURL === "function"
-        ) {
+        if (typeof URL.createObjectURL === "function") {
             try {
                 fileUri = URL.createObjectURL(file);
             } catch {
@@ -126,7 +121,7 @@ export default function WorkspaceEmptyState({
         Boolean(primaryActionLabel && onPrimaryActionPress);
 
     useEffect(() => {
-        if (Platform.OS !== "web" || !shouldShowUploadArea) {
+        if (!shouldShowUploadArea) {
             return;
         }
 
@@ -187,7 +182,7 @@ export default function WorkspaceEmptyState({
     }, [onFilesDrop, shouldShowUploadArea]);
 
     function handlePressUploadArea() {
-        if (Platform.OS === "web" && fileInputRef.current) {
+        if (fileInputRef.current) {
             fileInputRef.current.click();
             return;
         }
@@ -211,16 +206,15 @@ export default function WorkspaceEmptyState({
 
     return (
         <View style={styles.emptyState}>
-            {Platform.OS === "web" &&
-                React.createElement("input", {
-                    ref: fileInputRef,
-                    type: "file",
-                    multiple: true,
-                    onChange: handleFileInputChange,
-                    style: {
-                        display: "none",
-                    },
-                })}
+            {React.createElement("input", {
+                ref: fileInputRef,
+                type: "file",
+                multiple: true,
+                onChange: handleFileInputChange,
+                style: {
+                    display: "none",
+                },
+            })}
 
             {shouldShowUploadArea ? (
                 <Pressable
