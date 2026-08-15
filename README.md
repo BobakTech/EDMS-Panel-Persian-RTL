@@ -1,20 +1,20 @@
-# EDMS Panel - Persian RTL Frontend Demo
+# EDMS Panel - Persian RTL UI Template
 
-A frontend-only Enterprise Document Management System panel built with Expo, React Native, React Native Web, and TypeScript.
+A frontend-only Enterprise Document Management System template built with React, Vite, and TypeScript.
 
-This project is designed as a Persian RTL admin-style document management panel demo. It focuses on clean UI structure, responsive shell behavior, workspace flows, dashboard visibility, and frontend interaction quality.
+This project is designed as a finished Persian RTL admin-style document management UI. It focuses on clean structure, responsive behavior, realistic workspace flows, dashboard visibility, and reusable frontend interactions.
 
 ## Current Status
 
-This repository currently contains the frontend demo only.
+This repository is a self-contained UI template. All data and interactions run locally in the browser.
 
-Backend integration is intentionally not included in this public repository. API URLs and private panel details should stay outside GitHub.
+No backend or environment configuration is required.
 
 ## Tech Stack
 
-- Expo
-- React Native
-- React Native Web
+- React 19
+- Vite 6
+- Lucide React
 - TypeScript
 - Persian RTL-first interface
 - Light and dark theme support
@@ -26,12 +26,12 @@ Backend integration is intentionally not included in this public repository. API
 - Desktop sidebar navigation
 - Mobile drawer navigation
 - Mobile toolbar with project info and account menu
-- Dark mode as demo default
+- Light and dark themes
 - Workspace / My Documents page
 - Folder browsing
 - File and folder cards
 - Search filtering
-- Upload demo flow
+- Browser-native upload flow
 - New folder modal
 - Rename flow
 - Move item flow
@@ -42,7 +42,7 @@ Backend integration is intentionally not included in this public repository. API
 - Undo-style feedback for key actions
 - Inline and full-screen image/PDF previews
 - Original-file open/download and previous/next preview navigation
-- Mock workspace data for frontend demonstration
+- Local workspace data for template interactions
 
 ## Demo Pages
 
@@ -58,35 +58,21 @@ Install dependencies:
 
     npm install
 
-Run the web demo:
+Run the development server:
 
-    npm run web
+    npm run dev
 
-Run Expo:
+Create a production build:
 
-    npm start
+    npm run build
 
-Run Android:
+Preview the production build:
 
-    npm run android
-
-Run iOS:
-
-    npm run ios
-
-## Environment
-
-The project can load local environment variables from:
-
-    .env.local
-
-Do not commit private API URLs, tokens, backend credentials, or server configuration files.
+    npm run preview
 
 ## Project Notes
 
-This project is currently optimized for frontend presentation and demo review.
-
-The current demo uses mock workspace data until backend integration is connected.
+This project is optimized as a reusable, responsive frontend template. Workspace and project data are intentionally local so the interface works immediately after installation.
 
 ## Repository Scope
 
@@ -96,8 +82,8 @@ Included:
 - Responsive panel shell
 - Theme system
 - Workspace interactions
-- Mock data
-- Demo dashboard
+- Local template data
+- Dashboard UI
 - TypeScript source code
 
 Not included:

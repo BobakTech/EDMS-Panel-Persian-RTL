@@ -7,7 +7,7 @@
  * ============================================================================
  */
 
-import { SafeAreaView, StyleSheet, Text } from "react-native";
+import { SafeAreaView, StyleSheet, Text } from "../web/ui";
 
 export default function EDMSScreen() {
     return (

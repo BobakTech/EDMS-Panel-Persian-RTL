@@ -6,11 +6,7 @@
  * ============================================================================
  */
 
-import type {
-    ProjectInfo,
-    ProjectInfoApiResponse,
-    ProjectInfoQueryParams,
-} from "./project.types";
+import type { ProjectInfo, ProjectInfoQueryParams } from "./project.types";
 
 /**
  * ============================================================================
@@ -18,7 +14,11 @@ import type {
  * ============================================================================
  */
 
-const PROJECT_INFO_API_URL = process.env.EXPO_PUBLIC_PROJECT_INFO_API_URL;
+const TEMPLATE_PROJECT: ProjectInfo = {
+    id: "edms-template",
+    projectName: "سامانه مدیریت اسناد سازمانی",
+    projectCode: "EDMS-UI",
+};
 
 /**
  * ============================================================================
@@ -26,48 +26,8 @@ const PROJECT_INFO_API_URL = process.env.EXPO_PUBLIC_PROJECT_INFO_API_URL;
  * ============================================================================
  */
 
-function buildProjectInfoApiUrl(
-    queryParams: ProjectInfoQueryParams = {},
-): string {
-    if (!PROJECT_INFO_API_URL) {
-        throw new Error("Project info API URL is not configured.");
-    }
-
-    const url = new URL(PROJECT_INFO_API_URL);
-
-    Object.entries(queryParams).forEach(([key, value]) => {
-        if (value === undefined || value === null || value === "") {
-            return;
-        }
-
-        url.searchParams.set(key, String(value));
-    });
-
-    return url.toString();
-}
-
-/**
- * ============================================================================
- * Project Info
- * ============================================================================
- */
-
 export async function getProjectInfo(
-    queryParams: ProjectInfoQueryParams = {},
+    _queryParams: ProjectInfoQueryParams = {},
 ): Promise<ProjectInfo> {
-    const apiUrl = buildProjectInfoApiUrl(queryParams);
-
-    const response = await fetch(apiUrl);
-
-    if (!response.ok) {
-        throw new Error("Failed to load project info.");
-    }
-
-    const result = await response.json() as ProjectInfoApiResponse;
-
-    if (!result.success || !result.data) {
-        throw new Error(result.message || "Project info response is invalid.");
-    }
-
-    return result.data;
+    return Promise.resolve(TEMPLATE_PROJECT);
 }

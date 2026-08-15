@@ -6,8 +6,8 @@
  * ============================================================================
  */
 
-import { Feather } from "@expo/vector-icons";
-import * as DocumentPicker from "expo-document-picker";
+import { Feather } from "../../web/icons";
+import * as DocumentPicker from "../../web/document-picker";
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -17,7 +17,7 @@ import {
     Text,
     TextInput,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -267,6 +267,11 @@ export default function Toolbar({
                                 },
                             ]}
                         >
+                            <Feather
+                                name="check"
+                                size={16}
+                                color={colors.surface}
+                            />
                             <Text
                                 style={[
                                     styles.actionPanelPrimaryButtonText,
@@ -290,6 +295,11 @@ export default function Toolbar({
                                 },
                             ]}
                         >
+                            <Feather
+                                name="x"
+                                size={16}
+                                color={colors.text}
+                            />
                             <Text
                                 style={[
                                     styles.actionPanelSecondaryButtonText,
@@ -712,6 +722,11 @@ export default function Toolbar({
                                     },
                                 ]}
                             >
+                                <Feather
+                                    name="upload"
+                                    size={16}
+                                    color={colors.surface}
+                                />
                                 <Text
                                     style={[
                                         styles.actionSegmentPrimaryText,
@@ -738,6 +753,11 @@ export default function Toolbar({
                                     pressed && styles.pressedActionButton,
                                 ]}
                             >
+                                <Feather
+                                    name="folder-plus"
+                                    size={16}
+                                    color={colors.text}
+                                />
                                 <Text
                                     style={[
                                         styles.actionSegmentSecondaryText,
@@ -842,6 +862,11 @@ export default function Toolbar({
                                 },
                             ]}
                         >
+                            <Feather
+                                name="upload"
+                                size={16}
+                                color={colors.surface}
+                            />
                             <Text
                                 style={[
                                     styles.actionSegmentPrimaryText,
@@ -872,6 +897,11 @@ export default function Toolbar({
                                 pressed && styles.pressedActionButton,
                             ]}
                         >
+                            <Feather
+                                name="folder-plus"
+                                size={16}
+                                color={colors.text}
+                            />
                             <Text
                                 style={[
                                     styles.actionSegmentSecondaryText,
@@ -920,7 +950,7 @@ const styles = StyleSheet.create({
         minWidth: 0,
         minHeight: 72,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "flex-start",
 
         paddingHorizontal: spacing.lg,
@@ -935,7 +965,7 @@ const styles = StyleSheet.create({
     },
 
     user: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.sm,
@@ -982,7 +1012,7 @@ const styles = StyleSheet.create({
     },
 
     actions: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         borderWidth: 1,
@@ -994,10 +1024,13 @@ const styles = StyleSheet.create({
     actionSegmentButton: {
         minHeight: 42,
 
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
 
         paddingHorizontal: spacing.lg,
+
+        gap: spacing.sm,
     },
 
     primaryActionSegmentButton: {
@@ -1030,7 +1063,12 @@ const styles = StyleSheet.create({
     },
 
     popupOverlay: {
-        flex: 1,
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+
+        width: "100vw",
+        height: "100vh",
 
         alignItems: "center",
         justifyContent: "center",
@@ -1043,8 +1081,11 @@ const styles = StyleSheet.create({
     actionPanel: {
         width: "100%",
         maxWidth: 320,
+        maxHeight: "calc(100vh - 48px)",
 
         padding: spacing.lg,
+
+        direction: "rtl",
 
         borderWidth: 1,
         borderRadius: radius.lg,
@@ -1075,7 +1116,7 @@ const styles = StyleSheet.create({
     },
 
     actionPanelButtons: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         marginTop: spacing.md,
@@ -1086,10 +1127,13 @@ const styles = StyleSheet.create({
     actionPanelPrimaryButton: {
         minHeight: 36,
 
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
 
         paddingHorizontal: spacing.md,
+
+        gap: spacing.xs,
 
         borderRadius: radius.md,
     },
@@ -1102,10 +1146,13 @@ const styles = StyleSheet.create({
     actionPanelSecondaryButton: {
         minHeight: 36,
 
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
 
         paddingHorizontal: spacing.md,
+
+        gap: spacing.xs,
 
         borderWidth: 1,
         borderRadius: radius.md,
@@ -1191,7 +1238,7 @@ const styles = StyleSheet.create({
     mobileHeaderContainer: {
         minHeight: 60,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         paddingHorizontal: spacing.sm,
@@ -1233,7 +1280,7 @@ const styles = StyleSheet.create({
         flex: 1,
         minWidth: 0,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.sm,
@@ -1349,7 +1396,7 @@ const styles = StyleSheet.create({
     mobileUserMenuItem: {
         minHeight: 36,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.sm,

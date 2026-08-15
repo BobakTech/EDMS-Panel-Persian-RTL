@@ -12,7 +12,7 @@ import {
     StyleSheet,
     Text,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -70,9 +70,12 @@ export default function WorkspaceHeader({
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "flex-start",
+
+        width: "100%",
+        direction: "rtl",
 
         gap: spacing.md,
     },
@@ -81,7 +84,7 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         minWidth: 0,
 
-        alignItems: "flex-end",
+        alignItems: "flex-start",
     },
 
     title: {

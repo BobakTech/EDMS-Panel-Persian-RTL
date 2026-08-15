@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "../../web/icons";
 
 import {
     Pressable,
@@ -14,7 +14,7 @@ import {
     Text,
     useWindowDimensions,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -138,6 +138,7 @@ export default function Sidebar({
                 variant === "drawer" && styles.drawerContainer,
                 {
                     backgroundColor: colors.surface,
+                    borderColor: colors.border,
                 },
             ]}
         >
@@ -188,11 +189,17 @@ export default function Sidebar({
                     <ProjectInfoPanel
                         projectInfo={projectInfo}
                         isLoading={isProjectInfoLoading}
+                        error={projectInfoError}
                     />
                 </View>
             )}
 
-            <View style={styles.navigation}>
+            <View
+                style={[
+                    styles.navigation,
+                    { borderColor: colors.border },
+                ]}
+            >
                 {navigationItems.map((item) => {
                     const isSelected = activePage === item.page;
 
@@ -210,6 +217,7 @@ export default function Sidebar({
                                 styles.navigationButton,
                                 isSelected && {
                                     backgroundColor: colors.background,
+                                    borderColor: colors.border,
                                 },
                                 pressed && styles.pressedNavigationButton,
                             ]}
@@ -269,6 +277,7 @@ export default function Sidebar({
                         styles.utilityButton,
                         activePage === "settings" && {
                             backgroundColor: colors.background,
+                            borderColor: colors.border,
                         },
                         pressed && styles.pressedUtilityButton,
                     ]}
@@ -419,6 +428,8 @@ const styles = StyleSheet.create({
 
         padding: spacing.lg,
 
+        borderLeftWidth: 1,
+
         ...shadows.sm,
     },
 
@@ -496,6 +507,11 @@ const styles = StyleSheet.create({
 
     navigation: {
         gap: spacing.sm,
+
+        paddingVertical: spacing.md,
+
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
     },
 
     navigationButton: {
@@ -508,6 +524,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xs,
 
+        borderWidth: 1,
+        borderColor: "transparent",
         borderRadius: radius.md,
     },
 
@@ -516,7 +534,7 @@ const styles = StyleSheet.create({
     },
 
     navigationButtonContent: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.sm,
@@ -538,7 +556,7 @@ const styles = StyleSheet.create({
     },
 
     staticNavigationItem: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.sm,
@@ -561,11 +579,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xs,
 
+        borderWidth: 1,
+        borderColor: "transparent",
         borderRadius: radius.md,
     },
 
     utilityButtonContent: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.sm,
@@ -593,7 +613,7 @@ const styles = StyleSheet.create({
     },
 
     storageHeader: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
 

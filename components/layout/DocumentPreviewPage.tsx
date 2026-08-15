@@ -7,7 +7,7 @@
  * ============================================================================
  */
 
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "../../web/icons";
 import {
     Image,
     Linking,
@@ -18,11 +18,11 @@ import {
     Text,
     useWindowDimensions,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
-import PdfPreviewRenderer from "../preview/PdfPreviewRenderer";
+import PdfPreviewRenderer from "../preview/PdfPreviewRenderer.web";
 
 import type { WorkspaceItem } from "../workspace";
 
@@ -94,9 +94,22 @@ export default function DocumentPreviewPage({
     const canAccessOriginal = Boolean(item.localUri);
 
     function handleOpenOriginal() {
-        if (item.localUri) {
-            void Linking.openURL(item.localUri);
+        if (!item.localUri) {
+            return;
         }
+
+        if (Platform.OS !== "web") {
+            void Linking.openURL(item.localUri);
+            return;
+        }
+
+        const openLink = document.createElement("a");
+        openLink.href = item.localUri;
+        openLink.target = "_blank";
+        openLink.rel = "noopener noreferrer";
+        document.body.appendChild(openLink);
+        openLink.click();
+        openLink.remove();
     }
 
     function handleDownloadOriginal() {
@@ -113,7 +126,9 @@ export default function DocumentPreviewPage({
         downloadLink.href = item.localUri;
         downloadLink.download = item.name;
         downloadLink.rel = "noopener";
+        document.body.appendChild(downloadLink);
         downloadLink.click();
+        downloadLink.remove();
     }
 
     return (
@@ -396,7 +411,7 @@ const styles = StyleSheet.create({
         minWidth: 88,
         height: 40,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: spacing.xs,
@@ -418,7 +433,7 @@ const styles = StyleSheet.create({
     },
 
     actionsPanel: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         gap: spacing.sm,
@@ -431,14 +446,14 @@ const styles = StyleSheet.create({
     },
 
     actionGroup: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         gap: spacing.sm,
     },
 
     actionButton: {
         minWidth: 96,
         height: 40,
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: spacing.xs,
@@ -543,7 +558,7 @@ const styles = StyleSheet.create({
     },
 
     metaPanel: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         gap: spacing.md,
 
         padding: spacing.md,

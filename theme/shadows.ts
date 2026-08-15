@@ -10,7 +10,7 @@
 import {
     Platform,
     type ViewStyle,
-} from "react-native";
+} from "../web/ui";
 
 /**
  * ============================================================================

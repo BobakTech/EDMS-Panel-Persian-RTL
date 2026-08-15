@@ -6,7 +6,9 @@
  * ============================================================================
  */
 
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect } from "react";
+import { Feather } from "../../web/icons";
+import { Modal, Pressable, StyleSheet, Text, View } from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings, type ThemeMode } from "../../settings/SettingsContext";
@@ -53,7 +55,11 @@ const languageChoices: Array<{
  * ============================================================================
  */
 
-export default function SettingsPage() {
+interface SettingsPageProps {
+    onClose: () => void;
+}
+
+export default function SettingsPage({ onClose }: SettingsPageProps) {
     const {
         theme,
         themeMode,
@@ -64,15 +70,32 @@ export default function SettingsPage() {
 
     const colors = theme.colors;
 
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onClose]);
+
     return (
-        <View
-            style={[
-                styles.container,
-                {
-                    backgroundColor: colors.background,
-                },
-            ]}
+        <Modal
+            transparent
+            visible
+            animationType="fade"
+            onRequestClose={onClose}
         >
+            <View style={styles.overlay}>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="بستن تنظیمات"
+                    onPress={onClose}
+                    style={styles.backdrop}
+                />
+
             <View
                 style={[
                     styles.content,
@@ -83,16 +106,33 @@ export default function SettingsPage() {
                 ]}
             >
                 <View style={styles.header}>
-                    <Text
-                        style={[
-                            styles.title,
-                            {
-                                color: colors.text,
-                            },
-                        ]}
-                    >
-                        تنظیمات
-                    </Text>
+                    <View style={styles.headerTitleRow}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="بستن تنظیمات"
+                            onPress={onClose}
+                            style={[
+                                styles.closeButton,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                        >
+                            <Feather name="x" size={17} color={colors.text} />
+                        </Pressable>
+
+                        <Text
+                            style={[
+                                styles.title,
+                                {
+                                    color: colors.text,
+                                },
+                            ]}
+                        >
+                            تنظیمات
+                        </Text>
+                    </View>
 
                     <Text
                         style={[
@@ -277,7 +317,8 @@ export default function SettingsPage() {
                     </Text>
                 </View>
             </View>
-        </View>
+            </View>
+        </Modal>
     );
 }
 
@@ -288,18 +329,37 @@ export default function SettingsPage() {
  */
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+    overlay: {
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
 
-        padding: spacing.xl,
+        width: "100vw",
+        height: "100vh",
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        padding: spacing.lg,
+    },
+
+    backdrop: {
+        ...StyleSheet.absoluteFill,
+
+        backgroundColor: "rgba(0, 0, 0, 0.42)",
     },
 
     content: {
-        flex: 1,
+        zIndex: 1,
 
-        gap: spacing.xl,
+        width: "100%",
+        maxWidth: 520,
 
-        padding: spacing.xl,
+        direction: "rtl",
+
+        gap: spacing.lg,
+
+        padding: spacing.lg,
 
         borderWidth: 1,
         borderRadius: radius.xl,
@@ -308,31 +368,49 @@ const styles = StyleSheet.create({
     },
 
     header: {
-        alignItems: "flex-end",
-
+        alignItems: "flex-start",
         gap: spacing.sm,
     },
 
+    headerTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-start",
+
+        gap: spacing.md,
+    },
+
+    closeButton: {
+        width: 34,
+        height: 34,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
     title: {
-        fontSize: typography.fontSize.xxl,
+        fontSize: typography.fontSize.xl,
         fontWeight: typography.fontWeight.bold,
         textAlign: "right",
     },
 
     subtitle: {
-        fontSize: typography.fontSize.md,
+        fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
         textAlign: "right",
     },
 
     settingsSection: {
-        alignItems: "flex-end",
+        alignItems: "flex-start",
 
-        gap: spacing.md,
+        gap: spacing.sm,
     },
 
     settingsSectionHeader: {
-        alignItems: "flex-end",
+        alignItems: "flex-start",
 
         gap: spacing.xs,
     },
@@ -350,8 +428,8 @@ const styles = StyleSheet.create({
     },
 
     segmentedControl: {
-        flexDirection: "row-reverse",
-        alignSelf: "flex-end",
+        flexDirection: "row",
+        alignSelf: "flex-start",
 
         overflow: "hidden",
 
@@ -360,7 +438,7 @@ const styles = StyleSheet.create({
     },
 
     segmentedButton: {
-        minWidth: 92,
+        minWidth: 84,
 
         alignItems: "center",
         justifyContent: "center",
@@ -384,7 +462,7 @@ const styles = StyleSheet.create({
 
         gap: spacing.sm,
 
-        padding: spacing.lg,
+        padding: spacing.md,
 
         borderWidth: 1,
         borderRadius: radius.lg,

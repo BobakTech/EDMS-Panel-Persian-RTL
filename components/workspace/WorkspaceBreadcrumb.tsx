@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "../../web/ui";
 
 import { spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -115,7 +115,7 @@ export default function WorkspaceBreadcrumb({
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         flexWrap: "wrap",
 
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     },
 
     itemGroup: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.xs,

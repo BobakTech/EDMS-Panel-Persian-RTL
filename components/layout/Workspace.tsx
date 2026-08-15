@@ -25,7 +25,7 @@ import {
     TextInput,
     useWindowDimensions,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -1646,7 +1646,7 @@ const styles = StyleSheet.create({
     workspaceTopBar: {
         minHeight: 44,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
 
@@ -1687,7 +1687,7 @@ const styles = StyleSheet.create({
     },
 
     workspaceGrid: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         flexWrap: "wrap",
         alignItems: "flex-start",
 
@@ -1722,7 +1722,12 @@ const styles = StyleSheet.create({
     },
 
     modalOverlay: {
-        flex: 1,
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+
+        width: "100vw",
+        height: "100vh",
 
         alignItems: "center",
         justifyContent: "center",
@@ -1763,7 +1768,7 @@ const styles = StyleSheet.create({
     },
 
     modalActions: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.sm,
@@ -1880,7 +1885,7 @@ const styles = StyleSheet.create({
         right: spacing.xl,
         bottom: spacing.xl,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         maxWidth: 420,

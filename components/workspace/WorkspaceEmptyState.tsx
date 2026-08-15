@@ -13,7 +13,7 @@ import React, {
     useState,
 } from "react";
 
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "../../web/icons";
 
 import {
     Platform,
@@ -21,7 +21,7 @@ import {
     StyleSheet,
     Text,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     },
 
     footerActions: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
 
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
     newFolderButton: {
         minHeight: 38,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
 
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     },
 
     hints: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         marginTop: spacing.lg,

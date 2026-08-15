@@ -1,4 +1,4 @@
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "../../web/ui";
 
 interface PdfPreviewRendererProps {
     uri: string;

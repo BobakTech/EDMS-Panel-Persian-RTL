@@ -11,7 +11,7 @@ import {
     Text,
     useWindowDimensions,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";

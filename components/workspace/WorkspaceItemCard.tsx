@@ -6,14 +6,14 @@
  * ============================================================================
  */
 
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "../../web/icons";
 
 import {
     Pressable,
     StyleSheet,
     Text,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -99,7 +99,9 @@ export default function WorkspaceItemCard({
                 !isListMode && isCompact && styles.compactGridCard,
                 {
                     backgroundColor: colors.surface,
-                    borderColor: isSelected ? colors.primary : colors.border,
+                    borderColor: isSelected
+                        ? colors.primary
+                        : `color-mix(in srgb, ${colors.primary} 38%, ${colors.border})`,
                 },
                 isSelected && styles.selectedCard,
             ]}
@@ -110,6 +112,7 @@ export default function WorkspaceItemCard({
                 onPress={() => onOpenActions?.(item.id)}
                 style={({ pressed }) => [
                     styles.actionsButton,
+                    isListMode && styles.listActionsButton,
                     {
                         backgroundColor: colors.background,
                         borderColor: colors.border,
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
     card: {
         position: "relative",
 
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderRadius: radius.lg,
 
         ...shadows.sm,
@@ -249,13 +252,13 @@ const styles = StyleSheet.create({
     },
 
     selectedCard: {
-        borderWidth: 1,
+        borderWidth: 2,
     },
 
     actionsButton: {
         position: "absolute",
         top: spacing.sm,
-        left: spacing.sm,
+        right: spacing.sm,
         zIndex: 2,
 
         width: 30,
@@ -266,6 +269,11 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.pill,
+    },
+
+    listActionsButton: {
+        right: "auto",
+        left: spacing.sm,
     },
 
     pressedButton: {
@@ -287,18 +295,18 @@ const styles = StyleSheet.create({
     listContentButton: {
         minHeight: 88,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         paddingVertical: spacing.md,
     },
 
     iconMetaRow: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
 
-        paddingLeft: 42,
+        paddingRight: 42,
 
         gap: spacing.sm,
     },
@@ -306,7 +314,7 @@ const styles = StyleSheet.create({
     listIconMetaRow: {
         flexShrink: 0,
 
-        paddingLeft: 0,
+        paddingRight: 0,
 
         justifyContent: "flex-start",
     },
@@ -337,7 +345,10 @@ const styles = StyleSheet.create({
     },
 
     textArea: {
-        alignItems: "flex-end",
+        alignItems: "flex-start",
+
+        width: "100%",
+        direction: "rtl",
 
         gap: spacing.xs,
     },
@@ -345,6 +356,7 @@ const styles = StyleSheet.create({
     listTextArea: {
         flex: 1,
         minWidth: 0,
+        alignItems: "flex-start",
     },
 
     name: {

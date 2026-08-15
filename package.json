@@ -1,26 +1,25 @@
 {
   "name": "edms",
   "version": "1.0.0",
-  "main": "index.ts",
+  "type": "module",
   "dependencies": {
-    "@expo/vector-icons": "^15.0.2",
-    "expo": "~56.0.12",
-    "expo-document-picker": "~56.0.4",
-    "expo-status-bar": "~56.0.4",
+    "lucide-react": "^0.468.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.85.3",
-    "react-native-web": "^0.21.2"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "@types/react-dom": "^19.2.3",
+    "@types/node": "^22.10.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~6.0.3",
+    "vite": "^6.0.5"
   },
   "scripts": {
-    "start": "expo start --port 8092",
-    "android": "expo start --android --port 8092",
-    "ios": "expo start --ios --port 8092",
-    "web": "expo start --web --port 8092"
+    "start": "vite --port 8092",
+    "dev": "vite --port 8092",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 8092"
   },
   "private": true
 }

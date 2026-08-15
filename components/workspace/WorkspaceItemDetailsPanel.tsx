@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     container: {
         position: "relative",
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         marginBottom: spacing.lg,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     },
 
     metaRow: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         gap: spacing.md,

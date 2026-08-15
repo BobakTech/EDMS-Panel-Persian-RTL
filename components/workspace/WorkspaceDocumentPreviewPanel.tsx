@@ -7,18 +7,18 @@
  * ============================================================================
  */
 
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "../../web/icons";
 import {
     Image,
     Pressable,
     StyleSheet,
     Text,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
-import PdfPreviewRenderer from "../preview/PdfPreviewRenderer";
+import PdfPreviewRenderer from "../preview/PdfPreviewRenderer.web";
 
 import type { WorkspaceItem } from "./workspace.types";
 
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
 
     previewRow: {
         minHeight: 74,
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
 
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     },
 
     metaRow: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         gap: spacing.sm,
     },
 
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
     fullPreviewButton: {
         minHeight: 32,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: spacing.xs,

@@ -6,13 +6,13 @@
  * ============================================================================
  */
 
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "../../web/icons";
 
 import {
     Pressable,
     StyleSheet,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { radius, spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -131,7 +131,7 @@ export default function WorkspaceViewControls({
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: "row-reverse",
+        flexDirection: "row",
         alignItems: "center",
 
         padding: 3,

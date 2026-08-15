@@ -1,0 +1,62 @@
+import {
+    AlignRight,
+    Archive,
+    ArrowRight,
+    ChevronLeft,
+    ChevronRight,
+    Circle,
+    Download,
+    Ellipsis,
+    ExternalLink,
+    File,
+    FileText,
+    Folder,
+    FolderPlus,
+    Grid3X3,
+    Image,
+    List,
+    LogOut,
+    Maximize2,
+    Menu,
+    Settings,
+    Trash2,
+    UploadCloud,
+    User,
+    Users,
+    X,
+} from "lucide-react";
+import type { CSSProperties } from "react";
+
+const icons: Record<string, React.ComponentType<any>> = {
+    "align-right": AlignRight,
+    archive: Archive,
+    "arrow-right": ArrowRight,
+    "chevron-left": ChevronLeft,
+    "chevron-right": ChevronRight,
+    download: Download,
+    "external-link": ExternalLink,
+    file: File,
+    "file-text": FileText,
+    folder: Folder,
+    "folder-plus": FolderPlus,
+    grid: Grid3X3,
+    image: Image,
+    list: List,
+    "log-out": LogOut,
+    "maximize-2": Maximize2,
+    menu: Menu,
+    "more-horizontal": Ellipsis,
+    settings: Settings,
+    "trash-2": Trash2,
+    "upload-cloud": UploadCloud,
+    user: User,
+    users: Users,
+    x: X,
+};
+
+function FeatherIcon({ name, size = 24, color = "currentColor", style }: { name: string; size?: number; color?: string; style?: CSSProperties }) {
+    const Icon = icons[name] ?? Circle;
+    return <Icon aria-hidden="true" size={size} color={color} style={style} strokeWidth={1.8} />;
+}
+
+export const Feather = Object.assign(FeatherIcon, { glyphMap: {} as Record<string, number> });

@@ -14,7 +14,7 @@ import {
     StyleSheet,
     useWindowDimensions,
     View,
-} from "react-native";
+} from "../../web/ui";
 
 import { shadows, spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -44,7 +44,8 @@ import type { DroppedWorkspaceFile } from "../workspace/WorkspaceEmptyState";
  * ============================================================================
  */
 
-type AppPageType = "dashboard" | WorkspacePageType | "settings";
+type ContentPageType = "dashboard" | WorkspacePageType;
+type AppPageType = ContentPageType | "settings";
 
 /**
  * ============================================================================
@@ -124,13 +125,14 @@ export default function AppLayout() {
      * ============================================================================
      */
     const [activeWorkspacePage, setActiveWorkspacePage] =
-        useState<AppPageType>("dashboard");
+        useState<ContentPageType>("dashboard");
 
     const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
     const [isProjectInfoLoading, setIsProjectInfoLoading] = useState(true);
     const [projectInfoError, setProjectInfoError] = useState<string | null>(null);
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const activeWorkspaceFolderId =
         activeWorkspacePage === "workspace" ? currentFolderId : null;
@@ -238,7 +240,15 @@ export default function AppLayout() {
     }
 
     function handleChangeWorkspacePage(page: AppPageType) {
+        if (page === "settings") {
+            setIsSettingsOpen(true);
+            setActiveWorkspaceAction(null);
+            setIsMobileMenuOpen(false);
+            return;
+        }
+
         setActiveWorkspacePage(page);
+        setIsSettingsOpen(false);
         setActiveWorkspaceAction(null);
         setIsMobileMenuOpen(false);
         setPreviewPageItemId(null);
@@ -509,7 +519,7 @@ export default function AppLayout() {
         >
             {!isMobileShell && (
                 <Sidebar
-                    activePage={activeWorkspacePage}
+                    activePage={isSettingsOpen ? "settings" : activeWorkspacePage}
                     projectInfo={projectInfo}
                     isProjectInfoLoading={isProjectInfoLoading}
                     projectInfoError={projectInfoError}
@@ -586,7 +596,7 @@ export default function AppLayout() {
                             <Sidebar
                                 variant="drawer"
                                 showBrand={false}
-                                activePage={activeWorkspacePage}
+                                activePage={isSettingsOpen ? "settings" : activeWorkspacePage}
                                 projectInfo={projectInfo}
                                 isProjectInfoLoading={isProjectInfoLoading}
                                 projectInfoError={projectInfoError}
@@ -639,14 +649,14 @@ export default function AppLayout() {
                             showsVerticalScrollIndicator
                             showsHorizontalScrollIndicator={false}
                         >
-                            {activeWorkspacePage === "dashboard" ? (
-                                <Dashboard workspaceItems={workspaceItems} />
-                            ) : (
-                                <SettingsPage />
-                            )}
+                            <Dashboard workspaceItems={workspaceItems} />
                         </ScrollView>
                     )}
                 </View>
+
+                {isSettingsOpen && (
+                    <SettingsPage onClose={() => setIsSettingsOpen(false)} />
+                )}
             </View>
         </View>
     );
@@ -664,7 +674,8 @@ const styles = StyleSheet.create({
         minWidth: 0,
         minHeight: 0,
 
-        flexDirection: "row-reverse",
+        flexDirection: "row",
+        direction: "rtl",
 
         overflow: "hidden",
     },
