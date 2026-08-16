@@ -137,15 +137,6 @@ Integration rules:
 - Update `README.md` when significant changes to setup, architecture, development workflow, commands, milestones, or usage make it inaccurate or incomplete; skip minor internal changes that do not affect users or developers.
 - Keep it concise and aligned with the repository. Do not duplicate detailed AI context; keep project-specific AI rules in `docs/AI_CONTEXT.md`.
 
-## Local chat history
-
-- The existing root `.chat-history.md` is the local chat-history (LCH) file. Keep it local and Git-ignored; never stage or commit it.
-- Store exact user/Codex messages verbatim. Never summarize, paraphrase, merge, reconstruct, or invent message content.
-- Separate history into clear chat sections and keep messages chronological within each section. Put entries that cannot be classified confidently under `Unclassified`.
-- Record each message's actual system timestamp with timezone offset and region when available, for example `2026-08-10 14:52:00 +03:30 (Asia/Tehran)`. Never invent unavailable timestamp or timezone data.
-- Append future relevant EDMS development conversations using the same structure.
-- For transient/copy-pasted web UI preview screenshots, store a brief factual development-state description instead of the image; keep actual-file attachment rules unchanged.
-
 ## Resilient execution
 
 - For large or long-running tasks, keep the overall goal and remaining work clear, and split execution into small, independently completable milestones; do not fragment small tasks unnecessarily.
