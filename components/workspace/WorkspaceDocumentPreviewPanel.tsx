@@ -19,6 +19,11 @@ import {
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import PdfPreviewRenderer from "../preview/PdfPreviewRenderer.web";
+import {
+    getWorkspaceItemStatusLabel,
+    getWorkspaceItemUpdatedAtLabel,
+} from "./workspace.helpers";
+import type { TranslationKey } from "../../locales";
 
 import type { WorkspaceItem } from "./workspace.types";
 
@@ -74,26 +79,12 @@ function getNormalizedMimeType(item: WorkspaceItem) {
     return item.mimeType?.toLowerCase() ?? "";
 }
 
-function getFileTypeLabel(item: WorkspaceItem) {
+type Translate = (key: TranslationKey) => string;
+
+function getFileTypeLabel(item: WorkspaceItem, t: Translate) {
     const extension = getNormalizedExtension(item);
 
-    return extension ? extension.toUpperCase() : "فایل";
-}
-
-function getFileSizeLabel(item: WorkspaceItem) {
-    return item.sizeLabel ?? "اندازه نامشخص";
-}
-
-function getFileStatusLabel(item: WorkspaceItem) {
-    if (item.status === "archived") {
-        return "آرشیو شده";
-    }
-
-    if (item.status === "trashed") {
-        return "در سطل زباله";
-    }
-
-    return "فعال";
+    return extension ? extension.toUpperCase() : t("file");
 }
 
 /**
@@ -150,15 +141,15 @@ function getPreviewRendererKind(item: WorkspaceItem): PreviewRendererKind {
     return "generic";
 }
 
-function getPreviewRendererInfo(item: WorkspaceItem): PreviewRendererInfo {
+function getPreviewRendererInfo(item: WorkspaceItem, t: Translate): PreviewRendererInfo {
     const kind = getPreviewRendererKind(item);
 
     if (kind === "pdf") {
         return {
             kind,
             icon: "file-text",
-            title: "پیش‌نمایش PDF",
-            description: "رندر PDF در مرحله بعد فعال می‌شود.",
+            title: t("pdfPreviewTitle"),
+            description: t("pdfPreviewDescription"),
         };
     }
 
@@ -166,10 +157,10 @@ function getPreviewRendererInfo(item: WorkspaceItem): PreviewRendererInfo {
         return {
             kind,
             icon: "image",
-            title: "پیش‌نمایش تصویر",
+            title: t("imagePreviewTitle"),
             description: item.localUri
-                ? "تصویر انتخاب‌شده آماده نمایش است."
-                : "آدرس محلی تصویر در دسترس نیست.",
+                ? t("imagePreviewReady")
+                : t("imagePreviewUnavailable"),
         };
     }
 
@@ -177,8 +168,8 @@ function getPreviewRendererInfo(item: WorkspaceItem): PreviewRendererInfo {
         return {
             kind,
             icon: "file",
-            title: "پیش‌نمایش سند اداری",
-            description: "نمایش Word، Excel و PowerPoint در مرحله بعد اضافه می‌شود.",
+            title: t("officePreviewTitle"),
+            description: t("officePreviewDescription"),
         };
     }
 
@@ -186,16 +177,16 @@ function getPreviewRendererInfo(item: WorkspaceItem): PreviewRendererInfo {
         return {
             kind,
             icon: "align-right",
-            title: "پیش‌نمایش متن",
-            description: "نمایش محتوای متنی در مرحله بعد اضافه می‌شود.",
+            title: t("textPreviewTitle"),
+            description: t("textPreviewDescription"),
         };
     }
 
     return {
         kind,
         icon: "file",
-        title: "پیش‌نمایش فایل",
-        description: "برای این نوع فایل هنوز نمایشگر اختصاصی تعریف نشده است.",
+        title: t("genericPreviewTitle"),
+        description: t("genericPreviewDescription"),
     };
 }
 
@@ -210,9 +201,10 @@ export default function WorkspaceDocumentPreviewPanel({
     onClose,
     onOpenFullPreview,
 }: WorkspaceDocumentPreviewPanelProps) {
-    const { theme } = useSettings();
+    const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
-    const rendererInfo = getPreviewRendererInfo(item);
+    const textAlign = direction === "rtl" ? "right" : "left";
+    const rendererInfo = getPreviewRendererInfo(item, t);
     const shouldRenderImage =
         rendererInfo.kind === "image" && Boolean(item.localUri);
     const shouldRenderPdf =
@@ -225,13 +217,14 @@ export default function WorkspaceDocumentPreviewPanel({
                 {
                     backgroundColor: colors.surface,
                     borderColor: colors.border,
+                    direction,
                 },
             ]}
         >
             <View style={styles.topRow}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="بستن پیش‌نمایش"
+                    accessibilityLabel={t("closePreview")}
                     onPress={onClose}
                     style={[
                         styles.closeButton,
@@ -246,7 +239,7 @@ export default function WorkspaceDocumentPreviewPanel({
 
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="باز کردن پیش‌نمایش کامل"
+                    accessibilityLabel={t("openFullPreview")}
                     onPress={() => onOpenFullPreview?.(item)}
                     style={[
                         styles.fullPreviewButton,
@@ -263,10 +256,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.fullPreviewButtonText,
                             {
                                 color: colors.primary,
+                                textAlign,
                             },
                         ]}
                     >
-                        نمایش کامل
+                        {t("fullPreview")}
                     </Text>
                 </Pressable>
 
@@ -276,10 +270,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.eyebrow,
                             {
                                 color: colors.primary,
+                                textAlign,
                             },
                         ]}
                     >
-                        پیش‌نمایش سند
+                        {t("documentPreview")}
                     </Text>
 
                     <Text
@@ -288,6 +283,7 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.title,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -346,6 +342,7 @@ export default function WorkspaceDocumentPreviewPanel({
                                     styles.previewTitle,
                                     {
                                         color: colors.text,
+                                        textAlign,
                                     },
                                 ]}
                             >
@@ -358,6 +355,7 @@ export default function WorkspaceDocumentPreviewPanel({
                                     styles.previewDescription,
                                     {
                                         color: colors.text,
+                                        textAlign,
                                     },
                                 ]}
                             >
@@ -375,10 +373,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.metaLabel,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        نوع فایل
+                        {t("fileType")}
                     </Text>
 
                     <Text
@@ -387,10 +386,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.metaValue,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        {getFileTypeLabel(item)}
+                        {getFileTypeLabel(item, t)}
                     </Text>
                 </View>
 
@@ -400,10 +400,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.metaLabel,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        اندازه فایل
+                        {t("fileSize")}
                     </Text>
 
                     <Text
@@ -412,10 +413,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.metaValue,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        {getFileSizeLabel(item)}
+                        {getWorkspaceItemUpdatedAtLabel(item, t, language)}
                     </Text>
                 </View>
 
@@ -425,10 +427,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.metaLabel,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        وضعیت
+                        {direction === "ltr" ? "Status" : t("status")}
                     </Text>
 
                     <Text
@@ -437,10 +440,11 @@ export default function WorkspaceDocumentPreviewPanel({
                             styles.metaValue,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        {getFileStatusLabel(item)}
+                        {getWorkspaceItemStatusLabel(item, direction, t)}
                     </Text>
                 </View>
             </View>

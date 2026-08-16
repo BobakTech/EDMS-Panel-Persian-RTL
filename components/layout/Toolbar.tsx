@@ -11,6 +11,7 @@ import * as DocumentPicker from "../../web/document-picker";
 
 import { useEffect, useRef, useState } from "react";
 import {
+    Image,
     Modal,
     Pressable,
     StyleSheet,
@@ -18,6 +19,8 @@ import {
     TextInput,
     View,
 } from "../../web/ui";
+
+import panelLogo from "../../assets/panel-logo.png";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -94,8 +97,9 @@ export default function Toolbar({
     isMobileMenuOpen = false,
     onPressMobileMenu,
 }: ToolbarProps) {
-    const { t, theme } = useSettings();
+    const { direction, t, theme } = useSettings();
     const colors = theme.colors;
+    const textAlign = direction === "rtl" ? "right" : "left";
 
     const newFolderInputRef = useRef<TextInput>(null);
 
@@ -221,10 +225,11 @@ export default function Toolbar({
             <View style={styles.popupOverlay}>
                 <View
                     style={[
-                        styles.actionPanel,
-                        {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.primary,
+                    styles.actionPanel,
+                    {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.primary,
+                        direction,
                         },
                     ]}
                 >
@@ -233,6 +238,7 @@ export default function Toolbar({
                             styles.actionPanelTitle,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -251,6 +257,7 @@ export default function Toolbar({
                                 backgroundColor: colors.background,
                                 borderColor: colors.border,
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     />
@@ -339,6 +346,7 @@ export default function Toolbar({
                         {
                             backgroundColor: colors.surface,
                             borderColor: colors.primary,
+                            direction,
                         },
                     ]}
                 >
@@ -347,6 +355,7 @@ export default function Toolbar({
                             styles.uploadPanelTitle,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                         numberOfLines={1}
@@ -359,6 +368,7 @@ export default function Toolbar({
                             styles.uploadPanelDescription,
                             {
                                 color: colors.border,
+                                textAlign,
                             },
                         ]}
                     >
@@ -395,6 +405,7 @@ export default function Toolbar({
                 {
                     backgroundColor: colors.background,
                     borderColor: colors.primary,
+                    direction,
                 },
             ]}
         >
@@ -403,6 +414,7 @@ export default function Toolbar({
                     styles.uploadPanelTitle,
                     {
                         color: colors.text,
+                        textAlign,
                     },
                 ]}
                 numberOfLines={1}
@@ -415,6 +427,7 @@ export default function Toolbar({
                     styles.uploadPanelDescription,
                     {
                         color: colors.border,
+                        textAlign,
                     },
                 ]}
             >
@@ -457,7 +470,7 @@ export default function Toolbar({
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={
-                        isMobileMenuOpen ? "بستن منوی موبایل" : "باز کردن منوی موبایل"
+                        isMobileMenuOpen ? t("closeMobileMenu") : t("openMobileMenu")
                     }
                     onPress={onPressMobileMenu}
                     style={({ pressed }) => [
@@ -477,7 +490,9 @@ export default function Toolbar({
                 </Pressable>
 
                 <View style={styles.mobileBrand}>
-                    <View
+                    <Image
+                        source={{ uri: panelLogo }}
+                        resizeMode="contain"
                         style={[
                             styles.mobileLogo,
                             {
@@ -485,18 +500,7 @@ export default function Toolbar({
                                 borderColor: colors.border,
                             },
                         ]}
-                    >
-                        <Text
-                            style={[
-                                styles.mobileLogoText,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                        >
-                            Logo
-                        </Text>
-                    </View>
+                    />
 
                     <View style={styles.mobileBrandText}>
                         <Text
@@ -530,8 +534,8 @@ export default function Toolbar({
                         accessibilityRole="button"
                         accessibilityLabel={
                             isUserMenuOpen
-                                ? "بستن منوی حساب کاربری"
-                                : "باز کردن منوی حساب کاربری"
+                                ? t("closeUserMenu")
+                                : t("openUserMenu")
                         }
                         onPress={() => setIsUserMenuOpen((currentValue) => !currentValue)}
                         style={({ pressed }) => [
@@ -565,7 +569,7 @@ export default function Toolbar({
                         <View style={styles.mobileUserMenuModal}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="بستن منوی حساب کاربری"
+                                accessibilityLabel={t("closeUserMenu")}
                                 onPress={() => setIsUserMenuOpen(false)}
                                 style={styles.mobileUserMenuBackdrop}
                             />
@@ -599,7 +603,7 @@ export default function Toolbar({
                                             },
                                         ]}
                                     >
-                                        توسعه‌دهنده نرم‌افزار
+                                        {t("softwareDeveloper")}
                                     </Text>
                                 </View>
 
@@ -614,7 +618,7 @@ export default function Toolbar({
 
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="نمایش پروفایل کاربر"
+                                    accessibilityLabel={t("userProfile")}
                                     onPress={() => setIsUserMenuOpen(false)}
                                     style={({ pressed }) => [
                                         styles.mobileUserMenuItem,
@@ -635,13 +639,13 @@ export default function Toolbar({
                                             },
                                         ]}
                                     >
-                                        پروفایل کاربر
+                                        {t("userProfile")}
                                     </Text>
                                 </Pressable>
 
                                 <Pressable
                                     accessibilityRole="button"
-                                    accessibilityLabel="خروج از حساب کاربری"
+                                    accessibilityLabel={t("signOut")}
                                     onPress={() => setIsUserMenuOpen(false)}
                                     style={({ pressed }) => [
                                         styles.mobileUserMenuItem,
@@ -662,7 +666,7 @@ export default function Toolbar({
                                             },
                                         ]}
                                     >
-                                        خروج از حساب
+                                        {t("signOut")}
                                     </Text>
                                 </Pressable>
                             </View>
@@ -723,7 +727,7 @@ export default function Toolbar({
                                 ]}
                             >
                                 <Feather
-                                    name="upload"
+                                    name="upload-cloud"
                                     size={16}
                                     color={colors.surface}
                                 />
@@ -863,7 +867,7 @@ export default function Toolbar({
                             ]}
                         >
                             <Feather
-                                name="upload"
+                                name="upload-cloud"
                                 size={16}
                                 color={colors.surface}
                             />
@@ -1190,7 +1194,10 @@ const styles = StyleSheet.create({
      */
 
     uploadOverlay: {
-        flex: 1,
+        position: "fixed",
+        inset: 0,
+        zIndex: 1200,
+
         alignItems: "center",
         paddingTop: 92,
         pointerEvents: "box-none",
@@ -1287,19 +1294,14 @@ const styles = StyleSheet.create({
     },
 
     mobileLogo: {
-        width: 38,
-        height: 38,
+        width: 112,
+        height: 44,
 
         alignItems: "center",
         justifyContent: "center",
 
         borderWidth: 1,
         borderRadius: radius.md,
-    },
-
-    mobileLogoText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
     },
 
     mobileBrandText: {

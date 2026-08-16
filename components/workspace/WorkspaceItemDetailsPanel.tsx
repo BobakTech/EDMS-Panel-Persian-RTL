@@ -14,7 +14,9 @@ import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
 import {
+    getWorkspaceItemDescription,
     getWorkspaceItemLabel,
+    getWorkspaceItemStatusLabel,
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
 
@@ -63,18 +65,6 @@ interface WorkspaceItemDetailsPanelProps {
  * ============================================================================
  */
 
-function getWorkspaceItemStatusLabel(item: WorkspaceItem) {
-    if (item.status === "archived") {
-        return "آرشیو";
-    }
-
-    if (item.status === "trashed") {
-        return "سطل زباله";
-    }
-
-    return "فعال";
-}
-
 /**
  * ============================================================================
  * Component
@@ -88,8 +78,10 @@ export default function WorkspaceItemDetailsPanel({
     tertiaryAction,
     onClose,
 }: WorkspaceItemDetailsPanelProps) {
-    const { theme } = useSettings();
+    const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
+    const isRtl = direction === "rtl";
+    const textAlign = isRtl ? "right" : "left";
 
     const warningColor = "#D97706";
     const dangerColor = "#DC2626";
@@ -158,6 +150,7 @@ export default function WorkspaceItemDetailsPanel({
                 {
                     backgroundColor: colors.background,
                     borderColor: colors.border,
+                    direction,
                 },
             ]}
         >
@@ -167,10 +160,11 @@ export default function WorkspaceItemDetailsPanel({
                         styles.label,
                         {
                             color: colors.primary,
+                            textAlign,
                         },
                     ]}
                 >
-                    {getWorkspaceItemLabel(item)}
+                    {getWorkspaceItemLabel(item, t)}
                 </Text>
 
                 <Text
@@ -178,6 +172,7 @@ export default function WorkspaceItemDetailsPanel({
                         styles.title,
                         {
                             color: colors.text,
+                            textAlign,
                         },
                     ]}
                 >
@@ -189,10 +184,11 @@ export default function WorkspaceItemDetailsPanel({
                         styles.description,
                         {
                             color: colors.text,
+                            textAlign,
                         },
                     ]}
                 >
-                    {item.description}
+                    {getWorkspaceItemDescription(item, direction)}
                 </Text>
 
                 <View style={styles.metaRow}>
@@ -201,10 +197,11 @@ export default function WorkspaceItemDetailsPanel({
                             styles.metaText,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        وضعیت: {getWorkspaceItemStatusLabel(item)}
+                        {direction === "ltr" ? "Status" : t("status")}: {getWorkspaceItemStatusLabel(item, direction, t)}
                     </Text>
 
                     <Text
@@ -212,10 +209,11 @@ export default function WorkspaceItemDetailsPanel({
                             styles.metaText,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
-                        {getWorkspaceItemUpdatedAtLabel(item)}
+                        {getWorkspaceItemUpdatedAtLabel(item, t, language)}
                     </Text>
                 </View>
             </View>
@@ -350,12 +348,12 @@ export default function WorkspaceItemDetailsPanel({
             {/* Close Details Action */}
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="بستن جزئیات"
+                accessibilityLabel={t("closeDetails")}
                 onHoverIn={(event) =>
-                    handleShowTooltip("close", "بستن جزئیات", event)
+                    handleShowTooltip("close", t("closeDetails"), event)
                 }
                 onPointerMove={(event) =>
-                    handleShowTooltip("close", "بستن جزئیات", event)
+                    handleShowTooltip("close", t("closeDetails"), event)
                 }
                 onHoverOut={() => setVisibleTooltip(null)}
                 onPress={onClose}
@@ -413,7 +411,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
+        textAlign: "start",
     },
 
     title: {
@@ -421,7 +419,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
+        textAlign: "start",
     },
 
     description: {
@@ -429,7 +427,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
+        textAlign: "start",
 
         opacity: 0.72,
     },

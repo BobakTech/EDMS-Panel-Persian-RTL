@@ -84,7 +84,7 @@ function getFileSizeLabel(fileSize?: number) {
  */
 
 export default function AppLayout() {
-    const { language, theme } = useSettings();
+    const { direction, theme } = useSettings();
     const colors = theme.colors;
 
     const { width } = useWindowDimensions();
@@ -325,6 +325,7 @@ export default function AppLayout() {
                         : null,
                 extension: getFileExtension(trimmedFileName),
                 sizeLabel: getFileSizeLabel(file.size),
+                sizeBytes: file.size,
                 mimeType: file.mimeType,
                 localUri: file.uri,
             };
@@ -376,6 +377,7 @@ export default function AppLayout() {
                 parentFolderId: currentFolderId,
                 extension: getFileExtension(file.name),
                 sizeLabel: getFileSizeLabel(file.size),
+                sizeBytes: file.size,
                 mimeType: file.mimeType,
                 localUri: file.uri,
             }));
@@ -524,7 +526,7 @@ export default function AppLayout() {
                 isMobileShell && styles.mobileContainer,
                 {
                     backgroundColor: colors.background,
-                    direction: language === "fa" ? "rtl" : "ltr",
+                    direction,
                 },
             ]}
         >

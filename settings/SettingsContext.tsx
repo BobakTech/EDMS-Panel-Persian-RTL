@@ -15,7 +15,13 @@ import {
 } from "react";
 
 import { DEFAULT_LANGUAGE, DEFAULT_THEME } from "../constants/app";
-import { translations, Language, type TranslationKey } from "../locales";
+import {
+    languageDirections,
+    translations,
+    Language,
+    type LayoutDirection,
+    type TranslationKey,
+} from "../locales";
 import { darkTheme, lightTheme } from "../theme";
 
 export type ThemeMode = "light" | "dark";
@@ -23,6 +29,7 @@ export type ThemeMode = "light" | "dark";
 interface SettingsContextValue {
     themeMode: ThemeMode;
     language: Language;
+    direction: LayoutDirection;
 
     theme: typeof lightTheme;
 
@@ -56,6 +63,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     const [themeMode, setThemeMode] = useState<ThemeMode>(DEFAULT_THEME);
 
     const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
+    const direction = languageDirections[language];
 
     const theme =
         themeMode === "light"
@@ -69,6 +77,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         () => ({
             themeMode,
             language,
+            direction,
 
             theme,
 
@@ -83,7 +92,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
             t,
         }),
-        [themeMode, language, theme]
+        [themeMode, language, direction, theme]
     );
 
     return (

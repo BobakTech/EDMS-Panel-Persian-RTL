@@ -100,37 +100,39 @@ export function ProjectInfoPanel({
     isLoading,
     error = null,
 }: ProjectInfoPanelProps) {
-    const { theme } = useSettings();
+    const { direction, t, theme } = useSettings();
     const colors = theme.colors;
     const [isExpanded, setIsExpanded] = useState(false);
     const statusLabel = isLoading
-        ? "در حال دریافت"
+        ? t("projectConnectionConnecting")
         : error
-            ? "اطلاعات در دسترس نیست"
-            : "پروژه فعال";
-    const statusColor = error ? "#EF4444" : colors.primary;
+            ? t("projectConnectionFailed")
+            : t("projectConnectionConnected");
+    const statusColor = isLoading
+        ? "#F59E0B"
+        : error
+            ? "#94A3B8"
+            : "#22C55E";
 
     return (
-        <View
-            style={[
+        <Pressable
+            title={statusLabel}
+            accessibilityRole="button"
+            accessibilityLabel={statusLabel}
+            accessibilityState={{ expanded: isExpanded }}
+            onPress={() => setIsExpanded((currentValue) => !currentValue)}
+            style={({ pressed }) => [
                 styles.container,
                 {
                     backgroundColor: colors.background,
                     borderColor: colors.border,
-                    height: isExpanded ? 128 : 50,
+                    height: isExpanded ? 154 : 50,
+                    direction,
                 },
+                pressed && { opacity: 0.82 },
             ]}
         >
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Toggle active project details"
-                accessibilityState={{ expanded: isExpanded }}
-                onPress={() => setIsExpanded((currentValue) => !currentValue)}
-                style={({ pressed }) => [
-                    styles.header,
-                    pressed && { opacity: 0.82 },
-                ]}
-            >
+            <View style={styles.header}>
                 <View style={styles.headerText}>
                     <View style={styles.statusRow}>
                         <View
@@ -155,18 +157,17 @@ export function ProjectInfoPanel({
                     style={[
                         styles.toggleIcon,
                         {
-                            color: colors.primary,
-                            backgroundColor: `${colors.primary}1F`,
+                            backgroundColor: statusColor,
                         },
                     ]}
                 >
                     <Feather
                         name={isExpanded ? "chevron-up" : "chevron-down"}
                         size={15}
-                        color={colors.primary}
+                        color={colors.surface}
                     />
                 </View>
-            </Pressable>
+            </View>
 
             {isExpanded ? (
                 <View style={styles.details}>
@@ -178,7 +179,15 @@ export function ProjectInfoPanel({
                     />
 
                     <ProjectInfoRow
-                        label="نام پروژه"
+                        label={t("projectConnectionStatus")}
+                        isLoading={false}
+                        value={statusLabel}
+                        textColor={statusColor}
+                        mutedColor={panelColors.textMuted}
+                    />
+
+                    <ProjectInfoRow
+                        label={t("projectName")}
                         isLoading={isLoading}
                         value={projectInfo?.projectName}
                         textColor={colors.text}
@@ -186,7 +195,7 @@ export function ProjectInfoPanel({
                     />
 
                     <ProjectInfoRow
-                        label="کد پروژه"
+                        label={t("projectCode")}
                         isLoading={isLoading}
                         value={projectInfo?.projectCode}
                         textColor={colors.text}
@@ -194,7 +203,7 @@ export function ProjectInfoPanel({
                     />
                 </View>
             ) : null}
-        </View>
+        </Pressable>
     );
 }
 
@@ -209,10 +218,12 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
         backgroundColor: panelColors.surface,
         overflow: "hidden",
-        direction: "rtl",
     },
     header: {
+        width: "100%",
         height: 50,
+        alignSelf: "stretch",
+        boxSizing: "border-box",
         flexGrow: 0,
         flexShrink: 0,
         paddingHorizontal: spacing.sm,
@@ -230,7 +241,7 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.bold,
         color: panelColors.text,
-        textAlign: "right",
+        textAlign: "start",
     },
     statusRow: {
         flexDirection: "row",
@@ -253,7 +264,7 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(59, 130, 246, 0.12)",
     },
     details: {
-        height: 78,
+        height: 104,
         paddingHorizontal: spacing.sm,
         paddingBottom: spacing.sm,
         gap: spacing.xs,
@@ -276,13 +287,13 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.medium,
         color: panelColors.textMuted,
-        textAlign: "right",
+        textAlign: "start",
     },
     value: {
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.semibold,
         color: panelColors.text,
-        textAlign: "right",
+        textAlign: "start",
         lineHeight: 18,
     },
     spinner: {

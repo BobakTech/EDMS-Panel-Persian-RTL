@@ -15,6 +15,7 @@
  */
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { Feather } from "../../web/icons";
 
 import {
     Modal,
@@ -168,7 +169,6 @@ function isWorkspaceItemVisibleOnPage(
  */
 
 const MOVE_OUTSIDE_FOLDER_DESTINATION_ID = "__outside_folder__";
-const MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL = "خارج از پوشه";
 
 /**
  * ============================================================================
@@ -231,8 +231,9 @@ export default function Workspace({
     onOpenFullPreview,
     onOpenPreviewPage,
 }: WorkspaceProps) {
-    const { t, theme } = useSettings();
+    const { direction, t, theme } = useSettings();
     const colors = theme.colors;
+    const textAlign = direction === "rtl" ? "right" : "left";
 
     const dangerColor = "#DC2626";
 
@@ -529,7 +530,7 @@ export default function Workspace({
                 : selectedDestinationFolderId;
 
         onMoveItem(pendingMoveWorkspaceItem.id, destinationFolderId);
-        showUndoToast(pendingMoveWorkspaceItem, "آیتم منتقل شد.");
+        showUndoToast(pendingMoveWorkspaceItem, t("itemMoved"));
         setSelectedItemId(null);
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
@@ -552,7 +553,7 @@ export default function Workspace({
             updatedAt: new Date().toISOString(),
         });
 
-        showUndoToast(archivedItem, "آیتم به فضای کاری بازگردانده شد.");
+        showUndoToast(archivedItem, t("itemRestoredToWorkspace"));
         setSelectedItemId(null);
     }
 
@@ -566,7 +567,7 @@ export default function Workspace({
         }
 
         onMoveItemToTrash(archivedItem.id);
-        showUndoToast(archivedItem, "آیتم به سطل زباله منتقل شد.");
+        showUndoToast(archivedItem, t("itemMovedToTrash"));
         setSelectedItemId(null);
     }
 
@@ -585,7 +586,7 @@ export default function Workspace({
             updatedAt: new Date().toISOString(),
         });
 
-        showUndoToast(trashedItem, "آیتم از سطل زباله بازگردانده شد.");
+        showUndoToast(trashedItem, t("itemRestoredFromTrash"));
         setSelectedItemId(null);
     }
 
@@ -647,7 +648,7 @@ export default function Workspace({
         }
 
         onArchiveItem(pendingDeleteWorkspaceItem.id);
-        showUndoToast(pendingDeleteWorkspaceItem, "آیتم آرشیو شد.");
+        showUndoToast(pendingDeleteWorkspaceItem, t("itemArchived"));
         setPendingDeleteItemId(null);
     }
 
@@ -657,7 +658,7 @@ export default function Workspace({
         }
 
         onMoveItemToTrash(pendingDeleteWorkspaceItem.id);
-        showUndoToast(pendingDeleteWorkspaceItem, "آیتم به سطل زباله منتقل شد.");
+        showUndoToast(pendingDeleteWorkspaceItem, t("itemMovedToTrash"));
         setSelectedItemId(null);
         setPendingDeleteItemId(null);
     }
@@ -729,7 +730,7 @@ export default function Workspace({
 
     const isOutsideFolderDestinationVisible =
         !normalizedMoveSearchQuery ||
-        MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL.toLowerCase().includes(
+        t("outsideFolder").toLowerCase().includes(
             normalizedMoveSearchQuery
         );
 
@@ -755,14 +756,14 @@ export default function Workspace({
 
     function getSelectedDestinationLabel() {
         if (selectedDestinationFolderId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID) {
-            return MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL;
+            return t("outsideFolder");
         }
 
         const selectedFolder = destinationFolders.find(
             (folder) => folder.id === selectedDestinationFolderId
         );
 
-        return selectedFolder?.name ?? "انتخاب مقصد";
+        return selectedFolder?.name ?? t("selectDestination");
     }
 
     const isLoadingWorkspaceItems = false;
@@ -790,22 +791,22 @@ export default function Workspace({
     const detailsPrimaryAction =
         pageType === "archive"
             ? {
-                label: "بازگردانی",
+                label: t("restore"),
                 icon: "↩",
-                accessibilityLabel: "بازگردانی آیتم از آرشیو",
+                accessibilityLabel: t("restoreFromArchive"),
                 onPress: handleRestoreArchivedWorkspaceItem,
             }
             : pageType === "trash"
                 ? {
-                    label: "بازگردانی",
+                    label: t("restore"),
                     icon: "↩",
-                    accessibilityLabel: "بازگردانی آیتم از سطل زباله",
+                    accessibilityLabel: t("restoreFromTrash"),
                     onPress: handleRestoreTrashedWorkspaceItem,
                 }
                 : {
-                    label: "حذف / آرشیو",
+                    label: t("deleteOrArchive"),
                     icon: "⚠",
-                    accessibilityLabel: "حذف یا آرشیو آیتم",
+                    accessibilityLabel: t("deleteOrArchiveItem"),
                     tone: "warning" as const,
                     onPress: handleRequestDeleteWorkspaceItem,
                 };
@@ -813,24 +814,24 @@ export default function Workspace({
     const detailsSecondaryAction =
         pageType === "archive"
             ? {
-                label: "انتقال به سطل زباله",
+                label: t("moveToTrash"),
                 icon: "🗑",
-                accessibilityLabel: "انتقال آیتم آرشیوی به سطل زباله",
+                accessibilityLabel: t("moveArchivedToTrash"),
                 tone: "danger" as const,
                 onPress: handleMoveArchivedWorkspaceItemToTrash,
             }
             : pageType === "workspace"
                 ? {
-                    label: "تغییر نام",
+                    label: t("renameItem"),
                     icon: "✎",
-                    accessibilityLabel: "تغییر نام آیتم",
+                    accessibilityLabel: t("renameItem"),
                     onPress: handleRequestRenameWorkspaceItem,
                 }
                 : pageType === "trash"
                     ? {
-                        label: "حذف دائمی",
+                        label: t("permanentlyDeleteItem"),
                         icon: "🗑",
-                        accessibilityLabel: "حذف دائمی آیتم",
+                        accessibilityLabel: t("permanentlyDeleteItem"),
                         tone: "danger" as const,
                         onPress: handleRequestPermanentDeleteWorkspaceItem,
                     }
@@ -839,9 +840,9 @@ export default function Workspace({
     const detailsTertiaryAction =
         pageType === "workspace"
             ? {
-                label: "انتقال",
+                label: t("moveItem"),
                 icon: "⇄",
-                accessibilityLabel: "انتقال آیتم",
+                accessibilityLabel: t("moveItem"),
                 onPress: handleRequestMoveWorkspaceItem,
             }
             : undefined;
@@ -1092,6 +1093,7 @@ export default function Workspace({
                             {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.border,
+                                direction,
                             },
                         ]}
                     >
@@ -1100,10 +1102,11 @@ export default function Workspace({
                                 styles.modalTitle,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            مدیریت آیتم انتخاب‌شده
+                            {t("selectedItemActionsTitle")}
                         </Text>
 
                         <Text
@@ -1111,16 +1114,17 @@ export default function Workspace({
                                 styles.modalDescription,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            می‌توانید این آیتم را به سطل زباله منتقل کنید، آن را آرشیو کنید، یا عملیات را لغو کنید.
+                            {t("selectedItemActionsDescription")}
                         </Text>
 
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="انتقال به سطل زباله"
+                                accessibilityLabel={t("moveToTrash")}
                                 onPress={handleMovePendingWorkspaceItemToTrash}
                                 style={[
                                     styles.modalDangerButton,
@@ -1137,13 +1141,13 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    انتقال به سطل زباله
+                                    {t("moveToTrash")}
                                 </Text>
                             </Pressable>
 
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="آرشیو آیتم"
+                                accessibilityLabel={t("archiveItem")}
                                 onPress={handleArchivePendingWorkspaceItem}
                                 style={styles.modalTextButton}
                             >
@@ -1155,7 +1159,7 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    آرشیو
+                                    {t("archive")}
                                 </Text>
                             </Pressable>
 
@@ -1163,7 +1167,7 @@ export default function Workspace({
 
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="لغو عملیات"
+                                accessibilityLabel={t("cancel")}
                                 onPress={handleCancelDeleteWorkspaceItem}
                                 style={styles.modalTextButton}
                             >
@@ -1175,7 +1179,7 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    لغو
+                                    {t("cancel")}
                                 </Text>
                             </Pressable>
                         </View>
@@ -1196,6 +1200,7 @@ export default function Workspace({
                             {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.border,
+                                direction,
                             },
                         ]}
                     >
@@ -1204,16 +1209,17 @@ export default function Workspace({
                                 styles.modalTitle,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            تغییر نام آیتم
+                            {t("renameItem")}
                         </Text>
 
                         <TextInput
                             value={renameItemName}
                             onChangeText={setRenameItemName}
-                            placeholder="نام جدید را وارد کنید"
+                            placeholder={t("newNamePlaceholder")}
                             placeholderTextColor={colors.border}
                             style={[
                                 styles.renameInput,
@@ -1221,6 +1227,7 @@ export default function Workspace({
                                     color: colors.text,
                                     borderColor: colors.border,
                                     backgroundColor: colors.background,
+                                    textAlign,
                                 },
                             ]}
                         />
@@ -1228,7 +1235,7 @@ export default function Workspace({
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="ذخیره نام جدید"
+                                accessibilityLabel={t("saveNewName")}
                                 onPress={handleSaveRenameWorkspaceItem}
                                 style={[
                                     styles.modalPrimaryButton,
@@ -1245,13 +1252,13 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    ذخیره
+                                    {t("save")}
                                 </Text>
                             </Pressable>
 
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="لغو تغییر نام"
+                                accessibilityLabel={t("cancelRename")}
                                 onPress={handleCancelRenameWorkspaceItem}
                                 style={styles.modalTextButton}
                             >
@@ -1263,7 +1270,7 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    لغو
+                                    {t("cancel")}
                                 </Text>
                             </Pressable>
                         </View>
@@ -1284,6 +1291,7 @@ export default function Workspace({
                             {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.border,
+                                direction,
                             },
                         ]}
                     >
@@ -1292,10 +1300,11 @@ export default function Workspace({
                                 styles.modalTitle,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            انتقال آیتم
+                            {t("moveItem")}
                         </Text>
 
                         <Text
@@ -1303,10 +1312,11 @@ export default function Workspace({
                                 styles.modalDescription,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            مقصد جدید آیتم را انتخاب کنید.
+                            {t("moveItemDescription")}
                         </Text>
 
                         <View style={styles.destinationCombo}>
@@ -1325,7 +1335,7 @@ export default function Workspace({
                                     setSelectedDestinationFolderId(null);
                                     setIsMoveDestinationComboOpen(true);
                                 }}
-                                placeholder="انتخاب مقصد..."
+                                placeholder={`${t("selectDestination")}...`}
                                 placeholderTextColor={colors.border}
                                 style={[
                                     styles.destinationComboInput,
@@ -1333,9 +1343,30 @@ export default function Workspace({
                                         color: colors.text,
                                         borderColor: colors.border,
                                         backgroundColor: colors.background,
+                                        textAlign,
                                     },
                                 ]}
                             />
+
+                            <Pressable
+                                title={isMoveDestinationComboOpen ? t("closeDestinationList") : t("openDestinationList")}
+                                accessibilityRole="button"
+                                accessibilityLabel={isMoveDestinationComboOpen ? t("closeDestinationList") : t("openDestinationList")}
+                                accessibilityState={{ expanded: isMoveDestinationComboOpen }}
+                                onPress={() =>
+                                    setIsMoveDestinationComboOpen((currentValue) => !currentValue)
+                                }
+                                style={({ pressed }) => [
+                                    styles.destinationComboIcon,
+                                    pressed && styles.destinationComboIconPressed,
+                                ]}
+                            >
+                                <Feather
+                                    name={isMoveDestinationComboOpen ? "chevron-up" : "chevron-down"}
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Pressable>
 
                             {isMoveDestinationComboOpen && (
                                 <View
@@ -1350,7 +1381,7 @@ export default function Workspace({
                                     {isOutsideFolderDestinationVisible && (
                                         <Pressable
                                             accessibilityRole="button"
-                                            accessibilityLabel="انتقال به خارج از پوشه"
+                                            accessibilityLabel={t("moveOutsideFolder")}
                                             disabled={isMoveDestinationDisabled(
                                                 MOVE_OUTSIDE_FOLDER_DESTINATION_ID
                                             )}
@@ -1383,11 +1414,11 @@ export default function Workspace({
                                                     },
                                                 ]}
                                             >
-                                                {MOVE_OUTSIDE_FOLDER_DESTINATION_LABEL}
+                                                {t("outsideFolder")}
                                                 {isMoveDestinationDisabled(
                                                     MOVE_OUTSIDE_FOLDER_DESTINATION_ID
                                                 )
-                                                    ? " — مکان فعلی"
+                                                    ? ` — ${t("currentLocation")}`
                                                     : ""}
                                             </Text>
                                         </Pressable>
@@ -1401,7 +1432,7 @@ export default function Workspace({
                                             <Pressable
                                                 key={folder.id}
                                                 accessibilityRole="button"
-                                                accessibilityLabel={`انتخاب پوشه ${folder.name}`}
+                                                accessibilityLabel={`${t("selectFolder")} ${folder.name}`}
                                                 disabled={isCurrentDestination}
                                                 onPress={() => {
                                                     setSelectedDestinationFolderId(folder.id);
@@ -1429,7 +1460,7 @@ export default function Workspace({
                                                 >
                                                     {folder.name}
                                                     {isCurrentDestination
-                                                        ? " — مکان فعلی"
+                                                        ? ` — ${t("currentLocation")}`
                                                         : ""}
                                                 </Text>
                                             </Pressable>
@@ -1446,7 +1477,7 @@ export default function Workspace({
                                                     },
                                                 ]}
                                             >
-                                                مقصدی پیدا نشد
+                                                {t("noDestinationFound")}
                                             </Text>
                                         )}
                                 </View>
@@ -1456,7 +1487,7 @@ export default function Workspace({
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="ذخیره انتقال آیتم"
+                                accessibilityLabel={t("saveMove")}
                                 disabled={!canSaveMoveWorkspaceItem}
                                 onPress={handleSaveMoveWorkspaceItem}
                                 style={[
@@ -1479,13 +1510,13 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    انتقال
+                                    {t("moveItem")}
                                 </Text>
                             </Pressable>
 
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="لغو انتقال آیتم"
+                                accessibilityLabel={t("cancelMove")}
                                 onPress={handleCancelMoveWorkspaceItem}
                                 style={styles.modalTextButton}
                             >
@@ -1497,7 +1528,7 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    لغو
+                                    {t("cancel")}
                                 </Text>
                             </Pressable>
                         </View>
@@ -1518,6 +1549,7 @@ export default function Workspace({
                             {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.border,
+                                direction,
                             },
                         ]}
                     >
@@ -1526,10 +1558,11 @@ export default function Workspace({
                                 styles.modalTitle,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            حذف دائمی آیتم
+                            {t("permanentlyDeleteItem")}
                         </Text>
 
                         <Text
@@ -1537,16 +1570,17 @@ export default function Workspace({
                                 styles.modalDescription,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            این آیتم به‌صورت دائمی حذف می‌شود و امکان بازگردانی آن وجود ندارد.
+                            {t("permanentlyDeleteDescription")}
                         </Text>
 
                         <View style={styles.modalActions}>
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="تأیید حذف دائمی"
+                                accessibilityLabel={t("confirmPermanentDelete")}
                                 onPress={handleConfirmPermanentDeleteWorkspaceItem}
                                 style={[
                                     styles.modalDangerButton,
@@ -1563,13 +1597,13 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    حذف دائمی
+                                    {t("permanentlyDeleteItem")}
                                 </Text>
                             </Pressable>
 
                             <Pressable
                                 accessibilityRole="button"
-                                accessibilityLabel="لغو حذف دائمی"
+                                accessibilityLabel={t("cancelPermanentDelete")}
                                 onPress={handleCancelPermanentDeleteWorkspaceItem}
                                 style={styles.modalTextButton}
                             >
@@ -1581,7 +1615,7 @@ export default function Workspace({
                                         },
                                     ]}
                                 >
-                                    لغو
+                                    {t("cancel")}
                                 </Text>
                             </Pressable>
                         </View>
@@ -1604,6 +1638,7 @@ export default function Workspace({
                             styles.undoToastText,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -1612,7 +1647,7 @@ export default function Workspace({
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="بازگردانی عملیات"
+                        accessibilityLabel={t("undoAction")}
                         onPress={handleUndoWorkspaceAction}
                         style={[
                             styles.undoToastButton,
@@ -1629,7 +1664,7 @@ export default function Workspace({
                                 },
                             ]}
                         >
-                            ↶ بازگردانی
+                            ↶ {t("undo")}
                         </Text>
                     </Pressable>
                 </View>
@@ -1771,7 +1806,26 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.lg,
         fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
+        textAlign: "start",
+    },
+
+    destinationComboIcon: {
+        position: "absolute",
+        left: spacing.md,
+        top: 7,
+        zIndex: 2,
+
+        width: 26,
+        height: 26,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        opacity: 0.72,
+    },
+
+    destinationComboIconPressed: {
+        opacity: 1,
     },
 
     modalDescription: {
@@ -1779,7 +1833,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
+        textAlign: "start",
 
         opacity: 0.72,
     },
@@ -1839,7 +1893,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.medium,
-        textAlign: "right",
+        textAlign: "start",
     },
 
     destinationCombo: {
@@ -1851,7 +1905,8 @@ const styles = StyleSheet.create({
     destinationComboInput: {
         minHeight: 40,
 
-        paddingHorizontal: spacing.md,
+        paddingRight: spacing.md,
+        paddingLeft: 40,
         paddingVertical: spacing.sm,
 
         borderWidth: 1,
@@ -1859,7 +1914,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.medium,
-        textAlign: "right",
+        textAlign: "start",
     },
 
     destinationDropdown: {
@@ -1883,7 +1938,7 @@ const styles = StyleSheet.create({
     destinationOptionText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
+        textAlign: "start",
     },
 
     destinationEmptyText: {
@@ -1892,7 +1947,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.medium,
-        textAlign: "right",
+        textAlign: "start",
 
         opacity: 0.72,
     },
@@ -1922,7 +1977,7 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.medium,
-        textAlign: "right",
+        textAlign: "start",
     },
 
     undoToastButton: {

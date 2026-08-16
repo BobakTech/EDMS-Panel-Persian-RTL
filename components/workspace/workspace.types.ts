@@ -19,11 +19,13 @@ export interface WorkspaceItem {
     type: WorkspaceItemType;
     name: string;
     description: string;
+    ltrDescription?: string;
     updatedAt: string;
     status: WorkspaceItemStatus;
     isPinned?: boolean;
     parentFolderId?: string | null;
     extension?: string;
+    sizeBytes?: number;
     sizeLabel?: string;
     childrenCount?: number;
     mimeType?: string;

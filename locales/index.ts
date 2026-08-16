@@ -16,3 +16,9 @@ export const translations = {
 };
 
 export type Language = keyof typeof translations;
+export type LayoutDirection = "rtl" | "ltr";
+
+export const languageDirections: Record<Language, LayoutDirection> = {
+    fa: "rtl",
+    en: "ltr",
+};

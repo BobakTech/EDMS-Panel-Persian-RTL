@@ -21,6 +21,7 @@ import {
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import PdfPreviewRenderer from "../preview/PdfPreviewRenderer.web";
+import { getWorkspaceItemUpdatedAtLabel } from "../workspace/workspace.helpers";
 
 import type { WorkspaceItem } from "../workspace";
 
@@ -64,10 +65,10 @@ function isPdfFile(item: WorkspaceItem) {
     return extension === "pdf" || mimeType.includes("pdf");
 }
 
-function getFileTypeLabel(item: WorkspaceItem) {
+function getFileTypeLabel(item: WorkspaceItem, fallback: string) {
     const extension = getNormalizedExtension(item);
 
-    return extension ? extension.toUpperCase() : "فایل";
+    return extension ? extension.toUpperCase() : fallback;
 }
 
 /**
@@ -82,10 +83,15 @@ export default function DocumentPreviewPage({
     onPrevious,
     onNext,
 }: DocumentPreviewPageProps) {
-    const { theme } = useSettings();
+    const { direction, language, t, theme } = useSettings();
     const { width } = useWindowDimensions();
     const colors = theme.colors;
     const isPhonePreview = width < 430;
+    const isRtl = direction === "rtl";
+    const textAlign = isRtl ? "right" : "left";
+    const backIcon = isRtl ? "arrow-right" : "arrow-left";
+    const previousIcon = isRtl ? "chevron-right" : "chevron-left";
+    const nextIcon = isRtl ? "chevron-left" : "chevron-right";
 
     const shouldRenderImage = isImageFile(item) && Boolean(item.localUri);
     const shouldRenderPdf = isPdfFile(item) && Boolean(item.localUri);
@@ -125,6 +131,7 @@ export default function DocumentPreviewPage({
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator
             showsHorizontalScrollIndicator={false}
+            dir={direction}
         >
             <View
                 style={[
@@ -138,7 +145,7 @@ export default function DocumentPreviewPage({
             >
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="بازگشت به فضای کاری"
+                    accessibilityLabel={t("backToWorkspace")}
                     onPress={onBack}
                     style={({ pressed }) => [
                         styles.backButton,
@@ -150,7 +157,7 @@ export default function DocumentPreviewPage({
                         pressed && styles.pressedBackButton,
                     ]}
                 >
-                    <Feather name="arrow-right" size={16} color={colors.surface} />
+                    <Feather name={backIcon} size={16} color={colors.surface} />
 
                     <Text
                         style={[
@@ -160,7 +167,7 @@ export default function DocumentPreviewPage({
                             },
                         ]}
                     >
-                        بازگشت
+                        {t("back")}
                     </Text>
                 </Pressable>
 
@@ -170,10 +177,11 @@ export default function DocumentPreviewPage({
                             styles.eyebrow,
                             {
                                 color: colors.primary,
+                                textAlign,
                             },
                         ]}
                     >
-                        پیش‌نمایش کامل
+                        {t("fullPreview")}
                     </Text>
 
                     <Text
@@ -182,6 +190,7 @@ export default function DocumentPreviewPage({
                             styles.title,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -194,7 +203,7 @@ export default function DocumentPreviewPage({
                 <View style={styles.actionGroup}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="باز کردن فایل اصلی"
+                        accessibilityLabel={t("openOriginal")}
                         disabled={!canAccessOriginal}
                         onPress={handleOpenOriginal}
                         style={({ pressed }) => [
@@ -205,12 +214,12 @@ export default function DocumentPreviewPage({
                         ]}
                     >
                         <Feather name="external-link" size={16} color={colors.surface} />
-                        <Text style={[styles.actionButtonText, { color: colors.surface }]}>باز کردن</Text>
+                        <Text style={[styles.actionButtonText, { color: colors.surface }]}>{t("openOriginal")}</Text>
                     </Pressable>
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="دانلود فایل اصلی"
+                        accessibilityLabel={t("downloadOriginal")}
                         disabled={!canAccessOriginal}
                         onPress={handleDownloadOriginal}
                         style={({ pressed }) => [
@@ -221,14 +230,14 @@ export default function DocumentPreviewPage({
                         ]}
                     >
                         <Feather name="download" size={16} color={colors.text} />
-                        <Text style={[styles.actionButtonText, { color: colors.text }]}>دانلود</Text>
+                        <Text style={[styles.actionButtonText, { color: colors.text }]}>{t("downloadOriginal")}</Text>
                     </Pressable>
                 </View>
 
                 <View style={styles.actionGroup}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="فایل قبلی"
+                        accessibilityLabel={t("previousFile")}
                         disabled={!onPrevious}
                         onPress={onPrevious}
                         style={({ pressed }) => [
@@ -238,13 +247,13 @@ export default function DocumentPreviewPage({
                             pressed && Boolean(onPrevious) && styles.pressedBackButton,
                         ]}
                     >
-                        <Feather name="chevron-right" size={16} color={colors.text} />
-                        <Text style={[styles.actionButtonText, { color: colors.text }]}>قبلی</Text>
+                        <Feather name={previousIcon} size={16} color={colors.text} />
+                        <Text style={[styles.actionButtonText, { color: colors.text }]}>{t("previousFile")}</Text>
                     </Pressable>
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="فایل بعدی"
+                        accessibilityLabel={t("nextFile")}
                         disabled={!onNext}
                         onPress={onNext}
                         style={({ pressed }) => [
@@ -254,8 +263,8 @@ export default function DocumentPreviewPage({
                             pressed && Boolean(onNext) && styles.pressedBackButton,
                         ]}
                     >
-                        <Text style={[styles.actionButtonText, { color: colors.text }]}>بعدی</Text>
-                        <Feather name="chevron-left" size={16} color={colors.text} />
+                        <Text style={[styles.actionButtonText, { color: colors.text }]}>{t("nextFile")}</Text>
+                        <Feather name={nextIcon} size={16} color={colors.text} />
                     </Pressable>
                 </View>
             </View>
@@ -308,7 +317,7 @@ export default function DocumentPreviewPage({
                                 },
                             ]}
                         >
-                            پیش‌نمایش کامل هنوز آماده نیست
+                            {t("genericPreviewTitle")}
                         </Text>
 
                         <Text
@@ -319,7 +328,7 @@ export default function DocumentPreviewPage({
                                 },
                             ]}
                         >
-                            برای این نوع فایل هنوز نمایشگر اختصاصی اضافه نشده است.
+                            {t("genericPreviewDescription")}
                         </Text>
                     </View>
                 )}
@@ -337,21 +346,23 @@ export default function DocumentPreviewPage({
             >
                 <View style={styles.metaItem}>
                     <Text style={[styles.metaLabel, { color: colors.text }]}>
-                        نوع فایل
+                        {t("fileType")}
                     </Text>
 
                     <Text style={[styles.metaValue, { color: colors.text }]}>
-                        {getFileTypeLabel(item)}
+                        {getFileTypeLabel(item, t("file"))}
                     </Text>
                 </View>
 
                 <View style={styles.metaItem}>
                     <Text style={[styles.metaLabel, { color: colors.text }]}>
-                        اندازه فایل
+                        {t("fileSize")}
                     </Text>
 
                     <Text style={[styles.metaValue, { color: colors.text }]}>
-                        {item.sizeLabel ?? "اندازه نامشخص"}
+                        {item.sizeBytes
+                            ? getWorkspaceItemUpdatedAtLabel(item, t, language)
+                            : t("unknownFileSize")}
                     </Text>
                 </View>
             </View>

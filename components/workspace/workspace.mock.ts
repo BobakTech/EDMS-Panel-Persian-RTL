@@ -17,6 +17,7 @@ import type { WorkspaceItem } from "./workspace.types";
 export const workspaceItemsMock: WorkspaceItem[] = [
     {
         id: "folder-001",
+        ltrDescription: "Main folder for project documents",
         type: "folder",
         name: "اسناد پروژه",
         description: "پوشه اصلی اسناد پروژه",
@@ -27,6 +28,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "folder-002",
+        ltrDescription: "Approved and signed contracts",
         type: "folder",
         name: "قراردادها",
         description: "مجموعه قراردادهای تأیید و امضا شده",
@@ -37,6 +39,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "folder-003",
+        ltrDescription: "Project financial reports and records",
         type: "folder",
         name: "گزارش‌های مالی",
         description: "گزارش‌ها و مستندات مالی پروژه",
@@ -47,6 +50,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-001",
+        ltrDescription: "Approved main contract file",
         type: "file",
         name: "قرارداد اصلی",
         description: "فایل قرارداد تأیید شده",
@@ -54,10 +58,12 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         status: "active",
         parentFolderId: "folder-002",
         extension: "pdf",
+        sizeBytes: 2.4 * 1024 * 1024,
         sizeLabel: "۲.۴ مگابایت",
     },
     {
         id: "file-002",
+        ltrDescription: "Final document handover minutes",
         type: "file",
         name: "صورتجلسه تحویل",
         description: "صورتجلسه نهایی تحویل مدارک",
@@ -65,10 +71,12 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         status: "active",
         parentFolderId: "folder-001",
         extension: "docx",
+        sizeBytes: 780 * 1024,
         sizeLabel: "۷۸۰ کیلوبایت",
     },
     {
         id: "file-003",
+        ltrDescription: "Project execution schedule",
         type: "file",
         name: "برنامه زمان‌بندی",
         description: "فایل زمان‌بندی اجرای پروژه",
@@ -76,10 +84,12 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         status: "active",
         parentFolderId: "folder-001",
         extension: "xlsx",
+        sizeBytes: 1.1 * 1024 * 1024,
         sizeLabel: "۱.۱ مگابایت",
     },
     {
         id: "file-004",
+        ltrDescription: "July payment and financial status report",
         type: "file",
         name: "گزارش پرداخت تیر",
         description: "گزارش پرداخت و وضعیت مالی تیرماه",
@@ -87,10 +97,12 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         status: "active",
         parentFolderId: "folder-003",
         extension: "pdf",
+        sizeBytes: 1.8 * 1024 * 1024,
         sizeLabel: "۱.۸ مگابایت",
     },
     {
         id: "file-005",
+        ltrDescription: "Technical appendix for the main contract",
         type: "file",
         name: "پیوست فنی قرارداد",
         description: "پیوست فنی مرتبط با قرارداد اصلی",
@@ -98,10 +110,12 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         status: "active",
         parentFolderId: "folder-002",
         extension: "pdf",
+        sizeBytes: 3.2 * 1024 * 1024,
         sizeLabel: "۳.۲ مگابایت",
     },
     {
         id: "file-006",
+        ltrDescription: "Initial proposed project budget",
         type: "file",
         name: "بودجه پیشنهادی",
         description: "نسخه اولیه بودجه پیشنهادی پروژه",
@@ -109,10 +123,12 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         status: "archived",
         parentFolderId: null,
         extension: "xlsx",
+        sizeBytes: 950 * 1024,
         sizeLabel: "۹۵۰ کیلوبایت",
     },
     {
         id: "file-007",
+        ltrDescription: "Superseded contract version",
         type: "file",
         name: "نسخه قدیمی قرارداد",
         description: "نسخه قبلی قرارداد که دیگر استفاده نمی‌شود",
@@ -120,6 +136,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
         status: "trashed",
         parentFolderId: null,
         extension: "pdf",
+        sizeBytes: 2.1 * 1024 * 1024,
         sizeLabel: "۲.۱ مگابایت",
     },
 ];

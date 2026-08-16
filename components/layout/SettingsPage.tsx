@@ -64,12 +64,15 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         theme,
         themeMode,
         language,
+        direction,
         setThemeMode,
         setLanguage,
         t,
     } = useSettings();
 
     const colors = theme.colors;
+    const isRtl = direction === "rtl";
+    const textAlign = isRtl ? "right" : "left";
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
@@ -101,13 +104,19 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                 style={[
                     styles.content,
                     {
+                        direction,
+                    },
+                    {
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
                     },
                 ]}
             >
                 <View style={styles.header}>
-                    <View style={styles.headerTitleRow}>
+                    <View style={[
+                        styles.headerTitleRow,
+                        !isRtl && styles.ltrHeaderTitleRow,
+                    ]}>
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={t("closeSettings")}
@@ -128,6 +137,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 styles.title,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
@@ -140,6 +150,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                             styles.subtitle,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -147,13 +158,14 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     </Text>
                 </View>
 
-                <View style={styles.settingsSection}>
-                    <View style={styles.settingsSectionHeader}>
+                <View style={[styles.settingsSection, !isRtl && styles.ltrSection]}>
+                    <View style={[styles.settingsSectionHeader, !isRtl && styles.ltrSection]}>
                         <Text
                             style={[
                                 styles.settingsSectionTitle,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
@@ -165,6 +177,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 styles.settingsSectionDescription,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
@@ -216,13 +229,14 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                     </View>
                 </View>
 
-                <View style={styles.settingsSection}>
-                    <View style={styles.settingsSectionHeader}>
+                <View style={[styles.settingsSection, !isRtl && styles.ltrSection]}>
+                    <View style={[styles.settingsSectionHeader, !isRtl && styles.ltrSection]}>
                         <Text
                             style={[
                                 styles.settingsSectionTitle,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
@@ -234,6 +248,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                                 styles.settingsSectionDescription,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
@@ -299,6 +314,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                             styles.statusNoteTitle,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -310,6 +326,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                             styles.statusNoteDescription,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -380,6 +397,12 @@ const styles = StyleSheet.create({
         gap: spacing.md,
     },
 
+    ltrHeaderTitleRow: {
+        width: "100%",
+        flexDirection: "row-reverse",
+        justifyContent: "space-between",
+    },
+
     closeButton: {
         width: 34,
         height: 34,
@@ -413,6 +436,10 @@ const styles = StyleSheet.create({
         alignItems: "flex-start",
 
         gap: spacing.xs,
+    },
+
+    ltrSection: {
+        alignItems: "stretch",
     },
 
     settingsSectionTitle: {

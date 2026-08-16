@@ -28,17 +28,19 @@ export default function WorkspaceHeader({
     subtitle,
     children,
 }: WorkspaceHeaderProps) {
-    const { theme } = useSettings();
+    const { direction, theme } = useSettings();
     const colors = theme.colors;
+    const isRtl = direction === "rtl";
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { direction }]}>
             <View style={styles.textArea}>
                 <Text
                     style={[
                         styles.title,
                         {
                             color: colors.text,
+                            textAlign: isRtl ? "right" : "left",
                         },
                     ]}
                     numberOfLines={1}
@@ -51,6 +53,7 @@ export default function WorkspaceHeader({
                         styles.subtitle,
                         {
                             color: colors.text,
+                            textAlign: isRtl ? "right" : "left",
                         },
                     ]}
                     numberOfLines={2}

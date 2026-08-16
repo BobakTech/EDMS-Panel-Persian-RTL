@@ -24,6 +24,10 @@ import type {
     WorkspaceItem,
     WorkspaceViewMode,
 } from "./workspace.types";
+import {
+    getWorkspaceItemDescription,
+    getWorkspaceItemUpdatedAtLabel,
+} from "./workspace.helpers";
 
 /**
  * ============================================================================
@@ -69,14 +73,6 @@ function getItemTypeLabel(item: WorkspaceItem, t: Translate) {
     return item.extension?.toUpperCase() ?? t("file");
 }
 
-function getItemMetaLabel(item: WorkspaceItem, t: Translate) {
-    if (item.type === "folder") {
-        return `${item.childrenCount ?? 0} ${t("items")}`;
-    }
-
-    return item.sizeLabel ?? t("unknown");
-}
-
 /**
  * ============================================================================
  * Component
@@ -92,8 +88,9 @@ export default function WorkspaceItemCard({
     onOpenActions,
     onTogglePinned,
 }: WorkspaceItemCardProps) {
-    const { t, theme } = useSettings();
+    const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
+    const isRtl = direction === "rtl";
     const [isHovered, setIsHovered] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
 
@@ -135,6 +132,7 @@ export default function WorkspaceItemCard({
             ]}
         >
             <Pressable
+                title={item.isPinned ? t("unpinItem") : t("pinItem")}
                 accessibilityRole="button"
                 accessibilityLabel={item.isPinned ? t("unpinItem") : t("pinItem")}
                 accessibilityState={{ selected: Boolean(item.isPinned) }}
@@ -142,17 +140,20 @@ export default function WorkspaceItemCard({
                 style={({ pressed }) => [
                     styles.pinButton,
                     isListMode && styles.listPinButton,
+                    isListMode && !isRtl && styles.ltrListPinButton,
                     {
-                        backgroundColor: colors.background,
-                        borderColor: item.isPinned ? colors.primary : colors.border,
+                        backgroundColor: item.isPinned
+                            ? colors.primary
+                            : `color-mix(in srgb, ${colors.primary} 18%, ${colors.surface})`,
+                        borderColor: colors.primary,
                     },
                     pressed && styles.pressedButton,
                 ]}
             >
                 <Feather
-                    name="star"
+                    name="pin"
                     size={15}
-                    color={item.isPinned ? colors.primary : colors.text}
+                    color={item.isPinned ? colors.surface : colors.primary}
                 />
             </Pressable>
 
@@ -163,6 +164,7 @@ export default function WorkspaceItemCard({
                 style={({ pressed }) => [
                     styles.actionsButton,
                     isListMode && styles.listActionsButton,
+                    isListMode && !isRtl && styles.ltrListActionsButton,
                     {
                         backgroundColor: colors.background,
                         borderColor: colors.border,
@@ -184,12 +186,15 @@ export default function WorkspaceItemCard({
                 style={[
                     styles.contentButton,
                     isListMode && styles.listContentButton,
+                    isListMode && !isRtl && styles.ltrListContentButton,
+                    { direction },
                 ]}
             >
                 <View
                     style={[
                         styles.iconMetaRow,
                         isListMode && styles.listIconMetaRow,
+                        isListMode && !isRtl && styles.ltrListIconMetaRow,
                     ]}
                 >
                     <View style={styles.itemIcon}>
@@ -227,6 +232,10 @@ export default function WorkspaceItemCard({
                     style={[
                         styles.textArea,
                         isListMode && styles.listTextArea,
+                        {
+                            direction,
+                            alignItems: isListMode && !isRtl ? "stretch" : "flex-start",
+                        },
                     ]}
                 >
                     <Text
@@ -234,9 +243,11 @@ export default function WorkspaceItemCard({
                             styles.name,
                             {
                                 color: colors.text,
+                                textAlign: isRtl ? "start" : "left",
                             },
                         ]}
                         numberOfLines={2}
+                        dir="auto"
                     >
                         {item.name}
                     </Text>
@@ -246,23 +257,28 @@ export default function WorkspaceItemCard({
                             styles.description,
                             {
                                 color: colors.text,
+                                textAlign: isRtl ? "start" : "left",
                             },
                         ]}
                         numberOfLines={2}
+                        dir="auto"
                     >
-                        {item.description}
+                        {getWorkspaceItemDescription(item, direction)}
                     </Text>
 
                     <Text
                         style={[
                             styles.meta,
+                            isListMode && !isRtl && styles.ltrListMeta,
                             {
                                 color: colors.text,
+                                textAlign: isRtl ? "right" : "left",
+                                borderColor: colors.border,
                             },
                         ]}
                         numberOfLines={1}
                     >
-                        {getItemMetaLabel(item, t)}
+                        {getWorkspaceItemUpdatedAtLabel(item, t, language)}
                     </Text>
                 </View>
             </Pressable>
@@ -287,7 +303,7 @@ const styles = StyleSheet.create({
     },
 
     gridCard: {
-        width: 240,
+        width: 252,
         maxWidth: "100%",
     },
 
@@ -341,9 +357,19 @@ const styles = StyleSheet.create({
         left: 46,
     },
 
+    ltrListPinButton: {
+        right: 46,
+        left: "auto",
+    },
+
     listActionsButton: {
         right: "auto",
         left: spacing.sm,
+    },
+
+    ltrListActionsButton: {
+        right: spacing.sm,
+        left: "auto",
     },
 
     pressedButton: {
@@ -351,7 +377,7 @@ const styles = StyleSheet.create({
     },
 
     contentButton: {
-        minHeight: 160,
+        minHeight: 172,
 
         paddingHorizontal: spacing.md,
         paddingTop: spacing.lg,
@@ -371,12 +397,16 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.md,
     },
 
+    ltrListContentButton: {
+        paddingRight: 92,
+    },
+
     iconMetaRow: {
         flexDirection: "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
 
-        paddingRight: 42,
+        paddingHorizontal: 42,
 
         gap: spacing.sm,
     },
@@ -387,6 +417,10 @@ const styles = StyleSheet.create({
         paddingRight: 0,
 
         justifyContent: "flex-start",
+    },
+
+    ltrListIconMetaRow: {
+        paddingLeft: 0,
     },
 
     itemIcon: {
@@ -449,5 +483,15 @@ const styles = StyleSheet.create({
         textAlign: "right",
 
         opacity: 0.56,
+    },
+
+    ltrListMeta: {
+        width: "100%",
+
+        marginTop: 2,
+        paddingTop: spacing.xs,
+
+        borderTopWidth: 1,
+        opacity: 0.7,
     },
 });

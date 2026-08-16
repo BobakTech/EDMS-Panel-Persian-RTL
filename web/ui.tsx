@@ -61,6 +61,7 @@ interface PrimitiveProps {
 
 interface PressableProps {
     children?: ReactNode;
+    title?: string;
     style?: StyleValue | ((state: PressableState) => StyleValue);
     onPress?: () => void;
     onHoverIn?: (event: PointerLikeEvent) => void;

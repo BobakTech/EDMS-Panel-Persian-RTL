@@ -36,11 +36,12 @@ interface WorkspaceBreadcrumbProps {
 export default function WorkspaceBreadcrumb({
     items,
 }: WorkspaceBreadcrumbProps) {
-    const { theme } = useSettings();
+    const { direction, theme } = useSettings();
     const colors = theme.colors;
+    const textAlign = direction === "rtl" ? "right" : "left";
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { direction }]}>
             {items.map((item, index) => {
                 const isLastItem = index === items.length - 1;
                 const isClickable = Boolean(item.onPress);
@@ -66,6 +67,7 @@ export default function WorkspaceBreadcrumb({
                                         styles.clickableItemText,
                                         {
                                             color: colors.primary,
+                                            textAlign,
                                         },
                                     ]}
                                 >
@@ -80,6 +82,7 @@ export default function WorkspaceBreadcrumb({
                                         styles.currentItemText,
                                         {
                                             color: colors.text,
+                                            textAlign,
                                         },
                                     ]}
                                 >

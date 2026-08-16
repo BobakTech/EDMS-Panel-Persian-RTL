@@ -18,6 +18,7 @@ import { useSettings } from "../../settings/SettingsContext";
 import type { TranslationKey } from "../../locales";
 
 import type { WorkspaceItem } from "../workspace";
+import { getWorkspaceItemStatusLabel } from "../workspace/workspace.helpers";
 
 /**
  * ============================================================================
@@ -41,18 +42,6 @@ function getDashboardItemTypeLabel(item: WorkspaceItem, t: Translate) {
     return item.type === "folder" ? t("folder") : t("file");
 }
 
-function getDashboardStatusLabel(item: WorkspaceItem, t: Translate) {
-    if (item.status === "active") {
-        return t("active");
-    }
-
-    if (item.status === "archived") {
-        return t("archived");
-    }
-
-    return t("trash");
-}
-
 /**
  * ============================================================================
  * Component
@@ -62,8 +51,10 @@ function getDashboardStatusLabel(item: WorkspaceItem, t: Translate) {
 export default function Dashboard({
     workspaceItems,
 }: DashboardProps) {
-    const { t, theme } = useSettings();
+    const { direction, t, theme } = useSettings();
     const colors = theme.colors;
+    const isRtl = direction === "rtl";
+    const textAlign = isRtl ? "right" : "left";
 
     const { width } = useWindowDimensions();
 
@@ -78,6 +69,11 @@ export default function Dashboard({
         : isCompactDashboard
             ? spacing.lg
             : spacing.xl;
+    const recentActivityItemWidth = isPhoneDashboard
+        ? "100%"
+        : isCompactDashboard
+            ? "calc(50% - 6px)"
+            : "calc(25% - 9px)";
 
     const activeItems = workspaceItems.filter((item) => item.status === "active");
     const folders = workspaceItems.filter((item) => item.type === "folder");
@@ -135,12 +131,13 @@ export default function Dashboard({
                     },
                 ]}
             >
-                <View style={styles.header}>
+                <View style={{ direction }}>
                     <Text
                         style={[
                             styles.title,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -152,6 +149,7 @@ export default function Dashboard({
                             styles.subtitle,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -159,7 +157,7 @@ export default function Dashboard({
                     </Text>
                 </View>
 
-                <View style={styles.summaryGrid}>
+                <View style={[styles.summaryGrid, { flexDirection: isRtl ? "row-reverse" : "row" }]}>
                     {summaryCards.map((card) => (
                         <View
                             key={card.label}
@@ -176,6 +174,7 @@ export default function Dashboard({
                                     styles.summaryLabel,
                                     {
                                         color: colors.text,
+                                        textAlign,
                                     },
                                 ]}
                             >
@@ -187,6 +186,7 @@ export default function Dashboard({
                                     styles.summaryValue,
                                     {
                                         color: colors.primary,
+                                        textAlign,
                                     },
                                 ]}
                             >
@@ -198,6 +198,7 @@ export default function Dashboard({
                                     styles.summaryDescription,
                                     {
                                         color: colors.text,
+                                        textAlign,
                                     },
                                 ]}
                             >
@@ -221,20 +222,23 @@ export default function Dashboard({
                             styles.sectionTitle,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
                         {t("recentActivity")}
                     </Text>
 
-                    <View style={styles.activityList}>
+                    <View style={styles.activityGrid}>
                         {recentItems.map((item) => (
                             <View
                                 key={item.id}
                                 style={[
                                     styles.activityItem,
                                     {
+                                        backgroundColor: colors.surface,
                                         borderColor: colors.border,
+                                        width: recentActivityItemWidth,
                                     },
                                 ]}
                             >
@@ -244,8 +248,10 @@ export default function Dashboard({
                                             styles.activityTitle,
                                             {
                                                 color: colors.text,
+                                                textAlign: isRtl ? "start" : "left",
                                             },
                                         ]}
+                                        dir="auto"
                                     >
                                         {item.name}
                                     </Text>
@@ -255,10 +261,11 @@ export default function Dashboard({
                                             styles.activityDescription,
                                             {
                                                 color: colors.text,
+                                                textAlign,
                                             },
                                         ]}
                                     >
-                                        {getDashboardItemTypeLabel(item, t)} · {getDashboardStatusLabel(item, t)}
+                                        {getDashboardItemTypeLabel(item, t)}
                                     </Text>
                                 </View>
 
@@ -267,10 +274,11 @@ export default function Dashboard({
                                         styles.activityStatus,
                                         {
                                             color: colors.primary,
+                                            textAlign,
                                         },
                                     ]}
                                 >
-                                    {getDashboardStatusLabel(item, t)}
+                                    {getWorkspaceItemStatusLabel(item, direction, t)}
                                 </Text>
                             </View>
                         ))}
@@ -383,20 +391,25 @@ const styles = StyleSheet.create({
         textAlign: "right",
     },
 
-    activityList: {
+    activityGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
         gap: spacing.sm,
     },
 
     activityItem: {
-        flexDirection: "row-reverse",
-        alignItems: "center",
+        minWidth: 0,
+        minHeight: 112,
         justifyContent: "space-between",
 
-        gap: spacing.md,
+        gap: spacing.sm,
 
-        paddingVertical: spacing.sm,
+        padding: spacing.md,
 
-        borderBottomWidth: 1,
+        borderWidth: 1,
+        borderRadius: radius.lg,
+
+        ...shadows.sm,
     },
 
     activityText: {
@@ -421,6 +434,13 @@ const styles = StyleSheet.create({
     },
 
     activityStatus: {
+        alignSelf: "flex-start",
+
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+
+        borderRadius: radius.pill,
+
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.semibold,
         textAlign: "left",

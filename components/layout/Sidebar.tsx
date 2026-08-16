@@ -9,12 +9,15 @@
 import { Feather } from "../../web/icons";
 
 import {
+    Image,
     Pressable,
     StyleSheet,
     Text,
     useWindowDimensions,
     View,
 } from "../../web/ui";
+
+import panelLogo from "../../assets/panel-logo.png";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -117,8 +120,10 @@ export default function Sidebar({
     variant = "desktop",
     showBrand = true,
 }: SidebarProps) {
-    const { t, theme } = useSettings();
+    const { direction, t, theme } = useSettings();
     const colors = theme.colors;
+    const isRtl = direction === "rtl";
+    const textAlign = isRtl ? "right" : "left";
 
     const { height } = useWindowDimensions();
 
@@ -140,6 +145,7 @@ export default function Sidebar({
                 {
                     backgroundColor: colors.surface,
                     borderColor: colors.border,
+                    direction,
                 },
             ]}
         >
@@ -150,7 +156,9 @@ export default function Sidebar({
                         isShortSidebar && styles.compactBrand,
                     ]}
                 >
-                    <View
+                    <Image
+                        source={{ uri: panelLogo }}
+                        resizeMode="contain"
                         style={[
                             styles.logoPlaceholder,
                             isShortSidebar && styles.compactLogoPlaceholder,
@@ -159,18 +167,7 @@ export default function Sidebar({
                                 borderColor: colors.border,
                             },
                         ]}
-                    >
-                        <Text
-                            style={[
-                                styles.logoPlaceholderText,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                        >
-                            Logo
-                        </Text>
-                    </View>
+                    />
 
                     <Text
                         style={[
@@ -237,6 +234,7 @@ export default function Sidebar({
                                         styles.navigationItem,
                                         {
                                             color: itemColor,
+                                            textAlign,
                                         },
                                     ]}
                                 >
@@ -261,6 +259,7 @@ export default function Sidebar({
                             styles.navigationItem,
                             {
                                 color: colors.text,
+                                textAlign,
                             },
                         ]}
                     >
@@ -304,6 +303,7 @@ export default function Sidebar({
                                         activePage === "settings"
                                             ? colors.primary
                                             : colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
@@ -338,10 +338,11 @@ export default function Sidebar({
                                 styles.storageValue,
                                 {
                                     color: colors.primary,
+                                    textAlign: isRtl ? "left" : "right",
                                 },
                             ]}
                         >
-                            ۶۲٪
+                            {isRtl ? "۶۲٪" : "62%"}
                         </Text>
                     </View>
 
@@ -370,10 +371,11 @@ export default function Sidebar({
                                 styles.storageDetailText,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            PDF · ۳۴٪
+                            {isRtl ? "PDF · ۳۴٪" : "PDF · 34%"}
                         </Text>
 
                         <Text
@@ -381,10 +383,11 @@ export default function Sidebar({
                                 styles.storageDetailText,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            DOCX / XLSX · ۱۵٪
+                            {isRtl ? "DOCX / XLSX · ۱۵٪" : "DOCX / XLSX · 15%"}
                         </Text>
 
                         <Text
@@ -392,10 +395,11 @@ export default function Sidebar({
                                 styles.storageDetailText,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            ZIP / RAR · ۷٪
+                            {isRtl ? "ZIP / RAR · ۷٪" : "ZIP / RAR · 7%"}
                         </Text>
 
                         <Text
@@ -403,10 +407,11 @@ export default function Sidebar({
                                 styles.storageDetailText,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                         >
-                            {t("otherFiles")} · ۶٪
+                            {t("otherFiles")} · {isRtl ? "۶٪" : "6%"}
                         </Text>
                     </View>
                 </View>
@@ -469,8 +474,8 @@ const styles = StyleSheet.create({
     },
 
     logoPlaceholder: {
-        width: 78,
-        height: 78,
+        width: 184,
+        height: 72,
 
         alignItems: "center",
         justifyContent: "center",
@@ -480,13 +485,8 @@ const styles = StyleSheet.create({
     },
 
     compactLogoPlaceholder: {
-        width: 60,
-        height: 60,
-    },
-
-    logoPlaceholderText: {
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.semibold,
+        width: 140,
+        height: 55,
     },
 
     appTitle: {
