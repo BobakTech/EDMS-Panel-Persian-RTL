@@ -116,6 +116,45 @@ export default function Toolbar({
     const isMobileHeader = variant === "mobile-header";
     const isMobileMenu = variant === "mobile-menu";
 
+    const searchField = (isMobile = false) => (
+        <View
+            style={[
+                styles.searchField,
+                isMobile && styles.mobileSearchInput,
+                {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    direction,
+                },
+            ]}
+        >
+            {searchQuery.length > 0 && (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t("clearSearch")}
+                    onPress={() => onChangeSearchQuery("")}
+                    style={({ pressed }) => [
+                        styles.clearSearchButton,
+                        pressed && styles.pressedActionButton,
+                    ]}
+                >
+                    <Feather name="x" size={17} color={colors.text} />
+                </Pressable>
+            )}
+
+            <TextInput
+                value={searchQuery}
+                onChangeText={onChangeSearchQuery}
+                placeholder={t("search")}
+                placeholderTextColor={colors.border}
+                style={[
+                    styles.searchInput,
+                    { color: colors.text, textAlign },
+                ]}
+            />
+        </View>
+    );
+
     const projectSubtitle = isProjectInfoLoading
         ? t("loadingProjectInfo")
         : projectInfo
@@ -689,21 +728,7 @@ export default function Toolbar({
                     },
                 ]}
             >
-                <TextInput
-                    value={searchQuery}
-                    onChangeText={onChangeSearchQuery}
-                    placeholder={t("search")}
-                    placeholderTextColor={colors.border}
-                    style={[
-                        styles.searchInput,
-                        styles.mobileSearchInput,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                            color: colors.text,
-                        },
-                    ]}
-                />
+                {searchField(true)}
 
                 {canCreateWorkspaceItems && (
                     <View style={styles.mobileMenuActionsArea}>
@@ -924,20 +949,7 @@ export default function Toolbar({
                 </View>
             )}
 
-            <TextInput
-                value={searchQuery}
-                onChangeText={onChangeSearchQuery}
-                placeholder={t("search")}
-                placeholderTextColor={colors.border}
-                style={[
-                    styles.searchInput,
-                    {
-                        backgroundColor: colors.background,
-                        borderColor: colors.border,
-                        color: colors.text,
-                    },
-                ]}
-            />
+            {searchField()}
         </View>
     );
 }
@@ -1227,19 +1239,38 @@ const styles = StyleSheet.create({
         borderRadius: radius.pill,
     },
 
-    searchInput: {
+    searchField: {
         flex: 1,
         minHeight: 40,
+
+        flexDirection: "row",
+        alignItems: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    searchInput: {
+        flex: 1,
+        minWidth: 0,
+
+        backgroundColor: "transparent",
 
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
 
-        borderWidth: 1,
-        borderRadius: radius.md,
-
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
+    },
+
+    clearSearchButton: {
+        width: 38,
+        alignSelf: "stretch",
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        cursor: "pointer",
     },
 
     mobileHeaderContainer: {
