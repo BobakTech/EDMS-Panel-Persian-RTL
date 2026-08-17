@@ -1,6 +1,7 @@
 import {
     AlignRight,
     Archive,
+    ArrowLeft,
     ArrowRight,
     ChevronLeft,
     ChevronRight,
@@ -41,6 +42,7 @@ import type { CSSProperties } from "react";
 const icons: Record<string, React.ComponentType<any>> = {
     "align-right": AlignRight,
     archive: Archive,
+    "arrow-left": ArrowLeft,
     "arrow-right": ArrowRight,
     "chevron-left": ChevronLeft,
     "chevron-right": ChevronRight,

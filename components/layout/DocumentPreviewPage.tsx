@@ -87,8 +87,15 @@ export default function DocumentPreviewPage({
     const { width } = useWindowDimensions();
     const colors = theme.colors;
     const isPhonePreview = width < 430;
+    const isCompactPreview = width < 920;
     const isRtl = direction === "rtl";
     const textAlign = isRtl ? "right" : "left";
+    const previewPageInset = isPhonePreview
+        ? spacing.sm
+        : isCompactPreview
+            ? spacing.lg
+            : spacing.xl;
+    const primaryForeground = "#FFFFFF";
     const backIcon = isRtl ? "arrow-right" : "arrow-left";
     const previousIcon = isRtl ? "chevron-right" : "chevron-left";
     const nextIcon = isRtl ? "chevron-left" : "chevron-right";
@@ -128,7 +135,10 @@ export default function DocumentPreviewPage({
     return (
         <ScrollView
             style={styles.container}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[
+                styles.content,
+                { paddingHorizontal: previewPageInset },
+            ]}
             showsVerticalScrollIndicator
             showsHorizontalScrollIndicator={false}
             dir={direction}
@@ -157,13 +167,13 @@ export default function DocumentPreviewPage({
                         pressed && styles.pressedBackButton,
                     ]}
                 >
-                    <Feather name={backIcon} size={16} color={colors.surface} />
+                    <Feather name={backIcon} size={16} color={primaryForeground} />
 
                     <Text
                         style={[
                             styles.backButtonText,
                             {
-                                color: colors.surface,
+                                color: primaryForeground,
                             },
                         ]}
                     >
@@ -185,6 +195,7 @@ export default function DocumentPreviewPage({
                     </Text>
 
                     <Text
+                        dir="auto"
                         numberOfLines={2}
                         style={[
                             styles.title,
@@ -199,7 +210,16 @@ export default function DocumentPreviewPage({
                 </View>
             </View>
 
-            <View style={[styles.actionsPanel, isPhonePreview && styles.phoneActionsPanel]}>
+            <View
+                style={[
+                    styles.actionsPanel,
+                    isPhonePreview && styles.phoneActionsPanel,
+                    {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                    },
+                ]}
+            >
                 <View style={styles.actionGroup}>
                     <Pressable
                         accessibilityRole="button"
@@ -213,8 +233,8 @@ export default function DocumentPreviewPage({
                             pressed && canAccessOriginal && styles.pressedBackButton,
                         ]}
                     >
-                        <Feather name="external-link" size={16} color={colors.surface} />
-                        <Text style={[styles.actionButtonText, { color: colors.surface }]}>{t("openOriginal")}</Text>
+                        <Feather name="external-link" size={16} color={primaryForeground} />
+                        <Text style={[styles.actionButtonText, { color: primaryForeground }]}>{t("openOriginal")}</Text>
                     </Pressable>
 
                     <Pressable
@@ -345,21 +365,21 @@ export default function DocumentPreviewPage({
                 ]}
             >
                 <View style={styles.metaItem}>
-                    <Text style={[styles.metaLabel, { color: colors.text }]}>
+                    <Text style={[styles.metaLabel, { color: colors.text, textAlign }]}>
                         {t("fileType")}
                     </Text>
 
-                    <Text style={[styles.metaValue, { color: colors.text }]}>
+                    <Text style={[styles.metaValue, { color: colors.text, textAlign }]}>
                         {getFileTypeLabel(item, t("file"))}
                     </Text>
                 </View>
 
                 <View style={styles.metaItem}>
-                    <Text style={[styles.metaLabel, { color: colors.text }]}>
+                    <Text style={[styles.metaLabel, { color: colors.text, textAlign }]}>
                         {t("fileSize")}
                     </Text>
 
-                    <Text style={[styles.metaValue, { color: colors.text }]}>
+                    <Text style={[styles.metaValue, { color: colors.text, textAlign }]}>
                         {item.sizeBytes
                             ? getWorkspaceItemUpdatedAtLabel(item, t, language)
                             : t("unknownFileSize")}
@@ -437,6 +457,13 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         gap: spacing.sm,
         flexWrap: "wrap",
+
+        padding: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.lg,
+
+        ...shadows.sm,
     },
 
     phoneActionsPanel: {

@@ -17,6 +17,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    useWindowDimensions,
     View,
 } from "../../web/ui";
 
@@ -100,6 +101,8 @@ export default function Toolbar({
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
     const textAlign = direction === "rtl" ? "right" : "left";
+    const { width } = useWindowDimensions();
+    const desktopContentInset = width < 920 ? spacing.lg : spacing.xl;
 
     const newFolderInputRef = useRef<TextInput>(null);
 
@@ -812,6 +815,10 @@ export default function Toolbar({
         <View
             style={[
                 styles.container,
+                {
+                    width: `calc(100% - ${desktopContentInset * 2}px)`,
+                    alignSelf: "center",
+                },
                 {
                     backgroundColor: colors.surface,
                     borderColor: colors.border,

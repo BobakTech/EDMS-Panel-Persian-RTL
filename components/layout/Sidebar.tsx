@@ -20,6 +20,7 @@ import {
 } from "../../web/ui";
 
 import panelLogo from "../../assets/panel-logo.png";
+import panelFavicon from "../../assets/panel-favicon.png";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -49,6 +50,7 @@ type FeatherIconName = keyof typeof Feather.glyphMap;
 interface NavigationItemConfig {
     page: AppPageType;
     icon: FeatherIconName;
+    order: number;
     labelKey: TranslationKey;
     accessibilityLabelKey: TranslationKey;
 }
@@ -84,24 +86,28 @@ const navigationItems: NavigationItemConfig[] = [
     {
         page: "dashboard",
         icon: "grid",
+        order: 0,
         labelKey: "dashboard",
         accessibilityLabelKey: "showDashboard",
     },
     {
         page: "workspace",
         icon: "file-text",
+        order: 1,
         labelKey: "myDocuments",
         accessibilityLabelKey: "showMyDocuments",
     },
     {
         page: "archive",
         icon: "archive",
+        order: 3,
         labelKey: "archive",
         accessibilityLabelKey: "showArchive",
     },
     {
         page: "trash",
         icon: "trash-2",
+        order: 4,
         labelKey: "trash",
         accessibilityLabelKey: "showTrash",
     },
@@ -131,7 +137,6 @@ export default function Sidebar({
 
     const isShortSidebar = height < 720;
     const [isPinnedOpen, setIsPinnedOpen] = useState(false);
-    const [hoveredTooltip, setHoveredTooltip] = useState<string | null>(null);
     const isExpanded = variant === "drawer" || isPinnedOpen;
     const sidebarToggleIcon = isRtl
         ? isPinnedOpen ? "panel-right-close" : "panel-right-open"
@@ -141,6 +146,11 @@ export default function Sidebar({
         : projectInfoError
             ? t("projectConnectionFailed")
             : t("projectConnectionConnected");
+    const connectionTooltip = isProjectInfoLoading
+        ? t("connectionConnectingShort")
+        : projectInfoError
+            ? t("connectionUnavailableShort")
+            : t("connectionConnectedShort");
     const connectionColor = isProjectInfoLoading
         ? "#F59E0B"
         : projectInfoError
@@ -151,29 +161,6 @@ export default function Sidebar({
         : projectInfoError
             ? "cloud-off"
             : "cloud";
-
-    function collapsedTooltip(id: string, label: string) {
-        if (isExpanded || hoveredTooltip !== id) {
-            return null;
-        }
-
-        return (
-            <View
-                pointerEvents="none"
-                style={[
-                    styles.tooltip,
-                    isRtl ? styles.tooltipForRtl : styles.tooltipForLtr,
-                    {
-                        backgroundColor: colors.text,
-                    },
-                ]}
-            >
-                <Text style={[styles.tooltipText, { color: colors.surface }]}>
-                    {label}
-                </Text>
-            </View>
-        );
-    }
 
     const projectSubtitle = isProjectInfoLoading
         ? t("loadingProjectInfo")
@@ -196,6 +183,32 @@ export default function Sidebar({
                 },
             ]}
         >
+            {variant === "desktop" && (
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
+                    accessibilityState={{ selected: isPinnedOpen }}
+                    title={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
+                    onPress={() => setIsPinnedOpen((current) => !current)}
+                    style={[
+                        styles.sidebarPinButton,
+                        isRtl
+                            ? styles.sidebarPinButtonForRtl
+                            : styles.sidebarPinButtonForLtr,
+                        {
+                            backgroundColor: colors.surface,
+                            borderColor: colors.border,
+                        },
+                    ]}
+                >
+                    <Feather
+                        name={sidebarToggleIcon}
+                        size={18}
+                        color={colors.primary}
+                    />
+                </Pressable>
+            )}
+
             {showBrand && (
                 <View
                     style={[
@@ -222,44 +235,14 @@ export default function Sidebar({
                             ]}
                         />}
 
-                        {variant === "desktop" && (
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
-                                accessibilityState={{ selected: isPinnedOpen }}
-                                title={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
-                                onHoverIn={() => setHoveredTooltip("sidebar-toggle")}
-                                onHoverOut={() => setHoveredTooltip(null)}
-                                onPress={() => setIsPinnedOpen((current) => !current)}
-                                style={({ pressed }) => [
-                                    styles.sidebarPinButton,
-                                    pressed && styles.pressedNavigationButton,
-                                ]}
-                            >
-                                <Feather
-                                    name={sidebarToggleIcon}
-                                    size={19}
-                                    color={isPinnedOpen ? colors.primary : colors.text}
-                                />
-                                {collapsedTooltip("sidebar-toggle", t("pinSidebar"))}
-                            </Pressable>
-                        )}
-                    </View>
+                        {!isExpanded && <Image
+                            source={{ uri: panelFavicon }}
+                            resizeMode="contain"
+                            accessibilityLabel={t("appName")}
+                            style={styles.collapsedLogo}
+                        />}
 
-                    {!isExpanded && (
-                        <View
-                            accessibilityRole="status"
-                            accessibilityLabel={connectionLabel}
-                            title={connectionLabel}
-                            style={styles.collapsedConnectionStatus}
-                        >
-                            <Feather
-                                name={connectionIcon}
-                                size={20}
-                                color={connectionColor}
-                            />
-                        </View>
-                    )}
+                    </View>
 
                     {isExpanded && <Text
                         style={[
@@ -270,8 +253,30 @@ export default function Sidebar({
                             },
                         ]}
                     >
-                        EDMS
+                        {t("appName")}
                     </Text>}
+
+                    <View
+                        style={[
+                            styles.sectionSeparator,
+                            { backgroundColor: colors.border },
+                        ]}
+                    />
+
+                    {!isExpanded && (
+                        <View
+                            accessibilityRole="status"
+                            accessibilityLabel={connectionLabel}
+                            title={connectionTooltip}
+                            style={styles.collapsedConnectionStatus}
+                        >
+                            <Feather
+                                name={connectionIcon}
+                                size={20}
+                                color={connectionColor}
+                            />
+                        </View>
+                    )}
 
                     {/**
                     * Show project name/code as a compact sidebar list.
@@ -284,12 +289,16 @@ export default function Sidebar({
                 </View>
             )}
 
-            <View
-                style={[
-                    styles.navigation,
-                    { borderColor: colors.border },
-                ]}
-            >
+            {showBrand && (
+                <View
+                    style={[
+                        styles.sectionSeparator,
+                        { backgroundColor: colors.border },
+                    ]}
+                />
+            )}
+
+            <View style={styles.navigation}>
                 {navigationItems.map((item) => {
                     const isSelected = activePage === item.page;
 
@@ -303,11 +312,10 @@ export default function Sidebar({
                             accessibilityRole="button"
                             accessibilityLabel={t(item.accessibilityLabelKey)}
                             title={!isExpanded ? t(item.labelKey) : undefined}
-                            onHoverIn={() => setHoveredTooltip(item.page)}
-                            onHoverOut={() => setHoveredTooltip(null)}
                             onPress={() => onChangePage(item.page)}
                             style={({ pressed }) => [
                                 styles.navigationButton,
+                                { order: item.order },
                                 !isExpanded && styles.collapsedNavigationButton,
                                 isSelected && {
                                     backgroundColor: colors.background,
@@ -316,7 +324,12 @@ export default function Sidebar({
                                 pressed && styles.pressedNavigationButton,
                             ]}
                         >
-                            <View style={styles.navigationButtonContent}>
+                            <View
+                                style={[
+                                    styles.navigationButtonContent,
+                                    !isExpanded && styles.collapsedButtonContent,
+                                ]}
+                            >
                                 <View style={styles.navigationIconBox}>
                                     <Feather
                                         name={item.icon}
@@ -336,13 +349,19 @@ export default function Sidebar({
                                 >
                                     {t(item.labelKey)}
                                 </Text>}
-                                {collapsedTooltip(item.page, t(item.labelKey))}
                             </View>
                         </Pressable>
                     );
                 })}
 
-                <View style={styles.staticNavigationItem}>
+                <View
+                    title={!isExpanded ? t("sharedDocuments") : undefined}
+                    style={[
+                        styles.staticNavigationItem,
+                        !isExpanded && styles.collapsedStaticNavigationItem,
+                        { order: 2 },
+                    ]}
+                >
                     <View style={styles.navigationIconBox}>
                         <Feather
                             name="users"
@@ -366,12 +385,17 @@ export default function Sidebar({
             </View>
 
             <View style={styles.utilities}>
+                <View
+                    style={[
+                        styles.sectionSeparator,
+                        { backgroundColor: colors.border },
+                    ]}
+                />
+
                 <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={t("showSettings")}
                     title={!isExpanded ? t("settings") : undefined}
-                    onHoverIn={() => setHoveredTooltip("settings")}
-                    onHoverOut={() => setHoveredTooltip(null)}
                     onPress={() => onChangePage("settings")}
                     style={({ pressed }) => [
                         styles.utilityButton,
@@ -383,7 +407,12 @@ export default function Sidebar({
                         pressed && styles.pressedUtilityButton,
                     ]}
                 >
-                    <View style={styles.utilityButtonContent}>
+                    <View
+                        style={[
+                            styles.utilityButtonContent,
+                            !isExpanded && styles.collapsedButtonContent,
+                        ]}
+                    >
                         <View style={styles.navigationIconBox}>
                             <Feather
                                 name="settings"
@@ -410,7 +439,6 @@ export default function Sidebar({
                         >
                             {t("settings")}
                         </Text>}
-                        {collapsedTooltip("settings", t("settings"))}
                     </View>
                 </Pressable>
 
@@ -534,9 +562,10 @@ const styles = StyleSheet.create({
 
         justifyContent: "flex-start",
 
-        padding: spacing.lg,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.md,
 
-        gap: spacing.lg,
+        gap: spacing.md,
 
         borderLeftWidth: 1,
 
@@ -548,18 +577,33 @@ const styles = StyleSheet.create({
     collapsedContainer: {
         width: 72,
         paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.md,
     },
 
     sidebarPinButton: {
-        minWidth: 32,
-        minHeight: 32,
-        alignSelf: "flex-end",
+        width: 36,
+        height: 36,
+
+        position: "absolute",
+        top: 42,
+        zIndex: 60,
 
         alignItems: "center",
         justifyContent: "center",
 
-        borderRadius: radius.md,
+        borderWidth: 1,
+        borderRadius: radius.pill,
         cursor: "pointer",
+
+        ...shadows.md,
+    },
+
+    sidebarPinButtonForRtl: {
+        left: -18,
+    },
+
+    sidebarPinButtonForLtr: {
+        right: -18,
     },
 
     drawerContainer: {
@@ -587,7 +631,7 @@ const styles = StyleSheet.create({
 
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: "center",
 
         gap: spacing.sm,
     },
@@ -597,40 +641,23 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
 
+    collapsedLogo: {
+        width: 32,
+        height: 32,
+    },
+
     collapsedConnectionStatus: {
         minHeight: 32,
+        alignSelf: "center",
 
         alignItems: "center",
         justifyContent: "center",
     },
 
-    tooltip: {
-        position: "absolute",
-        top: "50%",
-        zIndex: 50,
-
-        transform: "translateY(-50%)",
-
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-
-        borderRadius: radius.sm,
-
-        boxShadow: "0 4px 12px rgba(15, 23, 42, 0.24)",
-        whiteSpace: "nowrap",
-    },
-
-    tooltipForRtl: {
-        right: "calc(100% + 8px)",
-    },
-
-    tooltipForLtr: {
-        left: "calc(100% + 8px)",
-    },
-
-    tooltipText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
+    sectionSeparator: {
+        width: "100%",
+        height: 1,
+        flexShrink: 0,
     },
 
     compactBrand: {
@@ -664,8 +691,11 @@ const styles = StyleSheet.create({
     },
 
     appTitle: {
+        width: "100%",
+
         fontSize: typography.fontSize.xl,
         fontWeight: typography.fontWeight.bold,
+        textAlign: "center",
     },
 
     compactAppTitle: {
@@ -681,18 +711,15 @@ const styles = StyleSheet.create({
     },
 
     navigation: {
-        gap: spacing.sm,
+        gap: spacing.xs,
 
-        paddingVertical: spacing.md,
-
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
+        paddingVertical: spacing.sm,
     },
 
     navigationButton: {
         alignSelf: "stretch",
 
-        minHeight: 34,
+        minHeight: 38,
 
         justifyContent: "center",
 
@@ -705,7 +732,13 @@ const styles = StyleSheet.create({
     },
 
     collapsedNavigationButton: {
-        paddingHorizontal: spacing.sm,
+        paddingHorizontal: 0,
+    },
+
+    collapsedButtonContent: {
+        width: "100%",
+        justifyContent: "center",
+        gap: 0,
     },
 
     pressedNavigationButton: {
@@ -735,6 +768,8 @@ const styles = StyleSheet.create({
     },
 
     staticNavigationItem: {
+        minHeight: 38,
+
         flexDirection: "row",
         alignItems: "center",
 
@@ -742,6 +777,12 @@ const styles = StyleSheet.create({
 
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xs,
+    },
+
+    collapsedStaticNavigationItem: {
+        paddingHorizontal: 0,
+        justifyContent: "center",
+        gap: 0,
     },
 
     utilities: {
@@ -753,7 +794,7 @@ const styles = StyleSheet.create({
     utilityButton: {
         alignSelf: "stretch",
 
-        minHeight: 34,
+        minHeight: 38,
 
         justifyContent: "center",
 

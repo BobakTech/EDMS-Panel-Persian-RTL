@@ -240,14 +240,13 @@ export default function Workspace({
     const { width } = useWindowDimensions();
 
     const isPhoneWorkspace = width < 430;
-    const isCompactWorkspace = width < spacing.sidebarWidth * 3;
+    const isCompactWorkspace = width < 920;
 
     const workspacePadding = isPhoneWorkspace
-        ? spacing.xs
+        ? spacing.sm
         : isCompactWorkspace
             ? spacing.lg
             : spacing.xl;
-    const workspaceTopPadding = spacing.none;
 
     const pageContent = getWorkspacePageContent(pageType, t);
 
@@ -883,9 +882,7 @@ export default function Workspace({
         <View style={[
             styles.container,
             {
-                paddingHorizontal: spacing.none,
-                paddingTop: workspaceTopPadding,
-                paddingBottom: workspacePadding,
+                padding: workspacePadding,
                 backgroundColor: colors.background,
             },
         ]}>
@@ -1696,13 +1693,13 @@ const styles = StyleSheet.create({
     },
 
     workspaceTopBar: {
-        minHeight: 44,
+        minHeight: 36,
 
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
 
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
     },
 
     folderBackButton: {

@@ -186,7 +186,7 @@ export default function AppLayout() {
      * ============================================================================
      * Project Info Loading
      * ----------------------------------------------------------------------------
-     * Loads project metadata from the configured frontend API placeholder.
+     * Loads project metadata from the configured backend API.
      * ============================================================================
      */
 
@@ -205,6 +205,7 @@ export default function AppLayout() {
                 }
             } catch {
                 if (isMounted) {
+                    setProjectInfo(null);
                     setProjectInfoError("Project info unavailable.");
                 }
             } finally {
