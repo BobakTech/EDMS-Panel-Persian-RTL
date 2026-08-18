@@ -398,9 +398,11 @@ export default function DocumentPreviewPage({
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        flexGrow: 0,
+        flexShrink: 0,
         minWidth: 0,
         minHeight: 0,
+        overflowY: "visible",
     },
 
     content: {
@@ -522,6 +524,8 @@ const styles = StyleSheet.create({
     },
 
     previewShell: {
+        order: 2,
+
         minHeight: 0,
         minWidth: 0,
 
@@ -584,6 +588,8 @@ const styles = StyleSheet.create({
     },
 
     metaPanel: {
+        order: 1,
+
         flexDirection: "row",
         gap: spacing.md,
 

@@ -138,6 +138,7 @@ export default function Sidebar({
     const isShortSidebar = height < 720;
     const [isPinnedOpen, setIsPinnedOpen] = useState(false);
     const isExpanded = variant === "drawer" || isPinnedOpen;
+    const desktopSidebarWidth = isExpanded ? spacing.sidebarWidth : 72;
     const sidebarToggleIcon = isRtl
         ? isPinnedOpen ? "panel-right-close" : "panel-right-open"
         : isPinnedOpen ? "panel-left-close" : "panel-left-open";
@@ -173,12 +174,9 @@ export default function Sidebar({
     return (
         <View
             style={[
-                styles.container,
-                variant === "drawer" && styles.drawerContainer,
-                !isExpanded && styles.collapsedContainer,
+                variant === "desktop" && styles.desktopWrapper,
+                variant === "drawer" && styles.drawerWrapper,
                 {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
                     direction,
                 },
             ]}
@@ -193,8 +191,8 @@ export default function Sidebar({
                     style={[
                         styles.sidebarPinButton,
                         isRtl
-                            ? styles.sidebarPinButtonForRtl
-                            : styles.sidebarPinButtonForLtr,
+                            ? { left: -18 }
+                            : { right: -18 },
                         {
                             backgroundColor: colors.surface,
                             borderColor: colors.border,
@@ -209,53 +207,196 @@ export default function Sidebar({
                 </Pressable>
             )}
 
-            {showBrand && (
-                <View
-                    style={[
-                        styles.brand,
-                        isShortSidebar && styles.compactBrand,
-                    ]}
-                >
+            <View
+                style={[
+                    styles.container,
+                    variant === "desktop" && styles.desktopContainer,
+                    variant === "drawer" && styles.drawerContainer,
+                    !isExpanded && styles.collapsedContainer,
+                    {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        direction,
+                    },
+                ]}
+            >
+
+                {showBrand && (
                     <View
                         style={[
-                            styles.brandHeader,
-                            !isExpanded && styles.collapsedBrandHeader,
+                            styles.brand,
+                            isShortSidebar && styles.compactBrand,
                         ]}
                     >
-                        {isExpanded && <Image
-                            source={{ uri: panelLogo }}
-                            resizeMode="contain"
+                        <View
                             style={[
-                                styles.logoPlaceholder,
-                                isShortSidebar && styles.compactLogoPlaceholder,
+                                styles.brandHeader,
+                                !isExpanded && styles.collapsedBrandHeader,
+                            ]}
+                        >
+                            {isExpanded && <Image
+                                source={{ uri: panelLogo }}
+                                resizeMode="contain"
+                                style={[
+                                    styles.logoPlaceholder,
+                                    isShortSidebar && styles.compactLogoPlaceholder,
+                                    {
+                                        backgroundColor: "transparent",
+                                        borderColor: colors.border,
+                                    },
+                                ]}
+                            />}
+
+                            {!isExpanded && <Image
+                                source={{ uri: panelFavicon }}
+                                resizeMode="contain"
+                                accessibilityLabel={t("appName")}
+                                style={styles.collapsedLogo}
+                            />}
+
+                        </View>
+
+                        {isExpanded && <Text
+                            style={[
+                                styles.appTitle,
+                                isShortSidebar && styles.compactAppTitle,
                                 {
-                                    backgroundColor: "transparent",
-                                    borderColor: colors.border,
+                                    color: colors.text,
                                 },
                             ]}
-                        />}
+                        >
+                            {t("appName")}
+                        </Text>}
 
-                        {!isExpanded && <Image
-                            source={{ uri: panelFavicon }}
-                            resizeMode="contain"
-                            accessibilityLabel={t("appName")}
-                            style={styles.collapsedLogo}
-                        />}
+                        <View
+                            style={[
+                                styles.sectionSeparator,
+                                { backgroundColor: colors.border },
+                            ]}
+                        />
 
+                        {!isExpanded && (
+                            <View
+                                accessibilityRole="status"
+                                accessibilityLabel={connectionLabel}
+                                title={connectionTooltip}
+                                style={styles.collapsedConnectionStatus}
+                            >
+                                <Feather
+                                    name={connectionIcon}
+                                    size={20}
+                                    color={connectionColor}
+                                />
+                            </View>
+                        )}
+
+                        {/**
+                    * Show project name/code as a compact sidebar list.
+                    */}
+                        {isExpanded && <ProjectInfoPanel
+                            projectInfo={projectInfo}
+                            isLoading={isProjectInfoLoading}
+                            error={projectInfoError}
+                        />}
                     </View>
+                )}
 
-                    {isExpanded && <Text
+                {showBrand && (
+                    <View
                         style={[
-                            styles.appTitle,
-                            isShortSidebar && styles.compactAppTitle,
-                            {
-                                color: colors.text,
-                            },
+                            styles.sectionSeparator,
+                            { backgroundColor: colors.border },
+                        ]}
+                    />
+                )}
+
+                <View style={styles.navigation}>
+                    {navigationItems.map((item) => {
+                        const isSelected = activePage === item.page;
+
+                        const itemColor = isSelected
+                            ? colors.primary
+                            : colors.text;
+
+                        return (
+                            <Pressable
+                                key={item.page}
+                                accessibilityRole="button"
+                                accessibilityLabel={t(item.accessibilityLabelKey)}
+                                title={!isExpanded ? t(item.labelKey) : undefined}
+                                onPress={() => onChangePage(item.page)}
+                                style={({ pressed }) => [
+                                    styles.navigationButton,
+                                    { order: item.order },
+                                    !isExpanded && styles.collapsedNavigationButton,
+                                    isSelected && {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    pressed && styles.pressedNavigationButton,
+                                ]}
+                            >
+                                <View
+                                    style={[
+                                        styles.navigationButtonContent,
+                                        !isExpanded && styles.collapsedButtonContent,
+                                    ]}
+                                >
+                                    <View style={styles.navigationIconBox}>
+                                        <Feather
+                                            name={item.icon}
+                                            size={18}
+                                            color={itemColor}
+                                        />
+                                    </View>
+
+                                    {isExpanded && <Text
+                                        style={[
+                                            styles.navigationItem,
+                                            {
+                                                color: itemColor,
+                                                textAlign,
+                                            },
+                                        ]}
+                                    >
+                                        {t(item.labelKey)}
+                                    </Text>}
+                                </View>
+                            </Pressable>
+                        );
+                    })}
+
+                    <View
+                        title={!isExpanded ? t("sharedDocuments") : undefined}
+                        style={[
+                            styles.staticNavigationItem,
+                            !isExpanded && styles.collapsedStaticNavigationItem,
+                            { order: 2 },
                         ]}
                     >
-                        {t("appName")}
-                    </Text>}
+                        <View style={styles.navigationIconBox}>
+                            <Feather
+                                name="users"
+                                size={18}
+                                color={colors.text}
+                            />
+                        </View>
 
+                        {isExpanded && <Text
+                            style={[
+                                styles.navigationItem,
+                                {
+                                    color: colors.text,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {t("sharedDocuments")}
+                        </Text>}
+                    </View>
+                </View>
+
+                <View style={styles.utilities}>
                     <View
                         style={[
                             styles.sectionSeparator,
@@ -263,288 +404,160 @@ export default function Sidebar({
                         ]}
                     />
 
-                    {!isExpanded && (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t("showSettings")}
+                        title={!isExpanded ? t("settings") : undefined}
+                        onPress={() => onChangePage("settings")}
+                        style={({ pressed }) => [
+                            styles.utilityButton,
+                            !isExpanded && styles.collapsedNavigationButton,
+                            activePage === "settings" && {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                            pressed && styles.pressedUtilityButton,
+                        ]}
+                    >
                         <View
-                            accessibilityRole="status"
-                            accessibilityLabel={connectionLabel}
-                            title={connectionTooltip}
-                            style={styles.collapsedConnectionStatus}
+                            style={[
+                                styles.utilityButtonContent,
+                                !isExpanded && styles.collapsedButtonContent,
+                            ]}
                         >
-                            <Feather
-                                name={connectionIcon}
-                                size={20}
-                                color={connectionColor}
-                            />
+                            <View style={styles.navigationIconBox}>
+                                <Feather
+                                    name="settings"
+                                    size={18}
+                                    color={
+                                        activePage === "settings"
+                                            ? colors.primary
+                                            : colors.text
+                                    }
+                                />
+                            </View>
+
+                            {isExpanded && <Text
+                                style={[
+                                    styles.utilityItem,
+                                    {
+                                        color:
+                                            activePage === "settings"
+                                                ? colors.primary
+                                                : colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {t("settings")}
+                            </Text>}
                         </View>
-                    )}
+                    </Pressable>
 
-                    {/**
-                    * Show project name/code as a compact sidebar list.
-                    */}
-                    {isExpanded && <ProjectInfoPanel
-                        projectInfo={projectInfo}
-                        isLoading={isProjectInfoLoading}
-                        error={projectInfoError}
-                    />}
-                </View>
-            )}
+                    {isExpanded && <View
+                        style={[
+                            styles.storageCard,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <View style={styles.storageHeader}>
+                            <Text
+                                style={[
+                                    styles.storageLabel,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                {t("storageSpace")}
+                            </Text>
 
-            {showBrand && (
-                <View
-                    style={[
-                        styles.sectionSeparator,
-                        { backgroundColor: colors.border },
-                    ]}
-                />
-            )}
+                            <Text
+                                style={[
+                                    styles.storageValue,
+                                    {
+                                        color: colors.primary,
+                                        textAlign: isRtl ? "left" : "right",
+                                    },
+                                ]}
+                            >
+                                {isRtl ? "۶۲٪" : "62%"}
+                            </Text>
+                        </View>
 
-            <View style={styles.navigation}>
-                {navigationItems.map((item) => {
-                    const isSelected = activePage === item.page;
-
-                    const itemColor = isSelected
-                        ? colors.primary
-                        : colors.text;
-
-                    return (
-                        <Pressable
-                            key={item.page}
-                            accessibilityRole="button"
-                            accessibilityLabel={t(item.accessibilityLabelKey)}
-                            title={!isExpanded ? t(item.labelKey) : undefined}
-                            onPress={() => onChangePage(item.page)}
-                            style={({ pressed }) => [
-                                styles.navigationButton,
-                                { order: item.order },
-                                !isExpanded && styles.collapsedNavigationButton,
-                                isSelected && {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
+                        <View
+                            style={[
+                                styles.storageTrack,
+                                {
+                                    backgroundColor: colors.surface,
                                 },
-                                pressed && styles.pressedNavigationButton,
                             ]}
                         >
                             <View
                                 style={[
-                                    styles.navigationButtonContent,
-                                    !isExpanded && styles.collapsedButtonContent,
+                                    styles.storageProgress,
+                                    {
+                                        width: "62%",
+                                        backgroundColor: colors.primary,
+                                    },
                                 ]}
-                            >
-                                <View style={styles.navigationIconBox}>
-                                    <Feather
-                                        name={item.icon}
-                                        size={18}
-                                        color={itemColor}
-                                    />
-                                </View>
-
-                                {isExpanded && <Text
-                                    style={[
-                                        styles.navigationItem,
-                                        {
-                                            color: itemColor,
-                                            textAlign,
-                                        },
-                                    ]}
-                                >
-                                    {t(item.labelKey)}
-                                </Text>}
-                            </View>
-                        </Pressable>
-                    );
-                })}
-
-                <View
-                    title={!isExpanded ? t("sharedDocuments") : undefined}
-                    style={[
-                        styles.staticNavigationItem,
-                        !isExpanded && styles.collapsedStaticNavigationItem,
-                        { order: 2 },
-                    ]}
-                >
-                    <View style={styles.navigationIconBox}>
-                        <Feather
-                            name="users"
-                            size={18}
-                            color={colors.text}
-                        />
-                    </View>
-
-                    {isExpanded && <Text
-                        style={[
-                            styles.navigationItem,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {t("sharedDocuments")}
-                    </Text>}
-                </View>
-            </View>
-
-            <View style={styles.utilities}>
-                <View
-                    style={[
-                        styles.sectionSeparator,
-                        { backgroundColor: colors.border },
-                    ]}
-                />
-
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("showSettings")}
-                    title={!isExpanded ? t("settings") : undefined}
-                    onPress={() => onChangePage("settings")}
-                    style={({ pressed }) => [
-                        styles.utilityButton,
-                        !isExpanded && styles.collapsedNavigationButton,
-                        activePage === "settings" && {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                        pressed && styles.pressedUtilityButton,
-                    ]}
-                >
-                    <View
-                        style={[
-                            styles.utilityButtonContent,
-                            !isExpanded && styles.collapsedButtonContent,
-                        ]}
-                    >
-                        <View style={styles.navigationIconBox}>
-                            <Feather
-                                name="settings"
-                                size={18}
-                                color={
-                                    activePage === "settings"
-                                        ? colors.primary
-                                        : colors.text
-                                }
                             />
                         </View>
 
-                        {isExpanded && <Text
-                            style={[
-                                styles.utilityItem,
-                                {
-                                    color:
-                                        activePage === "settings"
-                                            ? colors.primary
-                                            : colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("settings")}
-                        </Text>}
-                    </View>
-                </Pressable>
+                        <View style={styles.storageDetails}>
+                            <Text
+                                style={[
+                                    styles.storageDetailText,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {isRtl ? "PDF · ۳۴٪" : "PDF · 34%"}
+                            </Text>
 
-                {isExpanded && <View
-                    style={[
-                        styles.storageCard,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                >
-                    <View style={styles.storageHeader}>
-                        <Text
-                            style={[
-                                styles.storageLabel,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                        >
-                            {t("storageSpace")}
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.storageDetailText,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {isRtl ? "DOCX / XLSX · ۱۵٪" : "DOCX / XLSX · 15%"}
+                            </Text>
 
-                        <Text
-                            style={[
-                                styles.storageValue,
-                                {
-                                    color: colors.primary,
-                                    textAlign: isRtl ? "left" : "right",
-                                },
-                            ]}
-                        >
-                            {isRtl ? "۶۲٪" : "62%"}
-                        </Text>
-                    </View>
+                            <Text
+                                style={[
+                                    styles.storageDetailText,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {isRtl ? "ZIP / RAR · ۷٪" : "ZIP / RAR · 7%"}
+                            </Text>
 
-                    <View
-                        style={[
-                            styles.storageTrack,
-                            {
-                                backgroundColor: colors.surface,
-                            },
-                        ]}
-                    >
-                        <View
-                            style={[
-                                styles.storageProgress,
-                                {
-                                    width: "62%",
-                                    backgroundColor: colors.primary,
-                                },
-                            ]}
-                        />
-                    </View>
-
-                    <View style={styles.storageDetails}>
-                        <Text
-                            style={[
-                                styles.storageDetailText,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {isRtl ? "PDF · ۳۴٪" : "PDF · 34%"}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.storageDetailText,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {isRtl ? "DOCX / XLSX · ۱۵٪" : "DOCX / XLSX · 15%"}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.storageDetailText,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {isRtl ? "ZIP / RAR · ۷٪" : "ZIP / RAR · 7%"}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.storageDetailText,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("otherFiles")} · {isRtl ? "۶٪" : "6%"}
-                        </Text>
-                    </View>
-                </View>}
+                            <Text
+                                style={[
+                                    styles.storageDetailText,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {t("otherFiles")} · {isRtl ? "۶٪" : "6%"}
+                            </Text>
+                        </View>
+                    </View>}
+                </View>
             </View>
         </View>
     );
@@ -580,6 +593,25 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.md,
     },
 
+    desktopContainer: {
+        height: "100%",
+        overflowX: "hidden",
+        overflowY: "auto",
+    },
+
+    desktopWrapper: {
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        alignSelf: "flex-start",
+        zIndex: 50,
+    },
+
+    drawerWrapper: {
+        width: "100%",
+        flex: 1,
+    },
+
     sidebarPinButton: {
         width: 36,
         height: 36,
@@ -596,14 +628,6 @@ const styles = StyleSheet.create({
         cursor: "pointer",
 
         ...shadows.md,
-    },
-
-    sidebarPinButtonForRtl: {
-        left: -18,
-    },
-
-    sidebarPinButtonForLtr: {
-        right: -18,
     },
 
     drawerContainer: {

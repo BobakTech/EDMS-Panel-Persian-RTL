@@ -508,6 +508,8 @@ const styles = StyleSheet.create({
     },
 
     previewRow: {
+        order: 2,
+
         minHeight: 74,
         flexDirection: "row",
         alignItems: "center",
@@ -530,6 +532,8 @@ const styles = StyleSheet.create({
      */
 
     imagePreviewFrame: {
+        order: 2,
+
         minHeight: 420,
         alignItems: "center",
         justifyContent: "center",
@@ -586,6 +590,8 @@ const styles = StyleSheet.create({
     },
 
     metaRow: {
+        order: 1,
+
         flexDirection: "row",
         gap: spacing.sm,
     },

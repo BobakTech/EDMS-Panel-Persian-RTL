@@ -1,13 +1,11 @@
 :root { font-family: Tahoma, Arial, sans-serif; color: #17202a; background: #f4f6f8; font-synthesis: none; }
 * { box-sizing: border-box; }
-html, body, #root { width: 100%; min-width: 320px; height: 100%; margin: 0; }
-#root { display: flex; min-height: 0; }
-body { overflow: hidden; }
+html { width: 100%; min-width: 320px; min-height: 100%; margin: 0; }
+body, #root { width: 100%; min-width: 320px; min-height: 100vh; margin: 0; }
+#root { display: flex; }
+body { overflow-x: hidden; overflow-y: auto; }
 button, input { font: inherit; }
 button { appearance: none; color: inherit; }
 input::placeholder { color: var(--placeholder-color, #8b95a1); }
 iframe { border: 0; }
 @keyframes edms-spin { to { transform: rotate(360deg); } }
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { border-radius: 999px; background: #c7cdd4; }
-::-webkit-scrollbar-track { background: transparent; }

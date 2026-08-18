@@ -687,12 +687,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         minWidth: 0,
-        minHeight: 0,
+        minHeight: "100vh",
 
         flexDirection: "row",
         direction: "rtl",
 
-        overflow: "hidden",
+        overflow: "visible",
     },
 
     mobileContainer: {
@@ -731,20 +731,23 @@ const styles = StyleSheet.create({
     },
 
     pageSlot: {
-        flex: 1,
+        flexGrow: 1,
+        flexShrink: 0,
         minWidth: 0,
         minHeight: 0,
 
         position: "relative",
         zIndex: 1,
 
-        overflow: "hidden",
+        overflow: "visible",
     },
 
     pageScroller: {
-        flex: 1,
+        flexGrow: 0,
+        flexShrink: 0,
         minWidth: 0,
         minHeight: 0,
+        overflowY: "visible",
     },
 
     pageScrollerContent: {

@@ -1727,8 +1727,10 @@ const styles = StyleSheet.create({
     },
 
     workspaceBody: {
-        flex: 1,
+        flexGrow: 0,
+        flexShrink: 0,
         minHeight: 0,
+        overflowY: "visible",
     },
 
     workspaceBodyContent: {
