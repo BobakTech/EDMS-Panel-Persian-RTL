@@ -131,7 +131,7 @@ export default function Dashboard({
                     },
                 ]}
             >
-                <View style={{ direction }}>
+                <View style={[styles.header, { direction }]}>
                     <Text
                         style={[
                             styles.title,

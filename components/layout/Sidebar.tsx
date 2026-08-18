@@ -310,6 +310,14 @@ export default function Sidebar({
                     />
                 )}
 
+                {variant === "drawer" && !showBrand && (
+                    <ProjectInfoPanel
+                        projectInfo={projectInfo}
+                        isLoading={isProjectInfoLoading}
+                        error={projectInfoError}
+                    />
+                )}
+
                 <View style={styles.navigation}>
                     {navigationItems.map((item) => {
                         const isSelected = activePage === item.page;

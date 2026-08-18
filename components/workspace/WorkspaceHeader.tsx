@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
         justifyContent: "flex-start",
 
         width: "100%",
-        direction: "rtl",
+        marginBottom: spacing.xl,
 
         gap: spacing.md,
     },

@@ -166,6 +166,17 @@ export default function Toolbar({
                 ? t("projectInfoUnavailable")
                 : t("appName");
 
+    const projectStatusLabel = isProjectInfoLoading
+        ? t("projectConnectionConnecting")
+        : projectInfoError
+            ? t("projectConnectionFailed")
+            : t("projectConnectionConnected");
+    const projectStatusColor = isProjectInfoLoading
+        ? "#F59E0B"
+        : projectInfoError
+            ? "#94A3B8"
+            : "#22C55E";
+
     /**
      * ============================================================================
      * New Folder Autofocus
@@ -267,11 +278,11 @@ export default function Toolbar({
             <View style={styles.popupOverlay}>
                 <View
                     style={[
-                    styles.actionPanel,
-                    {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.primary,
-                        direction,
+                        styles.actionPanel,
+                        {
+                            backgroundColor: colors.surface,
+                            borderColor: colors.primary,
+                            direction,
                         },
                     ]}
                 >
@@ -506,6 +517,7 @@ export default function Toolbar({
                     {
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
+                        direction,
                     },
                 ]}
             >
@@ -544,24 +556,53 @@ export default function Toolbar({
                         ]}
                     />
 
-                    <View style={styles.mobileBrandText}>
-                        <Text
+                    <View
+                        style={[
+                            styles.mobileBrandText,
+                            {
+                                alignItems: direction === "rtl" ? "flex-end" : "flex-start",
+                            },
+                        ]}
+                    >
+                        <View
                             style={[
-                                styles.mobileAppTitle,
+                                styles.mobileBrandTitleRow,
                                 {
-                                    color: colors.text,
+                                    flexDirection: direction === "rtl" ? "row-reverse" : "row",
                                 },
                             ]}
-                            numberOfLines={1}
                         >
-                            EDMS
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.mobileAppTitle,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {t("appName")}
+                            </Text>
+
+                            <View
+                                title={projectStatusLabel}
+                                accessibilityLabel={projectStatusLabel}
+                                style={[
+                                    styles.mobileProjectStatusDot,
+                                    {
+                                        backgroundColor: projectStatusColor,
+                                    },
+                                ]}
+                            />
+                        </View>
 
                         <Text
                             style={[
                                 styles.mobileProjectSubtitle,
                                 {
                                     color: colors.text,
+                                    textAlign,
                                 },
                             ]}
                             numberOfLines={1}
@@ -619,18 +660,30 @@ export default function Toolbar({
                             <View
                                 style={[
                                     styles.mobileUserMenu,
+                                    direction === "rtl"
+                                        ? { left: spacing.sm }
+                                        : { right: spacing.sm },
                                     {
                                         backgroundColor: colors.background,
                                         borderColor: colors.border,
+                                        direction,
                                     },
                                 ]}
                             >
-                                <View style={styles.mobileUserMenuHeader}>
+                                <View
+                                    style={[
+                                        styles.mobileUserMenuHeader,
+                                        {
+                                            alignItems: direction === "rtl" ? "flex-end" : "flex-start",
+                                        },
+                                    ]}
+                                >
                                     <Text
                                         style={[
                                             styles.mobileUserMenuName,
                                             {
                                                 color: colors.text,
+                                                textAlign,
                                             },
                                         ]}
                                     >
@@ -642,6 +695,7 @@ export default function Toolbar({
                                             styles.mobileUserMenuRole,
                                             {
                                                 color: colors.text,
+                                                textAlign,
                                             },
                                         ]}
                                     >
@@ -664,6 +718,9 @@ export default function Toolbar({
                                     onPress={() => setIsUserMenuOpen(false)}
                                     style={({ pressed }) => [
                                         styles.mobileUserMenuItem,
+                                        {
+                                            flexDirection: direction === "rtl" ? "row-reverse" : "row",
+                                        },
                                         pressed && styles.pressedActionButton,
                                     ]}
                                 >
@@ -678,6 +735,7 @@ export default function Toolbar({
                                             styles.mobileUserMenuItemText,
                                             {
                                                 color: colors.text,
+                                                textAlign,
                                             },
                                         ]}
                                     >
@@ -691,6 +749,9 @@ export default function Toolbar({
                                     onPress={() => setIsUserMenuOpen(false)}
                                     style={({ pressed }) => [
                                         styles.mobileUserMenuItem,
+                                        {
+                                            flexDirection: direction === "rtl" ? "row-reverse" : "row",
+                                        },
                                         pressed && styles.pressedActionButton,
                                     ]}
                                 >
@@ -705,6 +766,7 @@ export default function Toolbar({
                                             styles.mobileUserMenuItemText,
                                             {
                                                 color: colors.text,
+                                                textAlign,
                                             },
                                         ]}
                                     >
@@ -1345,14 +1407,23 @@ const styles = StyleSheet.create({
     mobileBrandText: {
         flex: 1,
         minWidth: 0,
+    },
 
-        alignItems: "flex-end",
+    mobileBrandTitleRow: {
+        alignItems: "center",
+        gap: spacing.xs,
+    },
+
+    mobileProjectStatusDot: {
+        width: 7,
+        height: 7,
+        flexShrink: 0,
+        borderRadius: radius.pill,
     },
 
     mobileAppTitle: {
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.bold,
-        textAlign: "right",
     },
 
     mobileProjectSubtitle: {
@@ -1360,7 +1431,6 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
 
         opacity: 0.64,
     },
@@ -1379,7 +1449,11 @@ const styles = StyleSheet.create({
      */
 
     mobileUserMenuModal: {
-        flex: 1,
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        width: "100vw",
+        height: "100vh",
     },
 
     mobileUserMenuBackdrop: {
@@ -1391,8 +1465,9 @@ const styles = StyleSheet.create({
     mobileUserMenu: {
         position: "absolute",
         top: 72,
-        left: spacing.sm,
         zIndex: 1,
+
+        animation: "edms-user-menu-in 140ms ease-out",
 
         minWidth: 210,
 
@@ -1410,17 +1485,17 @@ const styles = StyleSheet.create({
     },
 
     mobileUserMenuName: {
+        width: "100%",
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.bold,
-        textAlign: "right",
     },
 
     mobileUserMenuRole: {
+        width: "100%",
         marginTop: spacing.xs,
 
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
 
         opacity: 0.64,
     },
@@ -1451,7 +1526,6 @@ const styles = StyleSheet.create({
 
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
     },
 
     mobileSearchInput: {
@@ -1466,11 +1540,16 @@ const styles = StyleSheet.create({
     mobileMenuActions: {
         width: "100%",
 
+        flexDirection: "row",
         gap: spacing.sm,
     },
 
     mobileMenuActionButton: {
-        width: "100%",
+        flex: 1,
+        minWidth: 0,
+        minHeight: 38,
+
+        paddingHorizontal: spacing.sm,
 
         borderWidth: 1,
         borderRadius: radius.md,

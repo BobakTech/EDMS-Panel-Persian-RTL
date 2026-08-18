@@ -16,6 +16,8 @@ import {
     View,
 } from "../../web/ui";
 
+import { Feather } from "../../web/icons";
+
 import { shadows, spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
@@ -581,41 +583,71 @@ export default function AppLayout() {
 
                         <View
                             style={[
-                                styles.mobileDrawer,
+                                styles.mobileDrawerShell,
                                 {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.border,
+                                    right: direction === "rtl" ? 0 : undefined,
+                                    left: direction === "rtl" ? undefined : 0,
+                                    animation:
+                                        direction === "rtl"
+                                            ? "edms-drawer-in-rtl 180ms ease-out"
+                                            : "edms-drawer-in-ltr 180ms ease-out",
                                 },
                             ]}
                         >
-                            <View style={styles.toolbarLayer}>
-                                <Toolbar
-                                    variant="mobile-menu"
-                                    activeAction={activeWorkspaceAction}
-                                    searchQuery={workspaceSearchQuery}
-                                    canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel="بستن منوی موبایل"
+                                onPress={handleCloseMobileMenu}
+                                style={[
+                                    styles.mobileDrawerCloseButton,
+                                    direction === "rtl" ? { left: -48 } : { right: -48 },
+                                    {
+                                        backgroundColor: colors.surface,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
+                            >
+                                <Feather name="x" size={20} color={colors.text} />
+                            </Pressable>
+
+                            <View
+                                style={[
+                                    styles.mobileDrawer,
+                                    {
+                                        backgroundColor: colors.surface,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
+                            >
+                                <View style={styles.toolbarLayer}>
+                                    <Toolbar
+                                        variant="mobile-menu"
+                                        activeAction={activeWorkspaceAction}
+                                        searchQuery={workspaceSearchQuery}
+                                        canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
+                                        projectInfo={projectInfo}
+                                        isProjectInfoLoading={isProjectInfoLoading}
+                                        projectInfoError={projectInfoError}
+                                        isMobileMenuOpen={isMobileMenuOpen}
+                                        onPressMobileMenu={handleToggleMobileMenu}
+                                        onChangeSearchQuery={setWorkspaceSearchQuery}
+                                        onPressCreateFolder={handlePressCreateFolder}
+                                        onDismissAction={handleDismissWorkspaceAction}
+                                        onCreateFolder={handleCreateFolder}
+                                        onCreateFile={handleCreateFile}
+                                    />
+                                </View>
+
+                                <Sidebar
+                                    variant="drawer"
+                                    showBrand={false}
+                                    activePage={isSettingsOpen ? "settings" : activeWorkspacePage}
                                     projectInfo={projectInfo}
                                     isProjectInfoLoading={isProjectInfoLoading}
                                     projectInfoError={projectInfoError}
-                                    isMobileMenuOpen={isMobileMenuOpen}
-                                    onPressMobileMenu={handleToggleMobileMenu}
-                                    onChangeSearchQuery={setWorkspaceSearchQuery}
-                                    onPressCreateFolder={handlePressCreateFolder}
-                                    onDismissAction={handleDismissWorkspaceAction}
-                                    onCreateFolder={handleCreateFolder}
-                                    onCreateFile={handleCreateFile}
+                                    onChangePage={handleChangeWorkspacePage}
                                 />
                             </View>
-
-                            <Sidebar
-                                variant="drawer"
-                                showBrand={false}
-                                activePage={isSettingsOpen ? "settings" : activeWorkspacePage}
-                                projectInfo={projectInfo}
-                                isProjectInfoLoading={isProjectInfoLoading}
-                                projectInfoError={projectInfoError}
-                                onChangePage={handleChangeWorkspacePage}
-                            />
                         </View>
                     </View>
                 </Modal>
@@ -755,8 +787,11 @@ const styles = StyleSheet.create({
     },
 
     mobileDrawerModal: {
-        flex: 1,
-
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        width: "100vw",
+        height: "100vh",
         alignItems: "flex-end",
     },
 
@@ -766,21 +801,41 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0, 0, 0, 0.32)",
     },
 
-    mobileDrawer: {
-        zIndex: 1,
-
+    mobileDrawerShell: {
+        position: "absolute",
+        top: 0,
+        bottom: 0,
         width: "88%",
         maxWidth: 360,
-        minWidth: 0,
+        zIndex: 1,
+    },
+
+    mobileDrawer: {
+        width: "100%",
         height: "100%",
 
         padding: spacing.lg,
 
         borderLeftWidth: 1,
-
         gap: spacing.lg,
 
         ...shadows.lg,
+    },
+
+    mobileDrawerCloseButton: {
+        position: "absolute",
+        top: spacing.sm,
+        zIndex: 2,
+
+        width: 40,
+        height: 40,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: 8,
+        cursor: "pointer",
     },
 
     phoneMain: {
