@@ -24,6 +24,7 @@ import panelFavicon from "../../assets/panel-favicon.png";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 import type { TranslationKey } from "../../locales";
 import { getProjectConnectionPresentation } from "../project";
 
@@ -122,15 +123,13 @@ export default function Sidebar({
 }: SidebarProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
-    const isRtl = direction === "rtl";
-    const textAlign = isRtl ? "right" : "left";
+    const { isRtl, textAlign } = getDirectionalLayout(direction);
 
     const { height } = useWindowDimensions();
 
     const isShortSidebar = height < 720;
     const [isPinnedOpen, setIsPinnedOpen] = useState(false);
     const isExpanded = variant === "drawer" || isPinnedOpen;
-    const desktopSidebarWidth = isExpanded ? spacing.sidebarWidth : 72;
     const sidebarToggleIcon = isRtl
         ? isPinnedOpen ? "panel-right-close" : "panel-right-open"
         : isPinnedOpen ? "panel-left-close" : "panel-left-open";

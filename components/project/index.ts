@@ -8,6 +8,7 @@
 
 export { checkProjectServiceConnection } from "./project.service";
 export { getProjectConnectionPresentation } from "./project.connection";
+export { createDefaultWorkspaceFilters } from "./project.filters";
 
 export type {
     ProjectFilterOption,

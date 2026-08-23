@@ -11,6 +11,24 @@ import type { Language, LayoutDirection, TranslationKey } from "../../locales";
 
 type Translate = (key: TranslationKey) => string;
 
+export const getWorkspaceFileExtension = (fileName: string) => {
+    const extension = fileName.split(".").pop();
+    return extension && extension !== fileName ? extension.toLowerCase() : "file";
+};
+
+export const getWorkspaceFileSizeLabel = (fileSize?: number) => {
+    if (!fileSize) {
+        return "نامشخص";
+    }
+
+    const megabytes = fileSize / (1024 * 1024);
+    if (megabytes >= 1) {
+        return `${megabytes.toFixed(1)} MB`;
+    }
+
+    return `${Math.max(1, Math.round(fileSize / 1024))} KB`;
+};
+
 /**
  * ============================================================================
  * Item Helpers

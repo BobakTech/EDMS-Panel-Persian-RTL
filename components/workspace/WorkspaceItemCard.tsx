@@ -18,14 +18,14 @@ import {
 
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
-import type { TranslationKey } from "../../locales";
-
+import { getDirectionalLayout } from "../../settings/direction";
 import type {
     WorkspaceItem,
     WorkspaceViewMode,
 } from "./workspace.types";
 import {
     getWorkspaceItemDescription,
+    getWorkspaceItemLabel,
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
 
@@ -63,16 +63,6 @@ function getItemIconName(item: WorkspaceItem): FeatherIconName {
     return item.type === "folder" ? "folder" : "file-text";
 }
 
-type Translate = (key: TranslationKey) => string;
-
-function getItemTypeLabel(item: WorkspaceItem, t: Translate) {
-    if (item.type === "folder") {
-        return t("folder");
-    }
-
-    return item.extension?.toUpperCase() ?? t("file");
-}
-
 /**
  * ============================================================================
  * Component
@@ -90,7 +80,7 @@ export default function WorkspaceItemCard({
 }: WorkspaceItemCardProps) {
     const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
-    const isRtl = direction === "rtl";
+    const { isRtl } = getDirectionalLayout(direction);
     const [isHovered, setIsHovered] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
 
@@ -223,7 +213,7 @@ export default function WorkspaceItemCard({
                             ]}
                             numberOfLines={1}
                         >
-                            {getItemTypeLabel(item, t)}
+                            {getWorkspaceItemLabel(item, t)}
                         </Text>
                     </View>
                 </View>

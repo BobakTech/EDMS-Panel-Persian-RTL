@@ -30,6 +30,16 @@ export type {
 } from "./workspace.types";
 
 export { getWorkspaceItems } from "./workspace.service";
+export {
+    getWorkspaceFileExtension,
+    getWorkspaceFileSizeLabel,
+} from "./workspace.helpers";
+export {
+    insertWorkspaceFiles,
+    insertWorkspaceFolder,
+    removeWorkspaceItem,
+    updateWorkspaceItem,
+} from "./workspace.operations";
 
 export { default as WorkspaceItemDetailsPanel } from "./WorkspaceItemDetailsPanel";
 

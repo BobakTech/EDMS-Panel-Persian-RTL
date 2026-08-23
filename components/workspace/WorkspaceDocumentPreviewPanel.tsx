@@ -9,7 +9,6 @@
 
 import { Feather } from "../../web/icons";
 import {
-    Image,
     Pressable,
     StyleSheet,
     Text,
@@ -18,7 +17,14 @@ import {
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
-import PdfPreviewRenderer from "../preview/PdfPreviewRenderer.web";
+import { getDirectionalLayout } from "../../settings/direction";
+import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
+import {
+    getPreviewRendererKind,
+    getWorkspaceFileTypeLabel,
+    hasRenderableWorkspacePreview,
+    type PreviewRendererKind,
+} from "../preview/preview.helpers";
 import {
     getWorkspaceItemStatusLabel,
     getWorkspaceItemUpdatedAtLabel,
@@ -34,13 +40,6 @@ import type { WorkspaceItem } from "./workspace.types";
  */
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
-
-type PreviewRendererKind =
-    | "pdf"
-    | "image"
-    | "office"
-    | "text"
-    | "generic";
 
 interface PreviewRendererInfo {
     kind: PreviewRendererKind;
@@ -65,81 +64,7 @@ interface WorkspaceDocumentPreviewPanelProps {
     onOpenFullPreview?: (item: WorkspaceItem) => void;
 }
 
-/**
- * ============================================================================
- * File Helpers
- * ============================================================================
- */
-
-function getNormalizedExtension(item: WorkspaceItem) {
-    return item.extension?.replace(".", "").toLowerCase() ?? "";
-}
-
-function getNormalizedMimeType(item: WorkspaceItem) {
-    return item.mimeType?.toLowerCase() ?? "";
-}
-
 type Translate = (key: TranslationKey) => string;
-
-function getFileTypeLabel(item: WorkspaceItem, t: Translate) {
-    const extension = getNormalizedExtension(item);
-
-    return extension ? extension.toUpperCase() : t("file");
-}
-
-/**
- * ============================================================================
- * Preview Type Detection
- * ----------------------------------------------------------------------------
- * Determines the preview presentation type from file extension and MIME type.
- * ============================================================================
- */
-
-function getPreviewRendererKind(item: WorkspaceItem): PreviewRendererKind {
-    const extension = getNormalizedExtension(item);
-    const mimeType = getNormalizedMimeType(item);
-
-    if (extension === "pdf" || mimeType.includes("pdf")) {
-        return "pdf";
-    }
-
-    if (
-        mimeType.startsWith("image/") ||
-        ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension)
-    ) {
-        return "image";
-    }
-
-    if (
-        mimeType.startsWith("text/") ||
-        ["txt", "md", "csv", "json", "xml", "log"].includes(extension)
-    ) {
-        return "text";
-    }
-
-    if (
-        [
-            "doc",
-            "docx",
-            "xls",
-            "xlsx",
-            "ppt",
-            "pptx",
-            "odt",
-            "ods",
-            "odp",
-        ].includes(extension) ||
-        mimeType.includes("word") ||
-        mimeType.includes("excel") ||
-        mimeType.includes("powerpoint") ||
-        mimeType.includes("spreadsheet") ||
-        mimeType.includes("presentation")
-    ) {
-        return "office";
-    }
-
-    return "generic";
-}
 
 function getPreviewRendererInfo(item: WorkspaceItem, t: Translate): PreviewRendererInfo {
     const kind = getPreviewRendererKind(item);
@@ -203,12 +128,9 @@ export default function WorkspaceDocumentPreviewPanel({
 }: WorkspaceDocumentPreviewPanelProps) {
     const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
-    const textAlign = direction === "rtl" ? "right" : "left";
+    const { textAlign } = getDirectionalLayout(direction);
     const rendererInfo = getPreviewRendererInfo(item, t);
-    const shouldRenderImage =
-        rendererInfo.kind === "image" && Boolean(item.localUri);
-    const shouldRenderPdf =
-        rendererInfo.kind === "pdf" && Boolean(item.localUri);
+    const hasRenderablePreview = hasRenderableWorkspacePreview(item);
 
     return (
         <View
@@ -294,7 +216,7 @@ export default function WorkspaceDocumentPreviewPanel({
 
             <View
                 style={[
-                    shouldRenderImage || shouldRenderPdf
+                    hasRenderablePreview
                         ? styles.imagePreviewFrame
                         : styles.previewRow,
                     {
@@ -303,67 +225,59 @@ export default function WorkspaceDocumentPreviewPanel({
                     },
                 ]}
             >
-                {shouldRenderImage ? (
-                    <Image
-                        source={{ uri: item.localUri }}
-                        resizeMode="contain"
-                        style={styles.imagePreview}
-                    />
-                ) : shouldRenderPdf && item.localUri ? (
-                    <PdfPreviewRenderer
-                        uri={item.localUri}
-                        title={item.name}
-                        height={520}
-                        backgroundColor={colors.background}
-                        borderColor={colors.border}
-                    />
-                ) : (
-                    <>
-                        <View
-                            style={[
-                                styles.previewIcon,
-                                {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.border,
-                                },
-                            ]}
-                        >
-                            <Feather
-                                name={rendererInfo.icon}
-                                size={24}
-                                color={colors.primary}
-                            />
-                        </View>
-
-                        <View style={styles.previewTextArea}>
-                            <Text
-                                numberOfLines={1}
+                <WorkspacePreviewRenderer
+                    item={item}
+                    imageStyle={styles.imagePreview}
+                    pdfHeight={520}
+                    borderColor={colors.border}
+                    fallback={
+                        <>
+                            <View
                                 style={[
-                                    styles.previewTitle,
+                                    styles.previewIcon,
                                     {
-                                        color: colors.text,
-                                        textAlign,
+                                        backgroundColor: colors.surface,
+                                        borderColor: colors.border,
                                     },
                                 ]}
                             >
-                                {rendererInfo.title}
-                            </Text>
+                                <Feather
+                                    name={rendererInfo.icon}
+                                    size={24}
+                                    color={colors.primary}
+                                />
+                            </View>
 
-                            <Text
-                                numberOfLines={1}
-                                style={[
-                                    styles.previewDescription,
-                                    {
-                                        color: colors.text,
-                                        textAlign,
-                                    },
-                                ]}
-                            >
-                                {rendererInfo.description}
-                            </Text>
-                        </View>
-                    </>
-                )}
+                            <View style={styles.previewTextArea}>
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.previewTitle,
+                                        {
+                                            color: colors.text,
+                                            textAlign,
+                                        },
+                                    ]}
+                                >
+                                    {rendererInfo.title}
+                                </Text>
+
+                                <Text
+                                    numberOfLines={1}
+                                    style={[
+                                        styles.previewDescription,
+                                        {
+                                            color: colors.text,
+                                            textAlign,
+                                        },
+                                    ]}
+                                >
+                                    {rendererInfo.description}
+                                </Text>
+                            </View>
+                        </>
+                    }
+                />
             </View>
 
             <View style={styles.metaRow}>
@@ -390,7 +304,7 @@ export default function WorkspaceDocumentPreviewPanel({
                             },
                         ]}
                     >
-                        {getFileTypeLabel(item, t)}
+                        {getWorkspaceFileTypeLabel(item, t("file"))}
                     </Text>
                 </View>
 

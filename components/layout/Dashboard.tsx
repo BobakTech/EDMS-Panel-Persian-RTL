@@ -15,6 +15,7 @@ import {
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 import type { TranslationKey } from "../../locales";
 
 import type { WorkspaceItem } from "../workspace";
@@ -53,8 +54,7 @@ export default function Dashboard({
 }: DashboardProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
-    const isRtl = direction === "rtl";
-    const textAlign = isRtl ? "right" : "left";
+    const { isRtl, textAlign } = getDirectionalLayout(direction);
 
     const { width } = useWindowDimensions();
 

@@ -9,7 +9,6 @@
 
 import { Feather } from "../../web/icons";
 import {
-    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -18,9 +17,13 @@ import {
     View,
 } from "../../web/ui";
 
-import { radius, shadows, spacing, typography } from "../../theme";
+import { radius, semanticColors, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
-import PdfPreviewRenderer from "../preview/PdfPreviewRenderer.web";
+import { getDirectionalLayout } from "../../settings/direction";
+import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
+import {
+    getWorkspaceFileTypeLabel,
+} from "../preview/preview.helpers";
 import { getWorkspaceItemUpdatedAtLabel } from "../workspace/workspace.helpers";
 
 import type { WorkspaceItem } from "../workspace";
@@ -40,39 +43,6 @@ interface DocumentPreviewPageProps {
 
 /**
  * ============================================================================
- * Helpers
- * ============================================================================
- */
-
-function getNormalizedExtension(item: WorkspaceItem) {
-    return item.extension?.replace(".", "").toLowerCase() ?? "";
-}
-
-function isImageFile(item: WorkspaceItem) {
-    const extension = getNormalizedExtension(item);
-    const mimeType = item.mimeType?.toLowerCase() ?? "";
-
-    return (
-        mimeType.startsWith("image/") ||
-        ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension)
-    );
-}
-
-function isPdfFile(item: WorkspaceItem) {
-    const extension = getNormalizedExtension(item);
-    const mimeType = item.mimeType?.toLowerCase() ?? "";
-
-    return extension === "pdf" || mimeType.includes("pdf");
-}
-
-function getFileTypeLabel(item: WorkspaceItem, fallback: string) {
-    const extension = getNormalizedExtension(item);
-
-    return extension ? extension.toUpperCase() : fallback;
-}
-
-/**
- * ============================================================================
  * Component
  * ============================================================================
  */
@@ -88,20 +58,17 @@ export default function DocumentPreviewPage({
     const colors = theme.colors;
     const isPhonePreview = width < 430;
     const isCompactPreview = width < 920;
-    const isRtl = direction === "rtl";
-    const textAlign = isRtl ? "right" : "left";
+    const { isRtl, textAlign } = getDirectionalLayout(direction);
     const previewPageInset = isPhonePreview
         ? spacing.sm
         : isCompactPreview
             ? spacing.lg
             : spacing.xl;
-    const primaryForeground = "#FFFFFF";
+    const primaryForeground = semanticColors.onAccent;
     const backIcon = isRtl ? "arrow-right" : "arrow-left";
     const previousIcon = isRtl ? "chevron-right" : "chevron-left";
     const nextIcon = isRtl ? "chevron-left" : "chevron-right";
 
-    const shouldRenderImage = isImageFile(item) && Boolean(item.localUri);
-    const shouldRenderPdf = isPdfFile(item) && Boolean(item.localUri);
     const canAccessOriginal = Boolean(item.localUri);
 
     function handleOpenOriginal() {
@@ -299,59 +266,51 @@ export default function DocumentPreviewPage({
                     },
                 ]}
             >
-                {shouldRenderImage ? (
-                    <Image
-                        source={{ uri: item.localUri }}
-                        resizeMode="contain"
-                        style={[
-                            styles.imagePreview,
-                            isPhonePreview && styles.phoneImagePreview,
-                        ]}
-                    />
-                ) : shouldRenderPdf && item.localUri ? (
-                    <PdfPreviewRenderer
-                        uri={item.localUri}
-                        title={item.name}
-                        height={isPhonePreview ? 520 : 720}
-                        backgroundColor={colors.background}
-                        borderColor={colors.border}
-                    />
-                ) : (
-                    <View
-                        style={[
-                            styles.placeholder,
-                            isPhonePreview && styles.phonePlaceholder,
-                            {
-                                backgroundColor: colors.background,
-                                borderColor: colors.border,
-                            },
-                        ]}
-                    >
-                        <Feather name="file" size={42} color={colors.primary} />
-
-                        <Text
+                <WorkspacePreviewRenderer
+                    item={item}
+                    imageStyle={[
+                        styles.imagePreview,
+                        isPhonePreview && styles.phoneImagePreview,
+                    ]}
+                    pdfHeight={isPhonePreview ? 520 : 720}
+                    borderColor={colors.border}
+                    fallback={
+                        <View
                             style={[
-                                styles.placeholderTitle,
+                                styles.placeholder,
+                                isPhonePreview && styles.phonePlaceholder,
                                 {
-                                    color: colors.text,
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
                                 },
                             ]}
                         >
-                            {t("genericPreviewTitle")}
-                        </Text>
+                            <Feather name="file" size={42} color={colors.primary} />
 
-                        <Text
-                            style={[
-                                styles.placeholderDescription,
-                                {
-                                    color: colors.text,
-                                },
-                            ]}
-                        >
-                            {t("genericPreviewDescription")}
-                        </Text>
-                    </View>
-                )}
+                            <Text
+                                style={[
+                                    styles.placeholderTitle,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                {t("genericPreviewTitle")}
+                            </Text>
+
+                            <Text
+                                style={[
+                                    styles.placeholderDescription,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                {t("genericPreviewDescription")}
+                            </Text>
+                        </View>
+                    }
+                />
             </View>
 
             <View
@@ -370,7 +329,7 @@ export default function DocumentPreviewPage({
                     </Text>
 
                     <Text style={[styles.metaValue, { color: colors.text, textAlign }]}>
-                        {getFileTypeLabel(item, t("file"))}
+                        {getWorkspaceFileTypeLabel(item, t("file"))}
                     </Text>
                 </View>
 

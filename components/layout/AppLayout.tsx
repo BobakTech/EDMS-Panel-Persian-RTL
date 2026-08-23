@@ -18,8 +18,9 @@ import {
 
 import { Feather } from "../../web/icons";
 
-import { shadows, spacing } from "../../theme";
+import { semanticColors, shadows, spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 
 import Dashboard from "./Dashboard";
 import SettingsPage from "./SettingsPage";
@@ -28,11 +29,21 @@ import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
 import DocumentPreviewPage from "./DocumentPreviewPage";
 
-import { checkProjectServiceConnection, type WorkspaceFilters } from "../project";
+import {
+    checkProjectServiceConnection,
+    createDefaultWorkspaceFilters,
+    type WorkspaceFilters,
+} from "../project";
 import { projectFilterOptions } from "../project/project.mock";
 
 import {
+    getWorkspaceFileExtension,
+    getWorkspaceFileSizeLabel,
     getWorkspaceItems,
+    insertWorkspaceFiles,
+    insertWorkspaceFolder,
+    removeWorkspaceItem,
+    updateWorkspaceItem,
     type WorkspaceActionType,
     type WorkspaceItem,
     type WorkspacePageType,
@@ -52,36 +63,6 @@ type AppPageType = ContentPageType | "settings";
 
 /**
  * ============================================================================
- * Helpers
- * ============================================================================
- */
-
-function getFileExtension(fileName: string) {
-    const extension = fileName.split(".").pop();
-
-    return extension && extension !== fileName
-        ? extension.toLowerCase()
-        : "file";
-}
-
-function getFileSizeLabel(fileSize?: number) {
-    if (!fileSize) {
-        return "نامشخص";
-    }
-
-    const megaBytes = fileSize / (1024 * 1024);
-
-    if (megaBytes >= 1) {
-        return `${megaBytes.toFixed(1)} MB`;
-    }
-
-    const kiloBytes = fileSize / 1024;
-
-    return `${Math.max(1, Math.round(kiloBytes))} KB`;
-}
-
-/**
- * ============================================================================
  * Component
  * ============================================================================
  */
@@ -89,13 +70,11 @@ function getFileSizeLabel(fileSize?: number) {
 export default function AppLayout() {
     const { direction, theme } = useSettings();
     const colors = theme.colors;
+    const { isRtl } = getDirectionalLayout(direction);
 
     const { width } = useWindowDimensions();
 
-    /**
-     * Mobile shell uses CSS viewport width, not physical device pixels.
-     * Nothing Phone 1 is roughly 393 CSS px wide in portrait.
-     */
+    /** Mobile breakpoints use CSS viewport width. */
     const isMobileShell = width < 760;
     const isPhoneShell = width < 430;
 
@@ -132,10 +111,9 @@ export default function AppLayout() {
 
     const [isProjectInfoLoading, setIsProjectInfoLoading] = useState(true);
     const [projectInfoError, setProjectInfoError] = useState<string | null>(null);
-    const [workspaceFilters, setWorkspaceFilters] = useState<WorkspaceFilters>({
-        projectId: null,
-        fileType: null,
-    });
+    const [workspaceFilters, setWorkspaceFilters] = useState<WorkspaceFilters>(
+        createDefaultWorkspaceFilters
+    );
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -177,6 +155,21 @@ export default function AppLayout() {
         fileTypes: fileTypeOptions,
         filters: workspaceFilters,
         onApplyFilters: handleApplyWorkspaceFilters,
+        onResetFilters: handleResetWorkspaceFilters,
+    };
+    const toolbarProps = {
+        activeAction: activeWorkspaceAction,
+        searchQuery: workspaceSearchQuery,
+        canCreateWorkspaceItems: activeWorkspacePage === "workspace",
+        ...projectConnectionProps,
+        ...workspaceFilterProps,
+        isMobileMenuOpen,
+        onPressMobileMenu: handleToggleMobileMenu,
+        onChangeSearchQuery: setWorkspaceSearchQuery,
+        onPressCreateFolder: handlePressCreateFolder,
+        onDismissAction: handleDismissWorkspaceAction,
+        onCreateFolder: handleCreateFolder,
+        onCreateFile: handleCreateFile,
     };
 
     const previewPageItem =
@@ -301,8 +294,10 @@ export default function AppLayout() {
 
     function handleApplyWorkspaceFilters(filters: WorkspaceFilters) {
         setWorkspaceFilters(filters);
-        setCurrentFolderId(null);
-        setPreviewPageItemId(null);
+    }
+
+    function handleResetWorkspaceFilters() {
+        setWorkspaceFilters(createDefaultWorkspaceFilters());
     }
 
     function handleCreateFolder(folderName: string) {
@@ -325,20 +320,7 @@ export default function AppLayout() {
                 childrenCount: 0,
             };
 
-            const firstFileIndex = currentItems.findIndex(
-                (item) => item.type === "file"
-            );
-
-            const insertIndex =
-                firstFileIndex === -1
-                    ? currentItems.length
-                    : firstFileIndex;
-
-            return [
-                ...currentItems.slice(0, insertIndex),
-                newWorkspaceFolder,
-                ...currentItems.slice(insertIndex),
-            ];
+            return insertWorkspaceFolder(currentItems, newWorkspaceFolder);
         });
 
         setActiveWorkspaceAction(null);
@@ -364,40 +346,17 @@ export default function AppLayout() {
                     activeWorkspacePage === "workspace"
                         ? activeWorkspaceFolderId
                         : null,
-                extension: getFileExtension(trimmedFileName),
-                sizeLabel: getFileSizeLabel(file.size),
+                extension: getWorkspaceFileExtension(trimmedFileName),
+                sizeLabel: getWorkspaceFileSizeLabel(file.size),
                 sizeBytes: file.size,
                 mimeType: file.mimeType,
                 localUri: file.uri,
             };
 
-            const lastFileIndex = currentItems.findLastIndex(
-                (item) => item.type === "file"
-            );
-
-            const insertIndex =
-                lastFileIndex === -1
-                    ? currentItems.length
-                    : lastFileIndex + 1;
-
-            return [
-                ...currentItems.slice(0, insertIndex),
-                newWorkspaceFile,
-                ...currentItems.slice(insertIndex),
-            ];
+            return insertWorkspaceFiles(currentItems, [newWorkspaceFile]);
         });
 
         setActiveWorkspaceAction(null);
-    }
-
-    function handleCreateFolderFromMobileMenu(folderName: string) {
-        handleCreateFolder(folderName);
-        handleCloseMobileMenu();
-    }
-
-    function handleCreateFileFromMobileMenu(file: WorkspacePickedFile) {
-        handleCreateFile(file);
-        handleCloseMobileMenu();
     }
 
     function handleDropWorkspaceFiles(files: DroppedWorkspaceFile[]) {
@@ -417,69 +376,44 @@ export default function AppLayout() {
                 updatedAt: new Date().toISOString(),
                 status: "active",
                 parentFolderId: currentFolderId,
-                extension: getFileExtension(file.name),
-                sizeLabel: getFileSizeLabel(file.size),
+                extension: getWorkspaceFileExtension(file.name),
+                sizeLabel: getWorkspaceFileSizeLabel(file.size),
                 sizeBytes: file.size,
                 mimeType: file.mimeType,
                 localUri: file.uri,
             }));
 
-            const lastFileIndex = currentItems.findLastIndex(
-                (item) => item.type === "file"
-            );
-
-            const insertIndex =
-                lastFileIndex === -1
-                    ? currentItems.length
-                    : lastFileIndex + 1;
-
-            return [
-                ...currentItems.slice(0, insertIndex),
-                ...droppedFiles,
-                ...currentItems.slice(insertIndex),
-            ];
+            return insertWorkspaceFiles(currentItems, droppedFiles);
         });
     }
 
     function handleArchiveWorkspaceItem(itemId: string) {
         setWorkspaceItems((currentItems) =>
-            currentItems.map((item) =>
-                item.id === itemId
-                    ? {
-                        ...item,
-                        status: "archived",
-                        updatedAt: new Date().toISOString(),
-                    }
-                    : item
-            )
+            updateWorkspaceItem(currentItems, itemId, (item) => ({
+                ...item,
+                status: "archived",
+                updatedAt: new Date().toISOString(),
+            }))
         );
     }
 
     function handleMoveWorkspaceItemToTrash(itemId: string) {
         setWorkspaceItems((currentItems) =>
-            currentItems.map((item) =>
-                item.id === itemId
-                    ? {
-                        ...item,
-                        status: "trashed",
-                        updatedAt: new Date().toISOString(),
-                    }
-                    : item
-            )
+            updateWorkspaceItem(currentItems, itemId, (item) => ({
+                ...item,
+                status: "trashed",
+                updatedAt: new Date().toISOString(),
+            }))
         );
     }
 
     function handleRestoreWorkspaceItem(restoredItem: WorkspaceItem) {
         setWorkspaceItems((currentItems) =>
-            currentItems.map((item) =>
-                item.id === restoredItem.id
-                    ? {
-                        ...item,
-                        status: "active",
-                        updatedAt: new Date().toISOString(),
-                    }
-                    : item
-            )
+            updateWorkspaceItem(currentItems, restoredItem.id, (item) => ({
+                ...item,
+                status: "active",
+                updatedAt: new Date().toISOString(),
+            }))
         );
     }
 
@@ -491,21 +425,17 @@ export default function AppLayout() {
         }
 
         setWorkspaceItems((currentItems) =>
-            currentItems.map((item) =>
-                item.id === itemId
-                    ? {
-                        ...item,
-                        name: trimmedNewName,
-                        updatedAt: new Date().toISOString(),
-                    }
-                    : item
-            )
+            updateWorkspaceItem(currentItems, itemId, (item) => ({
+                ...item,
+                name: trimmedNewName,
+                updatedAt: new Date().toISOString(),
+            }))
         );
     }
 
     function handleDeleteWorkspaceItem(itemId: string) {
         setWorkspaceItems((currentItems) =>
-            currentItems.filter((item) => item.id !== itemId)
+            removeWorkspaceItem(currentItems, itemId)
         );
     }
 
@@ -514,25 +444,20 @@ export default function AppLayout() {
         destinationFolderId: string | null
     ) {
         setWorkspaceItems((currentItems) =>
-            currentItems.map((item) =>
-                item.id === itemId
-                    ? {
-                        ...item,
-                        parentFolderId: destinationFolderId,
-                        updatedAt: new Date().toISOString(),
-                    }
-                    : item
-            )
+            updateWorkspaceItem(currentItems, itemId, (item) => ({
+                ...item,
+                parentFolderId: destinationFolderId,
+                updatedAt: new Date().toISOString(),
+            }))
         );
     }
 
     function handleTogglePinnedWorkspaceItem(itemId: string) {
         setWorkspaceItems((currentItems) =>
-            currentItems.map((item) =>
-                item.id === itemId
-                    ? { ...item, isPinned: !item.isPinned }
-                    : item
-            )
+            updateWorkspaceItem(currentItems, itemId, (item) => ({
+                ...item,
+                isPinned: !item.isPinned,
+            }))
         );
     }
 
@@ -588,19 +513,8 @@ export default function AppLayout() {
                 ]}
             >
                 <Toolbar
+                    {...toolbarProps}
                     variant={isMobileShell ? "mobile-header" : "desktop"}
-                    activeAction={activeWorkspaceAction}
-                    searchQuery={workspaceSearchQuery}
-                    canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
-                    {...projectConnectionProps}
-                    {...workspaceFilterProps}
-                    isMobileMenuOpen={isMobileMenuOpen}
-                    onPressMobileMenu={handleToggleMobileMenu}
-                    onChangeSearchQuery={setWorkspaceSearchQuery}
-                    onPressCreateFolder={handlePressCreateFolder}
-                    onDismissAction={handleDismissWorkspaceAction}
-                    onCreateFolder={handleCreateFolder}
-                    onCreateFile={handleCreateFile}
                 />
 
                 <Modal
@@ -621,10 +535,10 @@ export default function AppLayout() {
                             style={[
                                 styles.mobileDrawerShell,
                                 {
-                                    right: direction === "rtl" ? 0 : undefined,
-                                    left: direction === "rtl" ? undefined : 0,
+                                    right: isRtl ? 0 : undefined,
+                                    left: isRtl ? undefined : 0,
                                     animation:
-                                        direction === "rtl"
+                                        isRtl
                                             ? "edms-drawer-in-rtl 180ms ease-out"
                                             : "edms-drawer-in-ltr 180ms ease-out",
                                 },
@@ -636,7 +550,7 @@ export default function AppLayout() {
                                 onPress={handleCloseMobileMenu}
                                 style={[
                                     styles.mobileDrawerCloseButton,
-                                    direction === "rtl" ? { left: -48 } : { right: -48 },
+                                    isRtl ? { left: -48 } : { right: -48 },
                                     {
                                         backgroundColor: colors.surface,
                                         borderColor: colors.border,
@@ -657,19 +571,8 @@ export default function AppLayout() {
                             >
                                 <View style={styles.toolbarLayer}>
                                     <Toolbar
+                                        {...toolbarProps}
                                         variant="mobile-menu"
-                                        activeAction={activeWorkspaceAction}
-                                        searchQuery={workspaceSearchQuery}
-                                        canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
-                                        {...projectConnectionProps}
-                                        {...workspaceFilterProps}
-                                        isMobileMenuOpen={isMobileMenuOpen}
-                                        onPressMobileMenu={handleToggleMobileMenu}
-                                        onChangeSearchQuery={setWorkspaceSearchQuery}
-                                        onPressCreateFolder={handlePressCreateFolder}
-                                        onDismissAction={handleDismissWorkspaceAction}
-                                        onCreateFolder={handleCreateFolder}
-                                        onCreateFile={handleCreateFile}
                                     />
                                 </View>
 
@@ -720,7 +623,6 @@ export default function AppLayout() {
                             onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
                             onDropFiles={handleDropWorkspaceFiles}
                             onOpenPreviewPage={handleOpenPreviewPage}
-                            onOpenFullPreview={handleOpenPreviewPage}
                         />
                     ) : (
                         <ScrollView
@@ -773,7 +675,7 @@ const styles = StyleSheet.create({
 
         gap: spacing.md,
 
-        // Remove overflow: hidden to allow natural expansion and browser scrolling
+        // Allow natural content expansion and browser scrolling.
         overflow: "visible",
     },
 
@@ -831,7 +733,7 @@ const styles = StyleSheet.create({
     mobileDrawerBackdrop: {
         ...StyleSheet.absoluteFill,
 
-        backgroundColor: "rgba(0, 0, 0, 0.32)",
+        backgroundColor: semanticColors.backdrop,
     },
 
     mobileDrawerShell: {

@@ -10,8 +10,9 @@ import { useEffect } from "react";
 import { Feather } from "../../web/icons";
 import { Modal, Pressable, StyleSheet, Text, View } from "../../web/ui";
 
-import { radius, shadows, spacing, typography } from "../../theme";
+import { radius, semanticColors, shadows, spacing, typography } from "../../theme";
 import { useSettings, type ThemeMode } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 
 import type { Language, TranslationKey } from "../../locales";
 
@@ -71,8 +72,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     } = useSettings();
 
     const colors = theme.colors;
-    const isRtl = direction === "rtl";
-    const textAlign = isRtl ? "right" : "left";
+    const { isRtl, textAlign } = getDirectionalLayout(direction);
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     backdrop: {
         ...StyleSheet.absoluteFill,
 
-        backgroundColor: "rgba(0, 0, 0, 0.42)",
+        backgroundColor: semanticColors.backdropStrong,
     },
 
     content: {

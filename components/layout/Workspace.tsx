@@ -15,21 +15,19 @@
  */
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Feather } from "../../web/icons";
 
 import {
-    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     useWindowDimensions,
     View,
 } from "../../web/ui";
 
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 import type { TranslationKey } from "../../locales";
 
 /**
@@ -48,14 +46,12 @@ import {
     WorkspaceItemDetailsPanel,
     WorkspaceViewControls,
 } from "../workspace";
-
-/**
- * ============================================================================
- * Workspace Empty State Import
- * ----------------------------------------------------------------------------
- * Imported directly because DroppedWorkspaceFile is exported from this file.
- * ============================================================================
- */
+import {
+    WorkspaceDeleteDialog,
+    WorkspaceMoveDialog,
+    WorkspacePermanentDeleteDialog,
+    WorkspaceRenameDialog,
+} from "../workspace/WorkspaceDialogs";
 
 import WorkspaceEmptyState, {
     type DroppedWorkspaceFile,
@@ -195,14 +191,6 @@ interface WorkspaceProps {
     onDropFiles: (files: DroppedWorkspaceFile[]) => void;
     onOpenPreviewPage: (item: WorkspaceItem) => void;
 
-    /**
-     * ============================================================================
-     * Preview Page Callback
-     * ----------------------------------------------------------------------------
-     * Opens the full document preview page.
-     * ============================================================================
-     */
-    onOpenFullPreview?: (item: WorkspaceItem) => void;
 }
 
 /**
@@ -228,14 +216,11 @@ export default function Workspace({
     onTogglePinnedItem,
     onOpenDashboard,
     onDropFiles,
-    onOpenFullPreview,
     onOpenPreviewPage,
 }: WorkspaceProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
-    const textAlign = direction === "rtl" ? "right" : "left";
-
-    const dangerColor = "#DC2626";
+    const { textAlign } = getDirectionalLayout(direction);
 
     const { width } = useWindowDimensions();
 
@@ -352,14 +337,6 @@ export default function Workspace({
             onChangeFolder(null);
         }
     }, [currentFolderId, onChangeFolder, pageType, workspaceItems]);
-
-    /**
-     * ============================================================================
-     * Open Folder Or Select Item
-     * ----------------------------------------------------------------------------
-     * Folder cards open the folder. File cards keep the existing details behavior.
-     * ============================================================================
-     */
 
     /**
      * ============================================================================
@@ -688,14 +665,6 @@ export default function Workspace({
             Number(Boolean(secondItem.isPinned)) - Number(Boolean(firstItem.isPinned))
     );
 
-    /**
-    * Selected file item shown in the document preview panel.
-    */
-    const previewItem =
-        previewItemId
-            ? visibleWorkspaceItems.find((item) => item.id === previewItemId) ?? null
-            : null;
-
     const selectedWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === selectedItemId
     );
@@ -763,6 +732,27 @@ export default function Workspace({
         );
 
         return selectedFolder?.name ?? t("selectDestination");
+    }
+
+    function handleFocusMoveDestination() {
+        setMoveSearchQuery("");
+        setIsMoveDestinationComboOpen(true);
+    }
+
+    function handleChangeMoveDestination(query: string) {
+        setMoveSearchQuery(query);
+        setSelectedDestinationFolderId(null);
+        setIsMoveDestinationComboOpen(true);
+    }
+
+    function handleToggleMoveDestination() {
+        setIsMoveDestinationComboOpen((currentValue) => !currentValue);
+    }
+
+    function handleSelectMoveDestination(destinationId: string) {
+        setSelectedDestinationFolderId(destinationId);
+        setMoveSearchQuery("");
+        setIsMoveDestinationComboOpen(false);
     }
 
     const isLoadingWorkspaceItems = false;
@@ -1077,548 +1067,55 @@ export default function Workspace({
                 </ScrollView>
             </View>
 
-            <Modal
-                transparent
+            <WorkspaceDeleteDialog
                 visible={pageType === "workspace" && pendingDeleteItemId !== null}
-                animationType="fade"
-                onRequestClose={handleCancelDeleteWorkspaceItem}
-            >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalCard,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
-                                direction,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.modalTitle,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("selectedItemActionsTitle")}
-                        </Text>
+                onMoveToTrash={handleMovePendingWorkspaceItemToTrash}
+                onArchive={handleArchivePendingWorkspaceItem}
+                onCancel={handleCancelDeleteWorkspaceItem}
+            />
 
-                        <Text
-                            style={[
-                                styles.modalDescription,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("selectedItemActionsDescription")}
-                        </Text>
-
-                        <View style={styles.modalActions}>
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("moveToTrash")}
-                                onPress={handleMovePendingWorkspaceItemToTrash}
-                                style={[
-                                    styles.modalDangerButton,
-                                    {
-                                        backgroundColor: dangerColor,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalDangerButtonText,
-                                        {
-                                            color: colors.surface,
-                                        },
-                                    ]}
-                                >
-                                    {t("moveToTrash")}
-                                </Text>
-                            </Pressable>
-
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("archiveItem")}
-                                onPress={handleArchivePendingWorkspaceItem}
-                                style={styles.modalTextButton}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalTextButtonText,
-                                        {
-                                            color: colors.primary,
-                                        },
-                                    ]}
-                                >
-                                    {t("archive")}
-                                </Text>
-                            </Pressable>
-
-                            <View style={styles.modalActionSpacer} />
-
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("cancel")}
-                                onPress={handleCancelDeleteWorkspaceItem}
-                                style={styles.modalTextButton}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalTextButtonText,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    {t("cancel")}
-                                </Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            <Modal
-                transparent
+            <WorkspaceRenameDialog
                 visible={pageType === "workspace" && pendingRenameItemId !== null}
-                animationType="fade"
-                onRequestClose={handleCancelRenameWorkspaceItem}
-            >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalCard,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
-                                direction,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.modalTitle,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("renameItem")}
-                        </Text>
+                value={renameItemName}
+                onChange={setRenameItemName}
+                onSave={handleSaveRenameWorkspaceItem}
+                onCancel={handleCancelRenameWorkspaceItem}
+            />
 
-                        <TextInput
-                            value={renameItemName}
-                            onChangeText={setRenameItemName}
-                            placeholder={t("newNamePlaceholder")}
-                            placeholderTextColor={colors.border}
-                            style={[
-                                styles.renameInput,
-                                {
-                                    color: colors.text,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.background,
-                                    textAlign,
-                                },
-                            ]}
-                        />
-
-                        <View style={styles.modalActions}>
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("saveNewName")}
-                                onPress={handleSaveRenameWorkspaceItem}
-                                style={[
-                                    styles.modalPrimaryButton,
-                                    {
-                                        backgroundColor: colors.primary,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalPrimaryButtonText,
-                                        {
-                                            color: colors.surface,
-                                        },
-                                    ]}
-                                >
-                                    {t("save")}
-                                </Text>
-                            </Pressable>
-
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("cancelRename")}
-                                onPress={handleCancelRenameWorkspaceItem}
-                                style={styles.modalTextButton}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalTextButtonText,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    {t("cancel")}
-                                </Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            <Modal
-                transparent
+            <WorkspaceMoveDialog
                 visible={pageType === "workspace" && pendingMoveItemId !== null}
-                animationType="fade"
-                onRequestClose={handleCancelMoveWorkspaceItem}
-            >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalCard,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
-                                direction,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.modalTitle,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("moveItem")}
-                        </Text>
+                value={
+                    isMoveDestinationComboOpen
+                        ? moveSearchQuery
+                        : getSelectedDestinationLabel()
+                }
+                isOpen={isMoveDestinationComboOpen}
+                destinationFolders={filteredDestinationFolders}
+                outsideFolderDestinationId={MOVE_OUTSIDE_FOLDER_DESTINATION_ID}
+                isOutsideFolderVisible={isOutsideFolderDestinationVisible}
+                canSave={canSaveMoveWorkspaceItem}
+                isDestinationDisabled={isMoveDestinationDisabled}
+                onFocus={handleFocusMoveDestination}
+                onChange={handleChangeMoveDestination}
+                onToggle={handleToggleMoveDestination}
+                onSelectOutsideFolder={() =>
+                    handleSelectMoveDestination(
+                        MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                    )
+                }
+                onSelectDestination={handleSelectMoveDestination}
+                onSave={handleSaveMoveWorkspaceItem}
+                onCancel={handleCancelMoveWorkspaceItem}
+            />
 
-                        <Text
-                            style={[
-                                styles.modalDescription,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("moveItemDescription")}
-                        </Text>
-
-                        <View style={styles.destinationCombo}>
-                            <TextInput
-                                value={
-                                    isMoveDestinationComboOpen
-                                        ? moveSearchQuery
-                                        : getSelectedDestinationLabel()
-                                }
-                                onFocus={() => {
-                                    setMoveSearchQuery("");
-                                    setIsMoveDestinationComboOpen(true);
-                                }}
-                                onChangeText={(query) => {
-                                    setMoveSearchQuery(query);
-                                    setSelectedDestinationFolderId(null);
-                                    setIsMoveDestinationComboOpen(true);
-                                }}
-                                placeholder={`${t("selectDestination")}...`}
-                                placeholderTextColor={colors.border}
-                                style={[
-                                    styles.destinationComboInput,
-                                    {
-                                        color: colors.text,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.background,
-                                        textAlign,
-                                    },
-                                ]}
-                            />
-
-                            <Pressable
-                                title={isMoveDestinationComboOpen ? t("closeDestinationList") : t("openDestinationList")}
-                                accessibilityRole="button"
-                                accessibilityLabel={isMoveDestinationComboOpen ? t("closeDestinationList") : t("openDestinationList")}
-                                accessibilityState={{ expanded: isMoveDestinationComboOpen }}
-                                onPress={() =>
-                                    setIsMoveDestinationComboOpen((currentValue) => !currentValue)
-                                }
-                                style={({ pressed }) => [
-                                    styles.destinationComboIcon,
-                                    pressed && styles.destinationComboIconPressed,
-                                ]}
-                            >
-                                <Feather
-                                    name={isMoveDestinationComboOpen ? "chevron-up" : "chevron-down"}
-                                    size={16}
-                                    color={colors.text}
-                                />
-                            </Pressable>
-
-                            {isMoveDestinationComboOpen && (
-                                <View
-                                    style={[
-                                        styles.destinationDropdown,
-                                        {
-                                            backgroundColor: colors.surface,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                >
-                                    {isOutsideFolderDestinationVisible && (
-                                        <Pressable
-                                            accessibilityRole="button"
-                                            accessibilityLabel={t("moveOutsideFolder")}
-                                            disabled={isMoveDestinationDisabled(
-                                                MOVE_OUTSIDE_FOLDER_DESTINATION_ID
-                                            )}
-                                            onPress={() => {
-                                                setSelectedDestinationFolderId(
-                                                    MOVE_OUTSIDE_FOLDER_DESTINATION_ID
-                                                );
-                                                setMoveSearchQuery("");
-                                                setIsMoveDestinationComboOpen(false);
-                                            }}
-                                            style={[
-                                                styles.destinationOption,
-                                                isMoveDestinationDisabled(
-                                                    MOVE_OUTSIDE_FOLDER_DESTINATION_ID
-                                                ) && styles.destinationOptionCurrentLocation,
-                                                {
-                                                    backgroundColor: isMoveDestinationDisabled(
-                                                        MOVE_OUTSIDE_FOLDER_DESTINATION_ID
-                                                    )
-                                                        ? colors.background
-                                                        : colors.surface,
-                                                },
-                                            ]}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.destinationOptionText,
-                                                    {
-                                                        color: colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                {t("outsideFolder")}
-                                                {isMoveDestinationDisabled(
-                                                    MOVE_OUTSIDE_FOLDER_DESTINATION_ID
-                                                )
-                                                    ? ` — ${t("currentLocation")}`
-                                                    : ""}
-                                            </Text>
-                                        </Pressable>
-                                    )}
-
-                                    {filteredDestinationFolders.map((folder) => {
-                                        const isCurrentDestination =
-                                            isMoveDestinationDisabled(folder.id);
-
-                                        return (
-                                            <Pressable
-                                                key={folder.id}
-                                                accessibilityRole="button"
-                                                accessibilityLabel={`${t("selectFolder")} ${folder.name}`}
-                                                disabled={isCurrentDestination}
-                                                onPress={() => {
-                                                    setSelectedDestinationFolderId(folder.id);
-                                                    setMoveSearchQuery("");
-                                                    setIsMoveDestinationComboOpen(false);
-                                                }}
-                                                style={[
-                                                    styles.destinationOption,
-                                                    isCurrentDestination &&
-                                                    styles.destinationOptionCurrentLocation,
-                                                    {
-                                                        backgroundColor: isCurrentDestination
-                                                            ? colors.background
-                                                            : colors.surface,
-                                                    },
-                                                ]}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.destinationOptionText,
-                                                        {
-                                                            color: colors.text,
-                                                        },
-                                                    ]}
-                                                >
-                                                    {folder.name}
-                                                    {isCurrentDestination
-                                                        ? ` — ${t("currentLocation")}`
-                                                        : ""}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })}
-
-                                    {!isOutsideFolderDestinationVisible &&
-                                        filteredDestinationFolders.length === 0 && (
-                                            <Text
-                                                style={[
-                                                    styles.destinationEmptyText,
-                                                    {
-                                                        color: colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                {t("noDestinationFound")}
-                                            </Text>
-                                        )}
-                                </View>
-                            )}
-                        </View>
-
-                        <View style={styles.modalActions}>
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("saveMove")}
-                                disabled={!canSaveMoveWorkspaceItem}
-                                onPress={handleSaveMoveWorkspaceItem}
-                                style={[
-                                    styles.modalPrimaryButton,
-                                    {
-                                        backgroundColor: canSaveMoveWorkspaceItem
-                                            ? colors.primary
-                                            : colors.border,
-                                        opacity: canSaveMoveWorkspaceItem
-                                            ? 1
-                                            : 0.76,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalPrimaryButtonText,
-                                        {
-                                            color: colors.surface,
-                                        },
-                                    ]}
-                                >
-                                    {t("moveItem")}
-                                </Text>
-                            </Pressable>
-
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("cancelMove")}
-                                onPress={handleCancelMoveWorkspaceItem}
-                                style={styles.modalTextButton}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalTextButtonText,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    {t("cancel")}
-                                </Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            <Modal
-                transparent
-                visible={pageType === "trash" && pendingPermanentDeleteItemId !== null}
-                animationType="fade"
-                onRequestClose={handleCancelPermanentDeleteWorkspaceItem}
-            >
-                <View style={styles.modalOverlay}>
-                    <View
-                        style={[
-                            styles.modalCard,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
-                                direction,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.modalTitle,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("permanentlyDeleteItem")}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.modalDescription,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {t("permanentlyDeleteDescription")}
-                        </Text>
-
-                        <View style={styles.modalActions}>
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("confirmPermanentDelete")}
-                                onPress={handleConfirmPermanentDeleteWorkspaceItem}
-                                style={[
-                                    styles.modalDangerButton,
-                                    {
-                                        backgroundColor: dangerColor,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalDangerButtonText,
-                                        {
-                                            color: colors.surface,
-                                        },
-                                    ]}
-                                >
-                                    {t("permanentlyDeleteItem")}
-                                </Text>
-                            </Pressable>
-
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("cancelPermanentDelete")}
-                                onPress={handleCancelPermanentDeleteWorkspaceItem}
-                                style={styles.modalTextButton}
-                            >
-                                <Text
-                                    style={[
-                                        styles.modalTextButtonText,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    {t("cancel")}
-                                </Text>
-                            </Pressable>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+            <WorkspacePermanentDeleteDialog
+                visible={
+                    pageType === "trash" &&
+                    pendingPermanentDeleteItemId !== null
+                }
+                onConfirm={handleConfirmPermanentDeleteWorkspaceItem}
+                onCancel={handleCancelPermanentDeleteWorkspaceItem}
+            />
 
             {undoToast && (
                 <View
@@ -1770,185 +1267,6 @@ const styles = StyleSheet.create({
         width: "100%",
         maxWidth: "100%",
         flexBasis: "100%",
-    },
-
-    modalOverlay: {
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-
-        width: "100vw",
-        height: "100vh",
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        padding: spacing.xl,
-
-        backgroundColor: "rgba(0, 0, 0, 0.28)",
-    },
-
-    modalCard: {
-        width: "100%",
-        maxWidth: 460,
-
-        padding: spacing.lg,
-
-        borderWidth: 1,
-        borderRadius: radius.xl,
-
-        ...shadows.md,
-    },
-
-    modalTitle: {
-        marginBottom: spacing.sm,
-
-        fontSize: typography.fontSize.lg,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "start",
-    },
-
-    destinationComboIcon: {
-        position: "absolute",
-        left: spacing.md,
-        top: 7,
-        zIndex: 2,
-
-        width: 26,
-        height: 26,
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        opacity: 0.72,
-    },
-
-    destinationComboIconPressed: {
-        opacity: 1,
-    },
-
-    modalDescription: {
-        marginBottom: spacing.lg,
-
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.regular,
-        textAlign: "start",
-
-        opacity: 0.72,
-    },
-
-    modalActions: {
-        flexDirection: "row",
-        alignItems: "center",
-
-        gap: spacing.sm,
-    },
-
-    modalActionSpacer: {
-        flex: 1,
-    },
-
-    modalDangerButton: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-
-        borderRadius: radius.md,
-    },
-
-    modalDangerButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    modalPrimaryButton: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-
-        borderRadius: radius.md,
-    },
-
-    modalPrimaryButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    modalTextButton: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-    },
-
-    modalTextButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    renameInput: {
-        marginBottom: spacing.lg,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "start",
-    },
-
-    destinationCombo: {
-        position: "relative",
-
-        marginBottom: spacing.lg,
-    },
-
-    destinationComboInput: {
-        minHeight: 40,
-
-        paddingRight: spacing.md,
-        paddingLeft: 40,
-        paddingVertical: spacing.sm,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "start",
-    },
-
-    destinationDropdown: {
-        marginTop: spacing.xs,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        overflow: "hidden",
-    },
-
-    destinationOption: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-    },
-
-    destinationOptionCurrentLocation: {
-        opacity: 0.78,
-    },
-
-    destinationOptionText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "start",
-    },
-
-    destinationEmptyText: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "start",
-
-        opacity: 0.72,
     },
 
     undoToast: {

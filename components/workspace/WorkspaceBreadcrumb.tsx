@@ -10,6 +10,7 @@ import { Pressable, StyleSheet, Text, View } from "../../web/ui";
 
 import { spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 
 /**
  * ============================================================================
@@ -38,7 +39,7 @@ export default function WorkspaceBreadcrumb({
 }: WorkspaceBreadcrumbProps) {
     const { direction, theme } = useSettings();
     const colors = theme.colors;
-    const textAlign = direction === "rtl" ? "right" : "left";
+    const { textAlign } = getDirectionalLayout(direction);
 
     return (
         <View style={[styles.container, { direction }]}>

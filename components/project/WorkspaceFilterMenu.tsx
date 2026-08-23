@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { Feather } from "../../web/icons";
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from "../../web/ui";
-import { radius, spacing, typography } from "../../theme";
+import { radius, semanticColors, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
+import { createDefaultWorkspaceFilters } from "./project.filters";
 import type { ProjectFilterOption, WorkspaceFilters } from "./project.types";
 
 interface WorkspaceFilterMenuProps {
@@ -10,13 +12,9 @@ interface WorkspaceFilterMenuProps {
     fileTypes: string[];
     value: WorkspaceFilters;
     onApply: (filters: WorkspaceFilters) => void;
+    onReset: () => void;
     compact?: boolean;
 }
-
-const filterMenuColors = {
-    muted: "#64748B",
-    selectedSurface: "rgba(59,130,246,0.14)",
-};
 
 const styles = StyleSheet.create({
     trigger: {
@@ -49,13 +47,13 @@ const styles = StyleSheet.create({
         borderRadius: radius.pill,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#EF4444",
+        backgroundColor: semanticColors.error,
         borderWidth: 2,
-        borderColor: "#FFFFFF",
+        borderColor: semanticColors.onAccent,
         boxShadow: "0 4px 9px rgba(15,23,42,0.24)",
     },
     activeBadgeText: {
-        color: "#FFFFFF",
+        color: semanticColors.onAccent,
         fontSize: 10,
         fontWeight: typography.fontWeight.bold,
     },
@@ -71,7 +69,7 @@ const styles = StyleSheet.create({
     backdrop: {
         position: "absolute",
         inset: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.42)",
+        backgroundColor: semanticColors.glassBackdrop,
         backdropFilter: "blur(7px)",
     },
     panel: {
@@ -197,17 +195,17 @@ const styles = StyleSheet.create({
     },
 });
 
-const emptyFilters: WorkspaceFilters = { projectId: null, fileType: null };
-
 export function WorkspaceFilterMenu({
     projects,
     fileTypes,
     value,
     onApply,
+    onReset,
     compact = false,
 }: WorkspaceFilterMenuProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
+    const { isRtl } = getDirectionalLayout(direction);
     const [isOpen, setIsOpen] = useState(false);
     const [draft, setDraft] = useState(value);
     const [projectSearch, setProjectSearch] = useState("");
@@ -235,10 +233,10 @@ export function WorkspaceFilterMenu({
     }
 
     function resetFilters() {
-        setDraft(emptyFilters);
+        setDraft(createDefaultWorkspaceFilters());
         setProjectSearch("");
         setFileTypeSearch("");
-        onApply(emptyFilters);
+        onReset();
         setIsOpen(false);
     }
 
@@ -259,12 +257,12 @@ export function WorkspaceFilterMenu({
                     { borderColor: colors.border, backgroundColor: colors.background },
                 ]}
             >
-                <Feather name="search" size={15} color={filterMenuColors.muted} />
+                <Feather name="search" size={15} color={semanticColors.muted} />
                 <TextInput
                     value={searchValue}
                     onChangeText={onChange}
                     placeholder={placeholder}
-                    placeholderTextColor={filterMenuColors.muted}
+                    placeholderTextColor={semanticColors.muted}
                     style={[styles.input, { color: colors.text }]}
                 />
             </View>
@@ -318,7 +316,7 @@ export function WorkspaceFilterMenu({
                     <View
                         style={[
                             styles.activeBadge,
-                            direction === "rtl"
+                            isRtl
                                 ? { left: -7, right: undefined }
                                 : { right: -7, left: undefined },
                         ]}
@@ -388,7 +386,7 @@ export function WorkspaceFilterMenu({
                                             styles.tableRow,
                                             {
                                                 backgroundColor: isSelected
-                                                    ? filterMenuColors.selectedSurface
+                                                    ? semanticColors.selectedSurface
                                                     : "transparent",
                                             },
                                         ]}
@@ -415,7 +413,7 @@ export function WorkspaceFilterMenu({
                                 );
                             })}
                             {visibleProjects.length === 0 && (
-                                <Text style={[styles.empty, { color: filterMenuColors.muted }]}>
+                                <Text style={[styles.empty, { color: semanticColors.muted }]}>
                                     {t("noProjectsFound")}
                                 </Text>
                             )}

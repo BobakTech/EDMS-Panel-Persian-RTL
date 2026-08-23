@@ -1,4 +1,5 @@
 import type { TranslationKey } from "../../locales";
+import { semanticColors } from "../../theme";
 
 type Translate = (key: TranslationKey) => string;
 
@@ -16,7 +17,7 @@ export function getProjectConnectionPresentation(
 ): ProjectConnectionPresentation {
     if (isLoading) {
         return {
-            color: "#F59E0B",
+            color: semanticColors.warning,
             icon: "cloud-cog",
             label: t("projectConnectionConnecting"),
             shortLabel: t("connectionConnectingShort"),
@@ -25,7 +26,7 @@ export function getProjectConnectionPresentation(
 
     if (error) {
         return {
-            color: "#EF4444",
+            color: semanticColors.error,
             icon: "cloud-off",
             label: t("projectConnectionFailed"),
             shortLabel: t("connectionUnavailableShort"),
@@ -33,7 +34,7 @@ export function getProjectConnectionPresentation(
     }
 
     return {
-        color: "#22C55E",
+        color: semanticColors.success,
         icon: "cloud",
         label: t("projectConnectionConnected"),
         shortLabel: t("connectionConnectedShort"),

@@ -2,16 +2,15 @@
  * ============================================================================
  * Workspace Item Details Panel
  * ----------------------------------------------------------------------------
- * Displays metadata, icon actions, and cursor-following tooltips for the
- * selected workspace item.
+ * Displays metadata and actions for the selected workspace item.
  * ============================================================================
  */
 
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "../../web/ui";
+import { StyleSheet, Text, View } from "../../web/ui";
 
-import { radius, shadows, spacing, typography } from "../../theme";
+import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 
 import {
     getWorkspaceItemDescription,
@@ -19,31 +18,11 @@ import {
     getWorkspaceItemStatusLabel,
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
+import WorkspaceItemDetailsActions, {
+    type WorkspaceItemDetailsAction,
+} from "./WorkspaceItemDetailsActions";
 
 import type { WorkspaceItem } from "./workspace.types";
-
-/**
- * ============================================================================
- * Types
- * ============================================================================
- */
-
-type WorkspaceItemDetailsActionTone = "primary" | "warning" | "danger";
-
-interface WorkspaceItemDetailsAction {
-    label: string;
-    icon?: string;
-    accessibilityLabel: string;
-    tone?: WorkspaceItemDetailsActionTone;
-    onPress: (itemId: string) => void;
-}
-
-interface WorkspaceTooltipState {
-    key: string;
-    label: string;
-    x: number;
-    y: number;
-}
 
 /**
  * ============================================================================
@@ -61,12 +40,6 @@ interface WorkspaceItemDetailsPanelProps {
 
 /**
  * ============================================================================
- * Helpers
- * ============================================================================
- */
-
-/**
- * ============================================================================
  * Component
  * ============================================================================
  */
@@ -80,68 +53,7 @@ export default function WorkspaceItemDetailsPanel({
 }: WorkspaceItemDetailsPanelProps) {
     const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
-    const isRtl = direction === "rtl";
-    const textAlign = isRtl ? "right" : "left";
-
-    const warningColor = "#D97706";
-    const dangerColor = "#DC2626";
-
-    const [visibleTooltip, setVisibleTooltip] =
-        useState<WorkspaceTooltipState | null>(null);
-
-    function getActionColor(action: WorkspaceItemDetailsAction) {
-        if (action.tone === "danger") {
-            return dangerColor;
-        }
-
-        if (action.tone === "warning") {
-            return warningColor;
-        }
-
-        return colors.primary;
-    }
-
-    function handleShowTooltip(key: string, label: string, event: any) {
-        const nativeEvent = event.nativeEvent ?? {};
-
-        setVisibleTooltip({
-            key,
-            label,
-            x: (nativeEvent.locationX ?? nativeEvent.offsetX ?? 0) + 14,
-            y: (nativeEvent.locationY ?? nativeEvent.offsetY ?? 0) + 14,
-        });
-    }
-
-    function renderTooltip(key: string) {
-        if (!visibleTooltip || visibleTooltip.key !== key) {
-            return null;
-        }
-
-        return (
-            <View
-                style={[
-                    styles.tooltip,
-                    {
-                        left: visibleTooltip.x,
-                        top: visibleTooltip.y,
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                    },
-                ]}
-            >
-                <Text
-                    style={[
-                        styles.tooltipText,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    {visibleTooltip.label}
-                </Text>
-            </View>
-        );
-    }
+    const { textAlign } = getDirectionalLayout(direction);
 
     return (
         <View
@@ -218,165 +130,14 @@ export default function WorkspaceItemDetailsPanel({
                 </View>
             </View>
 
-            {/* Primary Item Action */}
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={primaryAction.accessibilityLabel}
-                onHoverIn={(event) =>
-                    handleShowTooltip(
-                        "primary",
-                        primaryAction.accessibilityLabel,
-                        event
-                    )
-                }
-                onPointerMove={(event) =>
-                    handleShowTooltip(
-                        "primary",
-                        primaryAction.accessibilityLabel,
-                        event
-                    )
-                }
-                onHoverOut={() => setVisibleTooltip(null)}
-                onPress={() => primaryAction.onPress(item.id)}
-                style={[
-                    styles.actionButton,
-                    {
-                        borderColor: getActionColor(primaryAction),
-                    },
-                ]}
-            >
-                <Text
-                    style={[
-                        styles.actionButtonText,
-                        {
-                            color: getActionColor(primaryAction),
-                        },
-                    ]}
-                >
-                    {primaryAction.icon ?? primaryAction.label}
-                </Text>
-
-                {renderTooltip("primary")}
-            </Pressable>
-
-            {/* Secondary Item Action */}
-            {secondaryAction && (
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={secondaryAction.accessibilityLabel}
-                    onHoverIn={(event) =>
-                        handleShowTooltip(
-                            "secondary",
-                            secondaryAction.accessibilityLabel,
-                            event
-                        )
-                    }
-                    onPointerMove={(event) =>
-                        handleShowTooltip(
-                            "secondary",
-                            secondaryAction.accessibilityLabel,
-                            event
-                        )
-                    }
-                    onHoverOut={() => setVisibleTooltip(null)}
-                    onPress={() => secondaryAction.onPress(item.id)}
-                    style={[
-                        styles.actionButton,
-                        {
-                            borderColor: getActionColor(secondaryAction),
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.actionButtonText,
-                            {
-                                color: getActionColor(secondaryAction),
-                            },
-                        ]}
-                    >
-                        {secondaryAction.icon ?? secondaryAction.label}
-                    </Text>
-
-                    {renderTooltip("secondary")}
-                </Pressable>
-            )}
-
-            {/* Tertiary Item Action */}
-            {tertiaryAction && (
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={tertiaryAction.accessibilityLabel}
-                    onHoverIn={(event) =>
-                        handleShowTooltip(
-                            "tertiary",
-                            tertiaryAction.accessibilityLabel,
-                            event
-                        )
-                    }
-                    onPointerMove={(event) =>
-                        handleShowTooltip(
-                            "tertiary",
-                            tertiaryAction.accessibilityLabel,
-                            event
-                        )
-                    }
-                    onHoverOut={() => setVisibleTooltip(null)}
-                    onPress={() => tertiaryAction.onPress(item.id)}
-                    style={[
-                        styles.actionButton,
-                        {
-                            borderColor: getActionColor(tertiaryAction),
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.actionButtonText,
-                            {
-                                color: getActionColor(tertiaryAction),
-                            },
-                        ]}
-                    >
-                        {tertiaryAction.icon ?? tertiaryAction.label}
-                    </Text>
-
-                    {renderTooltip("tertiary")}
-                </Pressable>
-            )}
-
-            {/* Close Details Action */}
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t("closeDetails")}
-                onHoverIn={(event) =>
-                    handleShowTooltip("close", t("closeDetails"), event)
-                }
-                onPointerMove={(event) =>
-                    handleShowTooltip("close", t("closeDetails"), event)
-                }
-                onHoverOut={() => setVisibleTooltip(null)}
-                onPress={onClose}
-                style={[
-                    styles.closeButton,
-                    {
-                        borderColor: colors.border,
-                    },
-                ]}
-            >
-                <Text
-                    style={[
-                        styles.closeButtonText,
-                        {
-                            color: colors.primary,
-                        },
-                    ]}
-                >
-                    ×
-                </Text>
-
-                {renderTooltip("close")}
-            </Pressable>
+            <WorkspaceItemDetailsActions
+                itemId={item.id}
+                primaryAction={primaryAction}
+                secondaryAction={secondaryAction}
+                tertiaryAction={tertiaryAction}
+                closeLabel={t("closeDetails")}
+                onClose={onClose}
+            />
         </View>
     );
 }
@@ -446,73 +207,4 @@ const styles = StyleSheet.create({
         opacity: 0.64,
     },
 
-    actionButton: {
-        position: "relative",
-
-        minWidth: 40,
-
-        marginRight: spacing.md,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        overflow: "visible",
-    },
-
-    actionButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    closeButton: {
-        position: "relative",
-
-        minWidth: 40,
-
-        marginRight: spacing.md,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        overflow: "visible",
-    },
-
-    closeButtonText: {
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    tooltip: {
-        position: "absolute",
-
-        minWidth: 120,
-
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-
-        zIndex: 50,
-
-        pointerEvents: "none",
-
-        ...shadows.sm,
-    },
-
-    tooltipText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "center",
-    },
 });

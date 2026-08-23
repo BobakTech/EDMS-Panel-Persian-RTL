@@ -14,7 +14,7 @@ import {
     View,
 } from "../../web/ui";
 
-import { radius, spacing } from "../../theme";
+import { radius } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
 import type { WorkspaceViewMode } from "./workspace.types";

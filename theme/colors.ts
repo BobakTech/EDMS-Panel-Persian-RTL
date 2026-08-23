@@ -21,3 +21,18 @@ export const darkColors = {
     text: "#F9FAFB",
     border: "#374151",
 };
+
+export const semanticColors = {
+    success: "#22C55E",
+    warning: "#F59E0B",
+    warningStrong: "#D97706",
+    error: "#EF4444",
+    destructive: "#DC2626",
+    muted: "#64748B",
+    selectedSurface: "rgba(59,130,246,0.14)",
+    onAccent: "#FFFFFF",
+    backdrop: "rgba(0, 0, 0, 0.32)",
+    backdropStrong: "rgba(0, 0, 0, 0.42)",
+    backdropSubtle: "rgba(0, 0, 0, 0.28)",
+    glassBackdrop: "rgba(15, 23, 42, 0.42)",
+};

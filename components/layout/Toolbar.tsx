@@ -23,8 +23,9 @@ import {
 
 import panelLogo from "../../assets/panel-logo.png";
 
-import { radius, shadows, spacing, typography } from "../../theme";
+import { radius, semanticColors, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 
 import { WorkspaceFilterMenu } from "../project/WorkspaceFilterMenu";
 import { getProjectConnectionPresentation } from "../project";
@@ -34,6 +35,10 @@ import type {
     WorkspaceActionType,
     WorkspacePickedFile,
 } from "../workspace";
+import {
+    ToolbarSearchField,
+    ToolbarUploadProgress,
+} from "./ToolbarSubcomponents";
 
 /**
  * ============================================================================
@@ -65,6 +70,7 @@ interface ToolbarProps {
     fileTypes: string[];
     filters: WorkspaceFilters;
     onApplyFilters: (filters: WorkspaceFilters) => void;
+    onResetFilters: () => void;
     isMobileMenuOpen?: boolean;
     onPressMobileMenu?: () => void;
 }
@@ -103,12 +109,13 @@ export default function Toolbar({
     fileTypes,
     filters,
     onApplyFilters,
+    onResetFilters,
     isMobileMenuOpen = false,
     onPressMobileMenu,
 }: ToolbarProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
-    const textAlign = direction === "rtl" ? "right" : "left";
+    const { isRtl, textAlign } = getDirectionalLayout(direction);
     const { width } = useWindowDimensions();
     const desktopContentInset = width < 920 ? spacing.lg : spacing.xl;
 
@@ -128,42 +135,11 @@ export default function Toolbar({
     const isMobileMenu = variant === "mobile-menu";
 
     const searchField = (isMobile = false) => (
-        <View
-            style={[
-                styles.searchField,
-                isMobile && styles.mobileSearchInput,
-                {
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    direction,
-                },
-            ]}
-        >
-            {searchQuery.length > 0 && (
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("clearSearch")}
-                    onPress={() => onChangeSearchQuery("")}
-                    style={({ pressed }) => [
-                        styles.clearSearchButton,
-                        pressed && styles.pressedActionButton,
-                    ]}
-                >
-                    <Feather name="x" size={17} color={colors.text} />
-                </Pressable>
-            )}
-
-            <TextInput
-                value={searchQuery}
-                onChangeText={onChangeSearchQuery}
-                placeholder={t("search")}
-                placeholderTextColor={colors.border}
-                style={[
-                    styles.searchInput,
-                    { color: colors.text, textAlign },
-                ]}
-            />
-        </View>
+        <ToolbarSearchField
+            value={searchQuery}
+            mobile={isMobile}
+            onChange={onChangeSearchQuery}
+        />
     );
     const filterMenu = (compact = false) => (
         <WorkspaceFilterMenu
@@ -172,6 +148,7 @@ export default function Toolbar({
             fileTypes={fileTypes}
             value={filters}
             onApply={onApplyFilters}
+            onReset={onResetFilters}
         />
     );
 
@@ -391,127 +368,22 @@ export default function Toolbar({
      */
 
     const desktopUploadPanel = (
-        <Modal
-            transparent
-            visible={!isMobileHeader && isPreparingUpload}
-            animationType="fade"
-        >
-            <View style={styles.uploadOverlay}>
-                <View
-                    style={[
-                        styles.uploadPanel,
-                        {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.primary,
-                            direction,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.uploadPanelTitle,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                        numberOfLines={1}
-                    >
-                        {uploadFileName ?? t("selectedFile")}
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.uploadPanelDescription,
-                            {
-                                color: colors.border,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {uploadStatusText}
-                    </Text>
-
-                    <View
-                        style={[
-                            styles.uploadProgressTrack,
-                            {
-                                backgroundColor: colors.background,
-                            },
-                        ]}
-                    >
-                        <View
-                            style={[
-                                styles.uploadProgressFill,
-                                {
-                                    width: `${uploadProgress ?? 0}%`,
-                                    backgroundColor: colors.primary,
-                                },
-                            ]}
-                        />
-                    </View>
-                </View>
-            </View>
-        </Modal>
+        <ToolbarUploadProgress
+            variant="desktop"
+            progress={isMobileHeader ? null : uploadProgress}
+            fileName={uploadFileName}
+            statusText={uploadStatusText}
+        />
     );
 
-    const mobileUploadPanel = isPreparingUpload ? (
-        <View
-            style={[
-                styles.mobileUploadPanel,
-                {
-                    backgroundColor: colors.background,
-                    borderColor: colors.primary,
-                    direction,
-                },
-            ]}
-        >
-            <Text
-                style={[
-                    styles.uploadPanelTitle,
-                    {
-                        color: colors.text,
-                        textAlign,
-                    },
-                ]}
-                numberOfLines={1}
-            >
-                {uploadFileName ?? t("selectedFile")}
-            </Text>
-
-            <Text
-                style={[
-                    styles.uploadPanelDescription,
-                    {
-                        color: colors.border,
-                        textAlign,
-                    },
-                ]}
-            >
-                {uploadStatusText}
-            </Text>
-
-            <View
-                style={[
-                    styles.uploadProgressTrack,
-                    {
-                        backgroundColor: colors.surface,
-                    },
-                ]}
-            >
-                <View
-                    style={[
-                        styles.uploadProgressFill,
-                        {
-                            width: `${uploadProgress ?? 0}%`,
-                            backgroundColor: colors.primary,
-                        },
-                    ]}
-                />
-            </View>
-        </View>
-    ) : null;
-
+    const mobileUploadPanel = (
+        <ToolbarUploadProgress
+            variant="mobile"
+            progress={uploadProgress}
+            fileName={uploadFileName}
+            statusText={uploadStatusText}
+        />
+    );
     if (isMobileHeader) {
         return (
             <View
@@ -564,7 +436,7 @@ export default function Toolbar({
                         style={[
                             styles.mobileBrandText,
                             {
-                                alignItems: direction === "rtl" ? "flex-end" : "flex-start",
+                                alignItems: isRtl ? "flex-end" : "flex-start",
                             },
                         ]}
                     >
@@ -572,7 +444,7 @@ export default function Toolbar({
                             style={[
                                 styles.mobileBrandTitleRow,
                                 {
-                                    flexDirection: direction === "rtl" ? "row-reverse" : "row",
+                                    flexDirection: isRtl ? "row-reverse" : "row",
                                 },
                             ]}
                         >
@@ -664,7 +536,7 @@ export default function Toolbar({
                             <View
                                 style={[
                                     styles.mobileUserMenu,
-                                    direction === "rtl"
+                                    isRtl
                                         ? { left: spacing.sm }
                                         : { right: spacing.sm },
                                     {
@@ -678,7 +550,7 @@ export default function Toolbar({
                                     style={[
                                         styles.mobileUserMenuHeader,
                                         {
-                                            alignItems: direction === "rtl" ? "flex-end" : "flex-start",
+                                            alignItems: isRtl ? "flex-end" : "flex-start",
                                         },
                                     ]}
                                 >
@@ -723,7 +595,7 @@ export default function Toolbar({
                                     style={({ pressed }) => [
                                         styles.mobileUserMenuItem,
                                         {
-                                            flexDirection: direction === "rtl" ? "row-reverse" : "row",
+                                            flexDirection: isRtl ? "row-reverse" : "row",
                                         },
                                         pressed && styles.pressedActionButton,
                                     ]}
@@ -754,7 +626,7 @@ export default function Toolbar({
                                     style={({ pressed }) => [
                                         styles.mobileUserMenuItem,
                                         {
-                                            flexDirection: direction === "rtl" ? "row-reverse" : "row",
+                                            flexDirection: isRtl ? "row-reverse" : "row",
                                         },
                                         pressed && styles.pressedActionButton,
                                     ]}
@@ -1166,7 +1038,7 @@ const styles = StyleSheet.create({
 
         padding: spacing.xl,
 
-        backgroundColor: "rgba(0, 0, 0, 0.32)",
+        backgroundColor: semanticColors.backdrop,
     },
 
     actionPanel: {
@@ -1252,100 +1124,6 @@ const styles = StyleSheet.create({
     actionPanelSecondaryButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
-    },
-
-    uploadPanel: {
-        width: 360,
-        maxWidth: "86%",
-
-        padding: spacing.md,
-
-        borderWidth: 1,
-        borderRadius: radius.lg,
-
-        ...shadows.md,
-    },
-
-    uploadPanelTitle: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
-    },
-
-    /**
-     * ============================================================================
-     * Upload Overlay
-     * ----------------------------------------------------------------------------
-     * Positions desktop upload progress above the full app layout.
-     * ============================================================================
-     */
-
-    uploadOverlay: {
-        position: "fixed",
-        inset: 0,
-        zIndex: 1200,
-
-        alignItems: "center",
-        paddingTop: 92,
-        pointerEvents: "box-none",
-    },
-
-    uploadPanelDescription: {
-        marginTop: spacing.xs,
-
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "right",
-    },
-
-    uploadProgressTrack: {
-        height: 6,
-
-        marginTop: spacing.sm,
-
-        borderRadius: radius.pill,
-
-        overflow: "hidden",
-    },
-
-    uploadProgressFill: {
-        height: "100%",
-
-        borderRadius: radius.pill,
-    },
-
-    searchField: {
-        flex: 1,
-        minHeight: 40,
-
-        flexDirection: "row",
-        alignItems: "center",
-
-        borderWidth: 1,
-        borderRadius: radius.md,
-    },
-
-    searchInput: {
-        flex: 1,
-        minWidth: 0,
-
-        backgroundColor: "transparent",
-
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.regular,
-    },
-
-    clearSearchButton: {
-        width: 38,
-        alignSelf: "stretch",
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        cursor: "pointer",
     },
 
     mobileHeaderContainer: {
@@ -1534,11 +1312,6 @@ const styles = StyleSheet.create({
         fontWeight: typography.fontWeight.semibold,
     },
 
-    mobileSearchInput: {
-        width: "100%",
-        flex: 0,
-    },
-
     mobileMenuActionsArea: {
         gap: spacing.sm,
     },
@@ -1561,12 +1334,4 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
     },
 
-    mobileUploadPanel: {
-        width: "100%",
-
-        padding: spacing.md,
-
-        borderWidth: 1,
-        borderRadius: radius.lg,
-    },
 });

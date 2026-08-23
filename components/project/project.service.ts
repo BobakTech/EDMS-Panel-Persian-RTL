@@ -6,14 +6,7 @@
  * ============================================================================
  */
 
-/**
- * ============================================================================
- * Config
- * ============================================================================
- */
-
-const PROJECT_INFO_API_URL =
-    import.meta.env.VITE_PROJECT_INFO_API_URL;
+import { projectServiceConfig } from "./project.config";
 
 /**
  * ============================================================================
@@ -22,11 +15,11 @@ const PROJECT_INFO_API_URL =
  */
 
 function getProjectServiceUrl() {
-    if (!PROJECT_INFO_API_URL) {
+    if (!projectServiceConfig.infoUrl) {
         throw new Error("Project info API URL is not configured.");
     }
 
-    return new URL(PROJECT_INFO_API_URL, window.location.origin).toString();
+    return new URL(projectServiceConfig.infoUrl, window.location.origin).toString();
 }
 
 export async function checkProjectServiceConnection(): Promise<void> {

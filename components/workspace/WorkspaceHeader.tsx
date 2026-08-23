@@ -16,6 +16,7 @@ import {
 
 import { spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import { getDirectionalLayout } from "../../settings/direction";
 
 interface WorkspaceHeaderProps {
     title: string;
@@ -30,7 +31,7 @@ export default function WorkspaceHeader({
 }: WorkspaceHeaderProps) {
     const { direction, theme } = useSettings();
     const colors = theme.colors;
-    const isRtl = direction === "rtl";
+    const { isRtl } = getDirectionalLayout(direction);
 
     return (
         <View style={[styles.container, { direction }]}>

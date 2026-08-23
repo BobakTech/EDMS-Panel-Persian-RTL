@@ -5,7 +5,6 @@ interface PdfPreviewRendererProps {
     uri: string;
     title: string;
     height: number;
-    backgroundColor: string;
     borderColor: string;
 }
 
@@ -13,7 +12,6 @@ export default function PdfPreviewRenderer({
     uri,
     title,
     height,
-    backgroundColor,
     borderColor,
 }: PdfPreviewRendererProps) {
     const previewUri = `${uri}${uri.includes("#") ? "&" : "#"}view=FitH&toolbar=1&navpanes=0`;
