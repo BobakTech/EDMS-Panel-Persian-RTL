@@ -16,6 +16,7 @@ export type WorkspaceItemStatus = "active" | "archived" | "trashed";
 
 export interface WorkspaceItem {
     id: string;
+    projectId?: string;
     type: WorkspaceItemType;
     name: string;
     description: string;

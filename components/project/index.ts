@@ -6,9 +6,10 @@
  * ============================================================================
  */
 
-export { getProjectInfo } from "./project.service";
+export { checkProjectServiceConnection } from "./project.service";
+export { getProjectConnectionPresentation } from "./project.connection";
 
 export type {
-    ProjectInfo,
-    ProjectInfoApiResponse,
+    ProjectFilterOption,
+    WorkspaceFilters,
 } from "./project.types";

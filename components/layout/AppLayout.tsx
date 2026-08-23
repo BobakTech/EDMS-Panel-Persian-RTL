@@ -28,7 +28,8 @@ import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
 import DocumentPreviewPage from "./DocumentPreviewPage";
 
-import { getProjectInfo, type ProjectInfo } from "../project";
+import { checkProjectServiceConnection, type WorkspaceFilters } from "../project";
+import { projectFilterOptions } from "../project/project.mock";
 
 import {
     getWorkspaceItems,
@@ -129,9 +130,12 @@ export default function AppLayout() {
     const [activeWorkspacePage, setActiveWorkspacePage] =
         useState<ContentPageType>("dashboard");
 
-    const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
     const [isProjectInfoLoading, setIsProjectInfoLoading] = useState(true);
     const [projectInfoError, setProjectInfoError] = useState<string | null>(null);
+    const [workspaceFilters, setWorkspaceFilters] = useState<WorkspaceFilters>({
+        projectId: null,
+        fileType: null,
+    });
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -144,12 +148,43 @@ export default function AppLayout() {
         activeWorkspacePage === "archive" ||
         activeWorkspacePage === "trash";
 
+    const fileTypeOptions = Array.from(
+        new Set(
+            workspaceItems
+                .filter((item) => item.type === "file" && item.extension)
+                .map((item) => item.extension as string)
+        )
+    ).sort();
+
+    const filteredWorkspaceItems = workspaceItems.filter((item) => {
+        const matchesProject =
+            !workspaceFilters.projectId || item.projectId === workspaceFilters.projectId;
+        const matchesFileType =
+            !workspaceFilters.fileType ||
+            item.type === "folder" ||
+            item.extension?.toLowerCase() === workspaceFilters.fileType.toLowerCase();
+        return matchesProject && matchesFileType;
+    });
+    const activeProjectId =
+        workspaceFilters.projectId ??
+        workspaceItems.find((item) => item.id === currentFolderId)?.projectId;
+    const projectConnectionProps = {
+        isProjectInfoLoading,
+        projectInfoError,
+    };
+    const workspaceFilterProps = {
+        projects: projectFilterOptions,
+        fileTypes: fileTypeOptions,
+        filters: workspaceFilters,
+        onApplyFilters: handleApplyWorkspaceFilters,
+    };
+
     const previewPageItem =
         previewPageItemId
-            ? workspaceItems.find((item) => item.id === previewPageItemId) ?? null
+            ? filteredWorkspaceItems.find((item) => item.id === previewPageItemId) ?? null
             : null;
 
-    const previewPageItems = workspaceItems.filter((item) => {
+    const previewPageItems = filteredWorkspaceItems.filter((item) => {
         const matchesPage =
             (activeWorkspacePage === "workspace" && item.status === "active") ||
             (activeWorkspacePage === "archive" && item.status === "archived") ||
@@ -186,29 +221,24 @@ export default function AppLayout() {
 
     /**
      * ============================================================================
-     * Project Info Loading
+     * Web-service Connection Check
      * ----------------------------------------------------------------------------
-     * Loads project metadata from the configured backend API.
+     * Checks only whether the configured project web service responds.
      * ============================================================================
      */
 
     useEffect(() => {
         let isMounted = true;
 
-        async function loadProjectInfo() {
+        async function checkConnection() {
             try {
                 setIsProjectInfoLoading(true);
                 setProjectInfoError(null);
 
-                const loadedProjectInfo = await getProjectInfo();
-
-                if (isMounted) {
-                    setProjectInfo(loadedProjectInfo);
-                }
+                await checkProjectServiceConnection();
             } catch {
                 if (isMounted) {
-                    setProjectInfo(null);
-                    setProjectInfoError("Project info unavailable.");
+                    setProjectInfoError("Project service unavailable.");
                 }
             } finally {
                 if (isMounted) {
@@ -217,7 +247,7 @@ export default function AppLayout() {
             }
         }
 
-        loadProjectInfo();
+        checkConnection();
 
         return () => {
             isMounted = false;
@@ -269,6 +299,12 @@ export default function AppLayout() {
         setIsMobileMenuOpen(false);
     }
 
+    function handleApplyWorkspaceFilters(filters: WorkspaceFilters) {
+        setWorkspaceFilters(filters);
+        setCurrentFolderId(null);
+        setPreviewPageItemId(null);
+    }
+
     function handleCreateFolder(folderName: string) {
         const trimmedFolderName = folderName.trim();
 
@@ -279,6 +315,7 @@ export default function AppLayout() {
         setWorkspaceItems((currentItems) => {
             const newWorkspaceFolder: WorkspaceItem = {
                 id: `folder-${Date.now()}`,
+                projectId: activeProjectId,
                 type: "folder",
                 name: trimmedFolderName,
                 description: "پوشه ایجاد شده در فضای کاری",
@@ -317,6 +354,7 @@ export default function AppLayout() {
         setWorkspaceItems((currentItems) => {
             const newWorkspaceFile: WorkspaceItem = {
                 id: `file-${Date.now()}`,
+                projectId: activeProjectId,
                 type: "file",
                 name: trimmedFileName,
                 description: "فایل انتخاب شده از دستگاه",
@@ -372,6 +410,7 @@ export default function AppLayout() {
 
             const droppedFiles: WorkspaceItem[] = files.map((file, index) => ({
                 id: `file-${createdAt}-${index}`,
+                projectId: activeProjectId,
                 type: "file",
                 name: file.name,
                 description: "فایل رها شده در فضای کاری",
@@ -536,9 +575,7 @@ export default function AppLayout() {
             {!isMobileShell && (
                 <Sidebar
                     activePage={isSettingsOpen ? "settings" : activeWorkspacePage}
-                    projectInfo={projectInfo}
-                    isProjectInfoLoading={isProjectInfoLoading}
-                    projectInfoError={projectInfoError}
+                    {...projectConnectionProps}
                     onChangePage={handleChangeWorkspacePage}
                 />
             )}
@@ -555,9 +592,8 @@ export default function AppLayout() {
                     activeAction={activeWorkspaceAction}
                     searchQuery={workspaceSearchQuery}
                     canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
-                    projectInfo={projectInfo}
-                    isProjectInfoLoading={isProjectInfoLoading}
-                    projectInfoError={projectInfoError}
+                    {...projectConnectionProps}
+                    {...workspaceFilterProps}
                     isMobileMenuOpen={isMobileMenuOpen}
                     onPressMobileMenu={handleToggleMobileMenu}
                     onChangeSearchQuery={setWorkspaceSearchQuery}
@@ -625,9 +661,8 @@ export default function AppLayout() {
                                         activeAction={activeWorkspaceAction}
                                         searchQuery={workspaceSearchQuery}
                                         canCreateWorkspaceItems={activeWorkspacePage === "workspace"}
-                                        projectInfo={projectInfo}
-                                        isProjectInfoLoading={isProjectInfoLoading}
-                                        projectInfoError={projectInfoError}
+                                        {...projectConnectionProps}
+                                        {...workspaceFilterProps}
                                         isMobileMenuOpen={isMobileMenuOpen}
                                         onPressMobileMenu={handleToggleMobileMenu}
                                         onChangeSearchQuery={setWorkspaceSearchQuery}
@@ -642,9 +677,7 @@ export default function AppLayout() {
                                     variant="drawer"
                                     showBrand={false}
                                     activePage={isSettingsOpen ? "settings" : activeWorkspacePage}
-                                    projectInfo={projectInfo}
-                                    isProjectInfoLoading={isProjectInfoLoading}
-                                    projectInfoError={projectInfoError}
+                                    {...projectConnectionProps}
                                     onChangePage={handleChangeWorkspacePage}
                                 />
                             </View>
@@ -672,7 +705,7 @@ export default function AppLayout() {
                         <Workspace
                             pageType={activeWorkspacePage}
                             currentFolderId={currentFolderId}
-                            workspaceItems={workspaceItems}
+                            workspaceItems={filteredWorkspaceItems}
                             searchQuery={workspaceSearchQuery}
                             onChangeFolder={setCurrentFolderId}
                             onPressCreateFolder={handlePressCreateFolder}
@@ -696,7 +729,7 @@ export default function AppLayout() {
                             showsVerticalScrollIndicator
                             showsHorizontalScrollIndicator={false}
                         >
-                            <Dashboard workspaceItems={workspaceItems} />
+                            <Dashboard workspaceItems={filteredWorkspaceItems} />
                         </ScrollView>
                     )}
                 </View>

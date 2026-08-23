@@ -6,19 +6,14 @@
  * ============================================================================
  */
 
-export interface ProjectInfo {
+export interface ProjectFilterOption {
     id: string;
     projectName: string;
-    projectCode?: string | null;
+    projectCode: string;
+    contractNumber: string;
 }
 
-export interface ProjectInfoApiResponse {
-    success: boolean;
-    message: string;
-    data: ProjectInfo | null;
+export interface WorkspaceFilters {
+    projectId: string | null;
+    fileType: string | null;
 }
-
-export type ProjectInfoQueryParams = Record<
-    string,
-    string | number | boolean | null | undefined
->;

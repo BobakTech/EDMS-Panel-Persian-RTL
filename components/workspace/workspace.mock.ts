@@ -17,6 +17,7 @@ import type { WorkspaceItem } from "./workspace.types";
 export const workspaceItemsMock: WorkspaceItem[] = [
     {
         id: "folder-001",
+        projectId: "project-001",
         ltrDescription: "Main folder for project documents",
         type: "folder",
         name: "اسناد پروژه",
@@ -28,6 +29,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "folder-002",
+        projectId: "project-002",
         ltrDescription: "Approved and signed contracts",
         type: "folder",
         name: "قراردادها",
@@ -39,6 +41,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "folder-003",
+        projectId: "project-003",
         ltrDescription: "Project financial reports and records",
         type: "folder",
         name: "گزارش‌های مالی",
@@ -50,6 +53,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-001",
+        projectId: "project-002",
         ltrDescription: "Approved main contract file",
         type: "file",
         name: "قرارداد اصلی",
@@ -63,6 +67,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-002",
+        projectId: "project-001",
         ltrDescription: "Final document handover minutes",
         type: "file",
         name: "صورتجلسه تحویل",
@@ -76,6 +81,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-003",
+        projectId: "project-001",
         ltrDescription: "Project execution schedule",
         type: "file",
         name: "برنامه زمان‌بندی",
@@ -89,6 +95,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-004",
+        projectId: "project-003",
         ltrDescription: "July payment and financial status report",
         type: "file",
         name: "گزارش پرداخت تیر",
@@ -102,6 +109,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-005",
+        projectId: "project-002",
         ltrDescription: "Technical appendix for the main contract",
         type: "file",
         name: "پیوست فنی قرارداد",
@@ -115,6 +123,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-006",
+        projectId: "project-001",
         ltrDescription: "Initial proposed project budget",
         type: "file",
         name: "بودجه پیشنهادی",
@@ -128,6 +137,7 @@ export const workspaceItemsMock: WorkspaceItem[] = [
     },
     {
         id: "file-007",
+        projectId: "project-002",
         ltrDescription: "Superseded contract version",
         type: "file",
         name: "نسخه قدیمی قرارداد",

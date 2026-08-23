@@ -25,13 +25,7 @@ import panelFavicon from "../../assets/panel-favicon.png";
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import type { TranslationKey } from "../../locales";
-
-import type { ProjectInfo } from "../project";
-
-/**
- * Import the new compact project-info panel.
- */
-import { ProjectInfoPanel } from "../project/ProjectInfoPanel";
+import { getProjectConnectionPresentation } from "../project";
 
 import type { WorkspacePageType } from "../workspace";
 
@@ -63,7 +57,6 @@ interface NavigationItemConfig {
 
 interface SidebarProps {
     activePage: AppPageType;
-    projectInfo: ProjectInfo | null;
     isProjectInfoLoading: boolean;
 
     /**
@@ -121,7 +114,6 @@ const navigationItems: NavigationItemConfig[] = [
 
 export default function Sidebar({
     activePage,
-    projectInfo,
     isProjectInfoLoading,
     projectInfoError = null,
     onChangePage,
@@ -142,34 +134,35 @@ export default function Sidebar({
     const sidebarToggleIcon = isRtl
         ? isPinnedOpen ? "panel-right-close" : "panel-right-open"
         : isPinnedOpen ? "panel-left-close" : "panel-left-open";
-    const connectionLabel = isProjectInfoLoading
-        ? t("projectConnectionConnecting")
-        : projectInfoError
-            ? t("projectConnectionFailed")
-            : t("projectConnectionConnected");
-    const connectionTooltip = isProjectInfoLoading
-        ? t("connectionConnectingShort")
-        : projectInfoError
-            ? t("connectionUnavailableShort")
-            : t("connectionConnectedShort");
-    const connectionColor = isProjectInfoLoading
-        ? "#F59E0B"
-        : projectInfoError
-            ? "#EF4444"
-            : "#22C55E";
-    const connectionIcon = isProjectInfoLoading
-        ? "cloud-cog"
-        : projectInfoError
-            ? "cloud-off"
-            : "cloud";
+    const connection = getProjectConnectionPresentation(
+        t,
+        isProjectInfoLoading,
+        projectInfoError,
+    );
 
-    const projectSubtitle = isProjectInfoLoading
-        ? t("loadingProjectInfo")
-        : projectInfo
-            ? `${projectInfo.projectName}${projectInfo.projectCode ? ` · ${projectInfo.projectCode}` : ""}`
-            : projectInfoError
-                ? t("projectInfoUnavailable")
-                : t("appName");
+    const connectionStatus = (showLabel: boolean) => (
+        <View
+            accessibilityRole="status"
+            accessibilityLabel={connection.label}
+            title={connection.shortLabel}
+            style={
+                showLabel
+                    ? styles.expandedConnectionStatus
+                    : styles.collapsedConnectionStatus
+            }
+        >
+            <Feather
+                name={connection.icon}
+                size={showLabel ? 18 : 20}
+                color={connection.color}
+            />
+            {showLabel && (
+                <Text style={[styles.connectionText, { color: connection.color }]}>
+                    {connection.label}
+                </Text>
+            )}
+        </View>
+    );
 
     return (
         <View
@@ -276,28 +269,12 @@ export default function Sidebar({
                         />
 
                         {!isExpanded && (
-                            <View
-                                accessibilityRole="status"
-                                accessibilityLabel={connectionLabel}
-                                title={connectionTooltip}
-                                style={styles.collapsedConnectionStatus}
-                            >
-                                <Feather
-                                    name={connectionIcon}
-                                    size={20}
-                                    color={connectionColor}
-                                />
-                            </View>
+                            connectionStatus(false)
                         )}
 
-                        {/**
-                    * Show project name/code as a compact sidebar list.
-                    */}
-                        {isExpanded && <ProjectInfoPanel
-                            projectInfo={projectInfo}
-                            isLoading={isProjectInfoLoading}
-                            error={projectInfoError}
-                        />}
+                        {isExpanded && (
+                            connectionStatus(true)
+                        )}
                     </View>
                 )}
 
@@ -311,11 +288,7 @@ export default function Sidebar({
                 )}
 
                 {variant === "drawer" && !showBrand && (
-                    <ProjectInfoPanel
-                        projectInfo={projectInfo}
-                        isLoading={isProjectInfoLoading}
-                        error={projectInfoError}
-                    />
+                    connectionStatus(true)
                 )}
 
                 <View style={styles.navigation}>
@@ -684,6 +657,18 @@ const styles = StyleSheet.create({
 
         alignItems: "center",
         justifyContent: "center",
+    },
+    expandedConnectionStatus: {
+        minHeight: 42,
+        paddingHorizontal: spacing.sm,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+    },
+    connectionText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
     },
 
     sectionSeparator: {

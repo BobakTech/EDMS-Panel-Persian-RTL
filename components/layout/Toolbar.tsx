@@ -26,7 +26,9 @@ import panelLogo from "../../assets/panel-logo.png";
 import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 
-import type { ProjectInfo } from "../project";
+import { WorkspaceFilterMenu } from "../project/WorkspaceFilterMenu";
+import { getProjectConnectionPresentation } from "../project";
+import type { ProjectFilterOption, WorkspaceFilters } from "../project";
 
 import type {
     WorkspaceActionType,
@@ -57,9 +59,12 @@ interface ToolbarProps {
     onCreateFile: (file: WorkspacePickedFile) => void;
     canCreateWorkspaceItems: boolean;
     variant?: ToolbarVariant;
-    projectInfo?: ProjectInfo | null;
     isProjectInfoLoading?: boolean;
     projectInfoError?: string | null;
+    projects: ProjectFilterOption[];
+    fileTypes: string[];
+    filters: WorkspaceFilters;
+    onApplyFilters: (filters: WorkspaceFilters) => void;
     isMobileMenuOpen?: boolean;
     onPressMobileMenu?: () => void;
 }
@@ -92,9 +97,12 @@ export default function Toolbar({
     onCreateFile,
     canCreateWorkspaceItems,
     variant = "desktop",
-    projectInfo,
     isProjectInfoLoading = false,
     projectInfoError = null,
+    projects,
+    fileTypes,
+    filters,
+    onApplyFilters,
     isMobileMenuOpen = false,
     onPressMobileMenu,
 }: ToolbarProps) {
@@ -157,25 +165,21 @@ export default function Toolbar({
             />
         </View>
     );
+    const filterMenu = (compact = false) => (
+        <WorkspaceFilterMenu
+            compact={compact}
+            projects={projects}
+            fileTypes={fileTypes}
+            value={filters}
+            onApply={onApplyFilters}
+        />
+    );
 
-    const projectSubtitle = isProjectInfoLoading
-        ? t("loadingProjectInfo")
-        : projectInfo
-            ? `${projectInfo.projectName}${projectInfo.projectCode ? ` · ${projectInfo.projectCode}` : ""}`
-            : projectInfoError
-                ? t("projectInfoUnavailable")
-                : t("appName");
-
-    const projectStatusLabel = isProjectInfoLoading
-        ? t("projectConnectionConnecting")
-        : projectInfoError
-            ? t("projectConnectionFailed")
-            : t("projectConnectionConnected");
-    const projectStatusColor = isProjectInfoLoading
-        ? "#F59E0B"
-        : projectInfoError
-            ? "#94A3B8"
-            : "#22C55E";
+    const connection = getProjectConnectionPresentation(
+        t,
+        isProjectInfoLoading,
+        projectInfoError,
+    );
 
     /**
      * ============================================================================
@@ -586,12 +590,12 @@ export default function Toolbar({
                             </Text>
 
                             <View
-                                title={projectStatusLabel}
-                                accessibilityLabel={projectStatusLabel}
+                                title={connection.label}
+                                accessibilityLabel={connection.label}
                                 style={[
                                     styles.mobileProjectStatusDot,
                                     {
-                                        backgroundColor: projectStatusColor,
+                                        backgroundColor: connection.color,
                                     },
                                 ]}
                             />
@@ -607,7 +611,7 @@ export default function Toolbar({
                             ]}
                             numberOfLines={1}
                         >
-                            {projectSubtitle}
+                            {connection.label}
                         </Text>
                     </View>
                 </View>
@@ -793,6 +797,7 @@ export default function Toolbar({
                     },
                 ]}
             >
+                {filterMenu(true)}
                 {searchField(true)}
 
                 {canCreateWorkspaceItems && (
@@ -1018,6 +1023,7 @@ export default function Toolbar({
                 </View>
             )}
 
+            {filterMenu()}
             {searchField()}
         </View>
     );
