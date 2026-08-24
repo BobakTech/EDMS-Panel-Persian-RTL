@@ -3,20 +3,35 @@
  * Workspace Service
  * ----------------------------------------------------------------------------
  * Provides the workspace data access boundary.
- * Currently backed by mock data until API integration is available.
+ * Uses API when configured, otherwise falls back to mock data.
  * ============================================================================
  */
 
+import { workspaceServiceConfig } from "../../config/workspace.config";
 import { workspaceItemsMock } from "./workspace.mock";
 
 import type { WorkspaceItem } from "./workspace.types";
 
-/**
- * ============================================================================
- * Workspace Items
- * ============================================================================
- */
+async function getWorkspaceItemsFromApi(): Promise<WorkspaceItem[]> {
+    if (!workspaceServiceConfig.itemsUrl) {
+        return workspaceItemsMock;
+    }
 
-export function getWorkspaceItems(): WorkspaceItem[] {
-    return workspaceItemsMock;
+    const response = await fetch(workspaceServiceConfig.itemsUrl, {
+        headers: {
+            Accept: "application/json",
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            `Workspace request failed with status ${response.status}.`,
+        );
+    }
+
+    return response.json();
+}
+
+export async function getWorkspaceItems(): Promise<WorkspaceItem[]> {
+    return getWorkspaceItemsFromApi();
 }

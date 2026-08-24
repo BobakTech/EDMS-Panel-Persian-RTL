@@ -78,9 +78,7 @@ export default function AppLayout() {
     const isMobileShell = width < 760;
     const isPhoneShell = width < 430;
 
-    const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>(() =>
-        getWorkspaceItems()
-    );
+    const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>([]);
 
     const [activeWorkspaceAction, setActiveWorkspaceAction] =
         useState<WorkspaceActionType | null>(null);
@@ -245,6 +243,12 @@ export default function AppLayout() {
         return () => {
             isMounted = false;
         };
+    }, []);
+
+    useEffect(() => {
+        getWorkspaceItems()
+            .then(setWorkspaceItems)
+            .catch(() => setWorkspaceItems([]));
     }, []);
 
     /**
