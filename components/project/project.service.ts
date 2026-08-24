@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { projectServiceConfig } from "./project.config";
+import { projectServiceConfig } from "../../config/project.config";
 
 /**
  * ============================================================================
