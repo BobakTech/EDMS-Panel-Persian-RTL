@@ -6,9 +6,9 @@
  * ============================================================================
  */
 
-export { checkProjectServiceConnection } from "./project.service";
 export { getProjectConnectionPresentation } from "./project.connection";
 export { createDefaultWorkspaceFilters } from "./project.filters";
+export { getProjects } from "./project.service";
 
 export type {
     ProjectFilterOption,

@@ -17,3 +17,10 @@ export interface WorkspaceFilters {
     projectId: string | null;
     fileType: string | null;
 }
+
+export interface ProjectApiItem {
+    project_id: string;
+    project_name: string;
+    project_short_name: string | null;
+    project_contract_no: string | null;
+}

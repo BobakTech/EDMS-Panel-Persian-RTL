@@ -30,7 +30,7 @@ import Workspace from "./Workspace";
 import DocumentPreviewPage from "./DocumentPreviewPage";
 
 import {
-    checkProjectServiceConnection,
+    getProjects,
     createDefaultWorkspaceFilters,
     type WorkspaceFilters,
 } from "../project";
@@ -40,6 +40,7 @@ import {
     getWorkspaceFileExtension,
     getWorkspaceFileSizeLabel,
     getWorkspaceItems,
+    getWorkspaceCategoryDefinitions,
     insertWorkspaceFiles,
     insertWorkspaceFolder,
     removeWorkspaceItem,
@@ -48,9 +49,15 @@ import {
     type WorkspaceItem,
     type WorkspacePageType,
     type WorkspacePickedFile,
+    type WorkspaceCategoryDefinition,
 } from "../workspace";
 
 import type { DroppedWorkspaceFile } from "../workspace/WorkspaceEmptyState";
+
+import {
+    filterWorkspaceByCategory,
+    getWorkspaceCategories,
+} from "../workspace/workspace.categories";
 
 /**
  * ============================================================================
@@ -80,10 +87,23 @@ export default function AppLayout() {
 
     const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>([]);
 
+    const [
+        workspaceCategoryDefinitions,
+        setWorkspaceCategoryDefinitions,
+    ] = useState<WorkspaceCategoryDefinition[]>([]);
+
+    const [workspaceTotal, setWorkspaceTotal] = useState(0);
+    const [workspaceOffset, setWorkspaceOffset] = useState(0);
+    const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
+
+    const workspacePageSize = 100;
+
     const [activeWorkspaceAction, setActiveWorkspaceAction] =
         useState<WorkspaceActionType | null>(null);
 
     const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState("");
+
+    const [activeWorkspaceCategory, setActiveWorkspaceCategory] = useState("all");
 
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
@@ -155,6 +175,10 @@ export default function AppLayout() {
         onApplyFilters: handleApplyWorkspaceFilters,
         onResetFilters: handleResetWorkspaceFilters,
     };
+    const workspaceCategories = getWorkspaceCategories(
+        workspaceItems,
+        workspaceCategoryDefinitions,
+    );
     const toolbarProps = {
         activeAction: activeWorkspaceAction,
         searchQuery: workspaceSearchQuery,
@@ -210,6 +234,35 @@ export default function AppLayout() {
             ? previewPageItems[previewPageItemIndex + 1]
             : null;
 
+    const loadMoreWorkspaceItems = async () => {
+        if (isWorkspaceLoading || workspaceItems.length >= workspaceTotal) {
+            return;
+        }
+
+        setIsWorkspaceLoading(true);
+
+        try {
+            const result = await getWorkspaceItems({
+                from: workspaceOffset,
+                cnt: workspacePageSize,
+                search: workspaceSearchQuery.trim() || undefined,
+            });
+
+            setWorkspaceItems((current) => [
+                ...current,
+                ...result.items,
+            ]);
+
+            setWorkspaceOffset((current) =>
+                current + result.items.length
+            );
+
+            setWorkspaceTotal(result.total);
+        } finally {
+            setIsWorkspaceLoading(false);
+        }
+    };
+
     /**
      * ============================================================================
      * Web-service Connection Check
@@ -226,7 +279,7 @@ export default function AppLayout() {
                 setIsProjectInfoLoading(true);
                 setProjectInfoError(null);
 
-                await checkProjectServiceConnection();
+                await getProjects();
             } catch {
                 if (isMounted) {
                     setProjectInfoError("Project service unavailable.");
@@ -246,9 +299,42 @@ export default function AppLayout() {
     }, []);
 
     useEffect(() => {
-        getWorkspaceItems()
-            .then(setWorkspaceItems)
-            .catch(() => setWorkspaceItems([]));
+        let isCurrentRequest = true;
+
+        const timer = setTimeout(() => {
+            setIsWorkspaceLoading(true);
+
+            getWorkspaceItems({
+                from: 0,
+                cnt: workspacePageSize,
+                search: workspaceSearchQuery.trim() || undefined,
+            })
+                .then((result) => {
+                    if (!isCurrentRequest) {
+                        return;
+                    }
+
+                    setWorkspaceItems(result.items);
+                    setWorkspaceTotal(result.total);
+                    setWorkspaceOffset(result.items.length);
+                })
+                .finally(() => {
+                    if (isCurrentRequest) {
+                        setIsWorkspaceLoading(false);
+                    }
+                });
+        }, 300);
+
+        return () => {
+            isCurrentRequest = false;
+            clearTimeout(timer);
+        };
+    }, [workspaceSearchQuery]);
+
+    useEffect(() => {
+        getWorkspaceCategoryDefinitions()
+            .then(setWorkspaceCategoryDefinitions)
+            .catch(() => setWorkspaceCategoryDefinitions([]));
     }, []);
 
     /**
@@ -613,6 +699,9 @@ export default function AppLayout() {
                             pageType={activeWorkspacePage}
                             currentFolderId={currentFolderId}
                             workspaceItems={filteredWorkspaceItems}
+                            workspaceCategories={workspaceCategories}
+                            activeWorkspaceCategory={activeWorkspaceCategory}
+                            setActiveWorkspaceCategory={setActiveWorkspaceCategory}
                             searchQuery={workspaceSearchQuery}
                             onChangeFolder={setCurrentFolderId}
                             onPressCreateFolder={handlePressCreateFolder}

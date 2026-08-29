@@ -27,13 +27,19 @@ export type {
     WorkspacePageType,
     WorkspaceActionType,
     WorkspacePickedFile,
+    WorkspaceCategoryDefinition,
 } from "./workspace.types";
 
-export { getWorkspaceItems } from "./workspace.service";
+export {
+    getWorkspaceItems,
+    getWorkspaceCategoryDefinitions,
+} from "./workspace.service";
+
 export {
     getWorkspaceFileExtension,
     getWorkspaceFileSizeLabel,
 } from "./workspace.helpers";
+
 export {
     insertWorkspaceFiles,
     insertWorkspaceFolder,
@@ -52,3 +58,8 @@ export { default as WorkspaceItemDetailsPanel } from "./WorkspaceItemDetailsPane
  */
 
 export { default as WorkspaceDocumentPreviewPanel } from "./WorkspaceDocumentPreviewPanel";
+
+export {
+    getWorkspaceCategories,
+    filterWorkspaceByCategory,
+} from "./workspace.categories";

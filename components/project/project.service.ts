@@ -2,39 +2,50 @@
  * ============================================================================
  * Project Service
  * ----------------------------------------------------------------------------
- * Checks whether the configured project web service is reachable.
+ * Provides project data access through the shared API transport layer.
+ *
+ * Keeps API communication separate from UI/filter components.
  * ============================================================================
  */
+
+import { postApi } from "../../config/api.service";
 
 import { projectServiceConfig } from "../../config/project.config";
 
+import type {
+    ProjectApiItem,
+    ProjectFilterOption,
+} from "./project.types";
+
 /**
  * ============================================================================
- * URL Builder
+ * Project Mapping
+ * ----------------------------------------------------------------------------
+ * Converts API project records into EDMS project filter models.
  * ============================================================================
  */
 
-function getProjectServiceUrl() {
-    if (!projectServiceConfig.infoUrl) {
-        throw new Error("Project info API URL is not configured.");
-    }
-
-    return new URL(projectServiceConfig.infoUrl, window.location.origin).toString();
+function mapProject(item: ProjectApiItem): ProjectFilterOption {
+    return {
+        id: item.project_id,
+        projectName: item.project_name,
+        projectCode: item.project_short_name ?? "",
+        contractNumber: item.project_contract_no ?? "",
+    };
 }
 
-export async function checkProjectServiceConnection(): Promise<void> {
-    const formData = new FormData();
-    formData.append("tok", "hcc");
+/**
+ * ============================================================================
+ * Projects
+ * ----------------------------------------------------------------------------
+ * Loads available projects from API.
+ * ============================================================================
+ */
 
-    const response = await fetch(getProjectServiceUrl(), {
-        method: "POST",
-        body: formData,
-        headers: {
-            Accept: "application/json",
-        },
-    });
+export async function getProjects(): Promise<ProjectFilterOption[]> {
+    const projects = await postApi<ProjectApiItem[]>(
+        projectServiceConfig.infoPath,
+    );
 
-    if (!response.ok) {
-        throw new Error(`Project info request failed with status ${response.status}.`);
-    }
+    return projects.map(mapProject);
 }

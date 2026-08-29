@@ -57,6 +57,8 @@ import WorkspaceEmptyState, {
     type DroppedWorkspaceFile,
 } from "../workspace/WorkspaceEmptyState";
 
+import type { WorkspaceCategory } from "../workspace/workspace.types";
+
 /**
  * ============================================================================
  * Workspace Type Imports
@@ -190,7 +192,9 @@ interface WorkspaceProps {
     onOpenDashboard: () => void;
     onDropFiles: (files: DroppedWorkspaceFile[]) => void;
     onOpenPreviewPage: (item: WorkspaceItem) => void;
-
+    workspaceCategories: WorkspaceCategory[];
+    activeWorkspaceCategory: string;
+    setActiveWorkspaceCategory: (categoryId: string) => void;
 }
 
 /**
@@ -217,6 +221,9 @@ export default function Workspace({
     onOpenDashboard,
     onDropFiles,
     onOpenPreviewPage,
+    workspaceCategories,
+    activeWorkspaceCategory,
+    setActiveWorkspaceCategory,
 }: WorkspaceProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
@@ -923,6 +930,26 @@ export default function Workspace({
                             : pageContent.subtitle
                     }
                 >
+                    <div className="flex flex-wrap gap-2">
+                        {workspaceCategories.map((category) => (
+                            <button
+                                key={category.id}
+                                type="button"
+                                onClick={() => setActiveWorkspaceCategory(category.id)}
+                                className={
+                                    activeWorkspaceCategory === category.id
+                                        ? "active-category-tab"
+                                        : "category-tab"
+                                }
+                            >
+                                {category.nameFa}
+                                <span>
+                                    ({category.filesCount + category.foldersCount})
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
                     <WorkspaceViewControls
                         viewMode={viewMode}
                         onChangeViewMode={setViewMode}

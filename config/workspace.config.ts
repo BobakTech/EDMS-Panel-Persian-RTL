@@ -1,3 +1,8 @@
+/**
+ * Workspace service endpoint configuration.
+ */
+
 export const workspaceServiceConfig = {
-    itemsUrl: import.meta.env.VITE_WORKSPACE_ITEMS_API_URL,
+    itemsPath: "/file/getAll",
+    categoriesPath: "/file/getCtg",
 };
