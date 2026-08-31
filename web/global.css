@@ -8,6 +8,30 @@ button, input { font: inherit; }
 button { appearance: none; color: inherit; }
 input::placeholder { color: var(--placeholder-color, #8b95a1); }
 iframe { border: 0; }
+
+.workspace-category-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.55) rgba(15, 23, 42, 0.35);
+}
+
+.workspace-category-scrollbar::-webkit-scrollbar {
+    height: 6px;
+}
+
+.workspace-category-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.35);
+    border-radius: 999px;
+}
+
+.workspace-category-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.55);
+    border-radius: 999px;
+}
+
+.workspace-category-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.8);
+}
+
 @keyframes edms-spin { to { transform: rotate(360deg); } }
 @keyframes edms-drawer-in-rtl {
     from { opacity: 0; transform: translateX(24px); }
@@ -22,4 +46,22 @@ iframe { border: 0; }
 @keyframes edms-user-menu-in {
     from { opacity: 0; transform: translateY(-6px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes edms-workspace-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .workspace-motion-panel {
+        animation: none !important;
+    }
 }

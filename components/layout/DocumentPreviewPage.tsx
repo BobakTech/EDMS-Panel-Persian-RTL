@@ -17,14 +17,21 @@ import {
     View,
 } from "../../web/ui";
 
-import { radius, semanticColors, shadows, spacing, typography } from "../../theme";
+import {
+    radius,
+    semanticColors,
+    shadows,
+    spacing,
+    typography,
+} from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
 import {
-    getWorkspaceFileTypeLabel,
-} from "../preview/preview.helpers";
-import { getWorkspaceItemUpdatedAtLabel } from "../workspace/workspace.helpers";
+    getWorkspaceFileExtension,
+    getWorkspaceItemStatusLabel,
+    getWorkspaceItemUpdatedAtLabel,
+} from "../workspace/workspace.helpers";
 
 import type { WorkspaceItem } from "../workspace";
 
@@ -56,20 +63,43 @@ export default function DocumentPreviewPage({
     const { direction, language, t, theme } = useSettings();
     const { width } = useWindowDimensions();
     const colors = theme.colors;
+
     const isPhonePreview = width < 430;
     const isCompactPreview = width < 920;
     const { isRtl, textAlign } = getDirectionalLayout(direction);
+
     const previewPageInset = isPhonePreview
         ? spacing.sm
         : isCompactPreview
             ? spacing.lg
             : spacing.xl;
+
     const primaryForeground = semanticColors.onAccent;
+
     const backIcon = isRtl ? "arrow-right" : "arrow-left";
     const previousIcon = isRtl ? "chevron-right" : "chevron-left";
     const nextIcon = isRtl ? "chevron-left" : "chevron-right";
 
     const canAccessOriginal = Boolean(item.localUri);
+
+    const fileTypeLabel =
+        item.type === "file"
+            ? (
+                item.extension ??
+                getWorkspaceFileExtension(item.name)
+            ).toUpperCase()
+            : t("folder");
+
+    const rawFileSizeLabel =
+        getWorkspaceItemUpdatedAtLabel(item, t, language);
+
+    const fileSizeLabel =
+        item.type === "file" &&
+            /^\d+(?:[.,]\d+)?$/.test(rawFileSizeLabel.trim())
+            ? `${rawFileSizeLabel} MB`
+            : rawFileSizeLabel;
+
+    const fileStatusLabel = getWorkspaceItemStatusLabel(item, direction, t);
 
     function handleOpenOriginal() {
         if (!item.localUri) {
@@ -80,6 +110,7 @@ export default function DocumentPreviewPage({
         openLink.href = item.localUri;
         openLink.target = "_blank";
         openLink.rel = "noopener noreferrer";
+
         document.body.appendChild(openLink);
         openLink.click();
         openLink.remove();
@@ -94,6 +125,7 @@ export default function DocumentPreviewPage({
         downloadLink.href = item.localUri;
         downloadLink.download = item.name;
         downloadLink.rel = "noopener";
+
         document.body.appendChild(downloadLink);
         downloadLink.click();
         downloadLink.remove();
@@ -104,7 +136,9 @@ export default function DocumentPreviewPage({
             style={styles.container}
             contentContainerStyle={[
                 styles.content,
-                { paddingHorizontal: previewPageInset },
+                {
+                    paddingHorizontal: previewPageInset,
+                },
             ]}
             showsVerticalScrollIndicator
             showsHorizontalScrollIndicator={false}
@@ -112,147 +146,241 @@ export default function DocumentPreviewPage({
         >
             <View
                 style={[
-                    styles.header,
-                    isPhonePreview && styles.phoneHeader,
+                    styles.topPanel,
+                    isPhonePreview && styles.phoneTopPanel,
                     {
                         backgroundColor: colors.surface,
                         borderColor: colors.border,
                     },
                 ]}
             >
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("backToWorkspace")}
-                    onPress={onBack}
-                    style={({ pressed }) => [
-                        styles.backButton,
-                        isPhonePreview && styles.phoneBackButton,
-                        {
-                            backgroundColor: colors.primary,
-                            borderColor: colors.primary,
-                        },
-                        pressed && styles.pressedBackButton,
+                <View
+                    style={[
+                        styles.topMainRow,
+                        isPhonePreview && styles.phoneTopMainRow,
                     ]}
                 >
-                    <Feather name={backIcon} size={16} color={primaryForeground} />
-
-                    <Text
-                        style={[
-                            styles.backButtonText,
+                    <Pressable
+                        title={t("backToWorkspace")}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("backToWorkspace")}
+                        onPress={onBack}
+                        style={({ pressed }) => [
+                            styles.compactButton,
                             {
-                                color: primaryForeground,
+                                backgroundColor: colors.primary,
+                                borderColor: colors.primary,
                             },
+                            pressed && styles.pressedButton,
                         ]}
                     >
-                        {t("back")}
-                    </Text>
-                </Pressable>
+                        <Feather
+                            name={backIcon}
+                            size={15}
+                            color={primaryForeground}
+                        />
 
-                <View style={styles.headerText}>
+                        <Text
+                            style={[
+                                styles.compactButtonText,
+                                {
+                                    color: primaryForeground,
+                                },
+                            ]}
+                        >
+                            {t("back")}
+                        </Text>
+                    </Pressable>
+
+                    <View style={styles.headerText}>
+                        <Text
+                            style={[
+                                styles.eyebrow,
+                                {
+                                    color: colors.primary,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {t("fullPreview")}
+                        </Text>
+
+                        <Text
+                            dir="auto"
+                            numberOfLines={1}
+                            style={[
+                                styles.title,
+                                {
+                                    color: colors.text,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {item.name}
+                        </Text>
+                    </View>
+
+                    <View style={styles.compactActions}>
+                        <Pressable
+                            title={t("openOriginal")}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("openOriginal")}
+                            disabled={!canAccessOriginal}
+                            onPress={handleOpenOriginal}
+                            style={({ pressed }) => [
+                                styles.iconActionButton,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                                !canAccessOriginal && styles.disabledAction,
+                                pressed &&
+                                canAccessOriginal &&
+                                styles.pressedButton,
+                            ]}
+                        >
+                            <Feather
+                                name="external-link"
+                                size={15}
+                                color={colors.text}
+                            />
+                        </Pressable>
+
+                        <Pressable
+                            title={t("downloadOriginal")}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("downloadOriginal")}
+                            disabled={!canAccessOriginal}
+                            onPress={handleDownloadOriginal}
+                            style={({ pressed }) => [
+                                styles.iconActionButton,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                                !canAccessOriginal && styles.disabledAction,
+                                pressed &&
+                                canAccessOriginal &&
+                                styles.pressedButton,
+                            ]}
+                        >
+                            <Feather
+                                name="download"
+                                size={15}
+                                color={colors.text}
+                            />
+                        </Pressable>
+
+                        <Pressable
+                            title={t("previousFile")}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("previousFile")}
+                            disabled={!onPrevious}
+                            onPress={onPrevious}
+                            style={({ pressed }) => [
+                                styles.iconActionButton,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                                !onPrevious && styles.disabledAction,
+                                pressed &&
+                                Boolean(onPrevious) &&
+                                styles.pressedButton,
+                            ]}
+                        >
+                            <Feather
+                                name={previousIcon}
+                                size={16}
+                                color={colors.text}
+                            />
+                        </Pressable>
+
+                        <Pressable
+                            title={t("nextFile")}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("nextFile")}
+                            disabled={!onNext}
+                            onPress={onNext}
+                            style={({ pressed }) => [
+                                styles.iconActionButton,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                                !onNext && styles.disabledAction,
+                                pressed &&
+                                Boolean(onNext) &&
+                                styles.pressedButton,
+                            ]}
+                        >
+                            <Feather
+                                name={nextIcon}
+                                size={16}
+                                color={colors.text}
+                            />
+                        </Pressable>
+                    </View>
+                </View>
+
+                <View style={styles.compactMetaRow}>
                     <Text
                         style={[
-                            styles.eyebrow,
-                            {
-                                color: colors.primary,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {t("fullPreview")}
-                    </Text>
-
-                    <Text
-                        dir="auto"
-                        numberOfLines={2}
-                        style={[
-                            styles.title,
+                            styles.compactMetaText,
                             {
                                 color: colors.text,
                                 textAlign,
                             },
                         ]}
                     >
-                        {item.name}
+                        {fileTypeLabel}
                     </Text>
-                </View>
-            </View>
 
-            <View
-                style={[
-                    styles.actionsPanel,
-                    isPhonePreview && styles.phoneActionsPanel,
-                    {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                    },
-                ]}
-            >
-                <View style={styles.actionGroup}>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("openOriginal")}
-                        disabled={!canAccessOriginal}
-                        onPress={handleOpenOriginal}
-                        style={({ pressed }) => [
-                            styles.actionButton,
-                            { backgroundColor: colors.primary, borderColor: colors.primary },
-                            !canAccessOriginal && styles.disabledAction,
-                            pressed && canAccessOriginal && styles.pressedBackButton,
+                    <Text
+                        style={[
+                            styles.compactMetaSeparator,
+                            {
+                                color: colors.text,
+                            },
                         ]}
                     >
-                        <Feather name="external-link" size={16} color={primaryForeground} />
-                        <Text style={[styles.actionButtonText, { color: primaryForeground }]}>{t("openOriginal")}</Text>
-                    </Pressable>
+                        •
+                    </Text>
 
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("downloadOriginal")}
-                        disabled={!canAccessOriginal}
-                        onPress={handleDownloadOriginal}
-                        style={({ pressed }) => [
-                            styles.actionButton,
-                            { backgroundColor: colors.background, borderColor: colors.border },
-                            !canAccessOriginal && styles.disabledAction,
-                            pressed && canAccessOriginal && styles.pressedBackButton,
+                    <Text
+                        style={[
+                            styles.compactMetaText,
+                            {
+                                color: colors.text,
+                                textAlign,
+                            },
                         ]}
                     >
-                        <Feather name="download" size={16} color={colors.text} />
-                        <Text style={[styles.actionButtonText, { color: colors.text }]}>{t("downloadOriginal")}</Text>
-                    </Pressable>
-                </View>
+                        {fileSizeLabel}
+                    </Text>
 
-                <View style={styles.actionGroup}>
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("previousFile")}
-                        disabled={!onPrevious}
-                        onPress={onPrevious}
-                        style={({ pressed }) => [
-                            styles.actionButton,
-                            { backgroundColor: colors.background, borderColor: colors.border },
-                            !onPrevious && styles.disabledAction,
-                            pressed && Boolean(onPrevious) && styles.pressedBackButton,
+                    <Text
+                        style={[
+                            styles.compactMetaSeparator,
+                            {
+                                color: colors.text,
+                            },
                         ]}
                     >
-                        <Feather name={previousIcon} size={16} color={colors.text} />
-                        <Text style={[styles.actionButtonText, { color: colors.text }]}>{t("previousFile")}</Text>
-                    </Pressable>
+                        •
+                    </Text>
 
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("nextFile")}
-                        disabled={!onNext}
-                        onPress={onNext}
-                        style={({ pressed }) => [
-                            styles.actionButton,
-                            { backgroundColor: colors.background, borderColor: colors.border },
-                            !onNext && styles.disabledAction,
-                            pressed && Boolean(onNext) && styles.pressedBackButton,
+                    <Text
+                        style={[
+                            styles.compactMetaText,
+                            {
+                                color: colors.text,
+                                textAlign,
+                            },
                         ]}
                     >
-                        <Text style={[styles.actionButtonText, { color: colors.text }]}>{t("nextFile")}</Text>
-                        <Feather name={nextIcon} size={16} color={colors.text} />
-                    </Pressable>
+                        {fileStatusLabel}
+                    </Text>
                 </View>
             </View>
 
@@ -285,7 +413,11 @@ export default function DocumentPreviewPage({
                                 },
                             ]}
                         >
-                            <Feather name="file" size={42} color={colors.primary} />
+                            <Feather
+                                name="file"
+                                size={42}
+                                color={colors.primary}
+                            />
 
                             <Text
                                 style={[
@@ -312,39 +444,6 @@ export default function DocumentPreviewPage({
                     }
                 />
             </View>
-
-            <View
-                style={[
-                    styles.metaPanel,
-                    isPhonePreview && styles.phoneMetaPanel,
-                    {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                    },
-                ]}
-            >
-                <View style={styles.metaItem}>
-                    <Text style={[styles.metaLabel, { color: colors.text, textAlign }]}>
-                        {t("fileType")}
-                    </Text>
-
-                    <Text style={[styles.metaValue, { color: colors.text, textAlign }]}>
-                        {getWorkspaceFileTypeLabel(item, t("file"))}
-                    </Text>
-                </View>
-
-                <View style={styles.metaItem}>
-                    <Text style={[styles.metaLabel, { color: colors.text, textAlign }]}>
-                        {t("fileSize")}
-                    </Text>
-
-                    <Text style={[styles.metaValue, { color: colors.text, textAlign }]}>
-                        {item.sizeBytes
-                            ? getWorkspaceItemUpdatedAtLabel(item, t, language)
-                            : t("unknownFileSize")}
-                    </Text>
-                </View>
-            </View>
         </ScrollView>
     );
 }
@@ -359,117 +458,59 @@ const styles = StyleSheet.create({
     container: {
         flexGrow: 0,
         flexShrink: 0,
+
         minWidth: 0,
         minHeight: 0,
+
         overflowY: "visible",
     },
 
     content: {
-        gap: spacing.md,
+        gap: spacing.sm,
+
         paddingBottom: spacing.xl,
     },
 
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: spacing.md,
+    topPanel: {
+        width: "100%",
 
-        padding: spacing.md,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 7,
 
         borderWidth: 1,
         borderRadius: radius.lg,
 
-        ...shadows.sm,
-    },
-
-    phoneHeader: {
-        alignItems: "stretch",
-        flexDirection: "column-reverse",
-    },
-
-    backButton: {
-        minWidth: 88,
-        height: 40,
-
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: spacing.xs,
-
-        paddingHorizontal: spacing.md,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
+        gap: 4,
 
         ...shadows.sm,
     },
 
-    phoneBackButton: {
-        alignSelf: "flex-start",
+    phoneTopPanel: {
+        padding: spacing.sm,
     },
 
-    pressedBackButton: {
-        opacity: 0.82,
-    },
-
-    actionsPanel: {
+    topMainRow: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: spacing.sm,
+
+        gap: spacing.md,
+    },
+
+    phoneTopMainRow: {
         flexWrap: "wrap",
-
-        padding: spacing.sm,
-
-        borderWidth: 1,
-        borderRadius: radius.lg,
-
-        ...shadows.sm,
-    },
-
-    phoneActionsPanel: {
-        alignItems: "stretch",
-        flexDirection: "column",
-    },
-
-    actionGroup: {
-        flexDirection: "row",
-        gap: spacing.sm,
-    },
-
-    actionButton: {
-        minWidth: 96,
-        height: 40,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: spacing.xs,
-        paddingHorizontal: spacing.md,
-        borderWidth: 1,
-        borderRadius: radius.md,
-    },
-
-    actionButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-    },
-
-    disabledAction: {
-        opacity: 0.45,
-    },
-
-    backButtonText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
     },
 
     headerText: {
         flex: 1,
-        minWidth: 0,
+
+        minWidth: 160,
+
+        paddingHorizontal: spacing.xs,
     },
 
     eyebrow: {
-        marginBottom: spacing.xs,
+        marginBottom: 1,
 
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.semibold,
@@ -477,14 +518,84 @@ const styles = StyleSheet.create({
     },
 
     title: {
-        fontSize: typography.fontSize.lg,
+        fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.bold,
         textAlign: "right",
     },
 
-    previewShell: {
-        order: 2,
+    compactActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
 
+        flexShrink: 0,
+
+        gap: spacing.xs,
+    },
+
+    compactButton: {
+        minHeight: 34,
+
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+
+        gap: spacing.xs,
+
+        paddingHorizontal: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    compactButtonText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    iconActionButton: {
+        width: 34,
+        height: 34,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    compactMetaRow: {
+        flexDirection: "row",
+        alignItems: "center",
+
+        gap: 6,
+
+        paddingHorizontal: spacing.xs,
+        paddingTop: 2,
+    },
+
+    compactMetaText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+
+        opacity: 0.78,
+    },
+
+    compactMetaSeparator: {
+        fontSize: typography.fontSize.sm,
+
+        opacity: 0.38,
+    },
+
+    disabledAction: {
+        opacity: 0.45,
+    },
+
+    pressedButton: {
+        opacity: 0.82,
+    },
+
+    previewShell: {
         minHeight: 0,
         minWidth: 0,
 
@@ -505,6 +616,7 @@ const styles = StyleSheet.create({
 
     imagePreview: {
         width: "100%",
+
         height: 500,
         maxHeight: 500,
     },
@@ -520,6 +632,7 @@ const styles = StyleSheet.create({
 
         alignItems: "center",
         justifyContent: "center",
+
         gap: spacing.sm,
 
         padding: spacing.lg,
@@ -543,41 +656,7 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
         textAlign: "center",
+
         opacity: 0.72,
-    },
-
-    metaPanel: {
-        order: 1,
-
-        flexDirection: "row",
-        gap: spacing.md,
-
-        padding: spacing.md,
-
-        borderWidth: 1,
-        borderRadius: radius.lg,
-    },
-
-    phoneMetaPanel: {
-        flexDirection: "column",
-    },
-
-    metaItem: {
-        flex: 1,
-        minWidth: 0,
-        gap: spacing.xs,
-    },
-
-    metaLabel: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
-        opacity: 0.64,
-    },
-
-    metaValue: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
     },
 });

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Feather } from "../../web/icons";
 import { Pressable, StyleSheet, Text, View } from "../../web/ui";
 import { radius, semanticColors, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -10,6 +11,7 @@ export interface WorkspaceItemDetailsAction {
     icon?: string;
     accessibilityLabel: string;
     tone?: WorkspaceItemDetailsActionTone;
+    isActive?: boolean;
     onPress: (itemId: string) => void;
 }
 
@@ -25,6 +27,7 @@ interface WorkspaceItemDetailsActionsProps {
     primaryAction: WorkspaceItemDetailsAction;
     secondaryAction?: WorkspaceItemDetailsAction;
     tertiaryAction?: WorkspaceItemDetailsAction;
+    pinAction?: WorkspaceItemDetailsAction;
     closeLabel: string;
     onClose: () => void;
 }
@@ -34,6 +37,7 @@ export default function WorkspaceItemDetailsActions({
     primaryAction,
     secondaryAction,
     tertiaryAction,
+    pinAction,
     closeLabel,
     onClose,
 }: WorkspaceItemDetailsActionsProps) {
@@ -90,6 +94,7 @@ export default function WorkspaceItemDetailsActions({
     }
 
     const actions = [
+        { key: "pin", action: pinAction },
         { key: "primary", action: primaryAction },
         { key: "secondary", action: secondaryAction },
         { key: "tertiary", action: tertiaryAction },
@@ -110,26 +115,49 @@ export default function WorkspaceItemDetailsActions({
                         accessibilityRole="button"
                         accessibilityLabel={action.accessibilityLabel}
                         onHoverIn={(event) =>
-                            handleShowTooltip(key, action.accessibilityLabel, event)
+                            handleShowTooltip(
+                                key,
+                                action.accessibilityLabel,
+                                event
+                            )
                         }
                         onPointerMove={(event) =>
-                            handleShowTooltip(key, action.accessibilityLabel, event)
+                            handleShowTooltip(
+                                key,
+                                action.accessibilityLabel,
+                                event
+                            )
                         }
                         onHoverOut={() => setVisibleTooltip(null)}
                         onPress={() => action.onPress(itemId)}
                         style={[
                             styles.button,
-                            { borderColor: actionColor },
+                            {
+                                borderColor: actionColor,
+                                backgroundColor: action.isActive
+                                    ? `color-mix(in srgb, ${actionColor} 14%, transparent)`
+                                    : "transparent",
+                            },
                         ]}
                     >
-                        <Text
-                            style={[
-                                styles.actionButtonText,
-                                { color: actionColor },
-                            ]}
-                        >
-                            {action.icon ?? action.label}
-                        </Text>
+                        {action.icon === "pin" ? (
+                            <Feather
+                                name="pin"
+                                size={16}
+                                color={actionColor}
+                            />
+                        ) : (
+                            <Text
+                                style={[
+                                    styles.actionButtonText,
+                                    {
+                                        color: actionColor,
+                                    },
+                                ]}
+                            >
+                                {action.icon ?? action.label}
+                            </Text>
+                        )}
 
                         {renderTooltip(key)}
                     </Pressable>
@@ -140,19 +168,36 @@ export default function WorkspaceItemDetailsActions({
                 accessibilityRole="button"
                 accessibilityLabel={closeLabel}
                 onHoverIn={(event) =>
-                    handleShowTooltip("close", closeLabel, event)
+                    handleShowTooltip(
+                        "close",
+                        closeLabel,
+                        event
+                    )
                 }
                 onPointerMove={(event) =>
-                    handleShowTooltip("close", closeLabel, event)
+                    handleShowTooltip(
+                        "close",
+                        closeLabel,
+                        event
+                    )
                 }
                 onHoverOut={() => setVisibleTooltip(null)}
                 onPress={onClose}
                 style={[
                     styles.button,
-                    { borderColor: colors.border },
+                    {
+                        borderColor: colors.border,
+                    },
                 ]}
             >
-                <Text style={[styles.closeButtonText, { color: colors.primary }]}>
+                <Text
+                    style={[
+                        styles.closeButtonText,
+                        {
+                            color: colors.primary,
+                        },
+                    ]}
+                >
                     ×
                 </Text>
 
@@ -175,14 +220,17 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
         overflow: "visible",
     },
+
     actionButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
+
     closeButtonText: {
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
     },
+
     tooltip: {
         position: "absolute",
         minWidth: 120,
@@ -194,6 +242,7 @@ const styles = StyleSheet.create({
         pointerEvents: "none",
         ...shadows.sm,
     },
+
     tooltipText: {
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.medium,

@@ -75,7 +75,7 @@ export default function WorkspaceHeader({
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "flex-start",
 
         width: "100%",
@@ -108,9 +108,10 @@ const styles = StyleSheet.create({
     },
 
     actions: {
-        flexShrink: 0,
+        flex: 1,
+        minWidth: 0,
 
-        alignItems: "center",
-        justifyContent: "center",
+        alignItems: "stretch",
+        justifyContent: "flex-start",
     },
 });

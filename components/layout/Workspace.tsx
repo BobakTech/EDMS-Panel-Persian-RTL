@@ -14,7 +14,14 @@
  * ============================================================================
  */
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import {
+    Fragment,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+
+import { Feather } from "../../web/icons";
 
 import {
     Pressable,
@@ -57,6 +64,7 @@ import WorkspaceEmptyState, {
     type DroppedWorkspaceFile,
 } from "../workspace/WorkspaceEmptyState";
 
+import { filterWorkspaceByCategory } from "../workspace/workspace.categories";
 import type { WorkspaceCategory } from "../workspace/workspace.types";
 
 /**
@@ -234,6 +242,13 @@ export default function Workspace({
     const isPhoneWorkspace = width < 430;
     const isCompactWorkspace = width < 920;
 
+    const workspaceGridColumnCount =
+        isPhoneWorkspace
+            ? 2
+            : isCompactWorkspace
+                ? 3
+                : 5;
+
     const workspacePadding = isPhoneWorkspace
         ? spacing.sm
         : isCompactWorkspace
@@ -263,6 +278,10 @@ export default function Workspace({
     }
 
     const [viewMode, setViewMode] = useState<WorkspaceViewMode>("grid");
+
+    const WORKSPACE_PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
+    const [itemsPerPage, setItemsPerPage] = useState(25);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
@@ -667,14 +686,89 @@ export default function Workspace({
         )
         : pageWorkspaceItems;
 
-    const visibleWorkspaceItems = [...filteredWorkspaceItems].sort(
+    const categoryFilteredWorkspaceItems = filterWorkspaceByCategory(
+        filteredWorkspaceItems,
+        activeWorkspaceCategory
+    );
+
+    const visibleWorkspaceItems = [...categoryFilteredWorkspaceItems].sort(
         (firstItem, secondItem) =>
             Number(Boolean(secondItem.isPinned)) - Number(Boolean(firstItem.isPinned))
     );
 
+    const totalWorkspaceItems = visibleWorkspaceItems.length;
+
+    const totalWorkspacePages = Math.max(
+        1,
+        Math.ceil(totalWorkspaceItems / itemsPerPage)
+    );
+
+    const safeCurrentPage = Math.min(
+        currentPage,
+        totalWorkspacePages
+    );
+
+    const paginationStartIndex =
+        (safeCurrentPage - 1) * itemsPerPage;
+
+    const paginationEndIndex = Math.min(
+        paginationStartIndex + itemsPerPage,
+        totalWorkspaceItems
+    );
+
+    const paginatedWorkspaceItems = visibleWorkspaceItems.slice(
+        paginationStartIndex,
+        paginationEndIndex
+    );
+
+    const paginationWindowSize = 5;
+
+    const paginationWindowStart = Math.max(
+        1,
+        Math.min(
+            safeCurrentPage - Math.floor(paginationWindowSize / 2),
+            totalWorkspacePages - paginationWindowSize + 1
+        )
+    );
+
+    const paginationPageNumbers = Array.from(
+        {
+            length: Math.min(
+                paginationWindowSize,
+                totalWorkspacePages
+            ),
+        },
+        (_, index) => Math.max(1, paginationWindowStart) + index
+    );
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [
+        activeWorkspaceCategory,
+        currentFolderId,
+        normalizedSearchQuery,
+        pageType,
+        itemsPerPage,
+    ]);
+
     const selectedWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === selectedItemId
     );
+
+    const detailsPinAction =
+        selectedWorkspaceItem
+            ? {
+                label: selectedWorkspaceItem.isPinned
+                    ? t("unpinItem")
+                    : t("pinItem"),
+                icon: "pin",
+                accessibilityLabel: selectedWorkspaceItem.isPinned
+                    ? t("unpinItem")
+                    : t("pinItem"),
+                isActive: Boolean(selectedWorkspaceItem.isPinned),
+                onPress: onTogglePinnedItem,
+            }
+            : undefined;
 
     const pendingDeleteWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === pendingDeleteItemId
@@ -760,6 +854,13 @@ export default function Workspace({
         setSelectedDestinationFolderId(destinationId);
         setMoveSearchQuery("");
         setIsMoveDestinationComboOpen(false);
+    }
+
+    function handleScrollWorkspaceToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
     }
 
     const isLoadingWorkspaceItems = false;
@@ -876,21 +977,25 @@ export default function Workspace({
     ];
 
     return (
-        <View style={[
-            styles.container,
-            {
-                padding: workspacePadding,
-                backgroundColor: colors.background,
-            },
-        ]}>
-            <View style={[
-                styles.content,
+        <View
+            style={[
+                styles.container,
                 {
                     padding: workspacePadding,
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
+                    backgroundColor: colors.background,
                 },
-            ]}>
+            ]}
+        >
+            <View
+                style={[
+                    styles.content,
+                    {
+                        padding: workspacePadding,
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                    },
+                ]}
+            >
                 <View style={styles.workspaceTopBar}>
                     <WorkspaceBreadcrumb items={breadcrumbItems} />
 
@@ -930,41 +1035,556 @@ export default function Workspace({
                             : pageContent.subtitle
                     }
                 >
-                    <div className="flex flex-wrap gap-2">
-                        {workspaceCategories.map((category) => (
-                            <button
-                                key={category.id}
-                                type="button"
-                                onClick={() => setActiveWorkspaceCategory(category.id)}
-                                className={
-                                    activeWorkspaceCategory === category.id
-                                        ? "active-category-tab"
-                                        : "category-tab"
-                                }
-                            >
-                                {category.nameFa}
-                                <span>
-                                    ({category.filesCount + category.foldersCount})
-                                </span>
-                            </button>
-                        ))}
+                    <div
+                        className="workspace-category-scrollbar"
+                        style={{
+                            width: "100%",
+                            minWidth: 0,
+                            overflowX: "auto",
+                            overflowY: "hidden",
+                            paddingBlock: 4,
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                flexWrap: "nowrap",
+                                alignItems: "center",
+                                gap: 8,
+                                width: "max-content",
+                                minWidth: "100%",
+                            }}
+                        >
+                            {workspaceCategories
+                                .filter((category) => {
+                                    const categoryCount =
+                                        category.filesCount + category.foldersCount;
+
+                                    return (
+                                        category.id === "all" ||
+                                        categoryCount > 0
+                                    );
+                                })
+                                .map((category) => {
+                                    const isActiveCategory =
+                                        activeWorkspaceCategory === category.id;
+
+                                    const categoryCount =
+                                        category.filesCount +
+                                        category.foldersCount;
+
+                                    return (
+                                        <button
+                                            key={category.id}
+                                            type="button"
+                                            aria-pressed={isActiveCategory}
+                                            onClick={() => {
+                                                setSelectedItemId(null);
+                                                setPreviewItemId(null);
+                                                setActiveWorkspaceCategory(
+                                                    category.id
+                                                );
+                                            }}
+                                            style={{
+                                                flexShrink: 0,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: 7,
+
+                                                minHeight: isPhoneWorkspace
+                                                    ? 32
+                                                    : 36,
+
+                                                paddingInline:
+                                                    isPhoneWorkspace
+                                                        ? 11
+                                                        : 14,
+
+                                                paddingBlock: 6,
+
+                                                border: `1px solid ${isActiveCategory
+                                                    ? colors.primary
+                                                    : colors.border
+                                                    }`,
+
+                                                borderRadius: 999,
+
+                                                backgroundColor:
+                                                    isActiveCategory
+                                                        ? colors.primary
+                                                        : colors.surface,
+
+                                                color:
+                                                    isActiveCategory
+                                                        ? colors.surface
+                                                        : colors.text,
+
+                                                fontSize:
+                                                    isPhoneWorkspace
+                                                        ? 12
+                                                        : 13,
+
+                                                fontWeight:
+                                                    isActiveCategory
+                                                        ? 700
+                                                        : 500,
+
+                                                lineHeight: 1.2,
+                                                whiteSpace: "nowrap",
+                                                cursor: "pointer",
+
+                                                transition:
+                                                    "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+                                            }}
+                                        >
+                                            <span>
+                                                {category.id === "all"
+                                                    ? direction === "rtl"
+                                                        ? category.nameFa
+                                                        : category.nameEn
+                                                    : category.nameFa}
+                                            </span>
+
+                                            <span
+                                                style={{
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+
+                                                    minWidth: 22,
+                                                    height: 20,
+                                                    paddingInline: 6,
+
+                                                    borderRadius: 999,
+
+                                                    backgroundColor:
+                                                        isActiveCategory
+                                                            ? "rgba(255,255,255,0.16)"
+                                                            : "rgba(255,255,255,0.05)",
+
+                                                    fontSize: 11,
+                                                    fontWeight: 700,
+                                                }}
+                                            >
+                                                {categoryCount}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                        </div>
                     </div>
 
-                    <WorkspaceViewControls
-                        viewMode={viewMode}
-                        onChangeViewMode={setViewMode}
-                    />
-                </WorkspaceHeader>
+                    <div
+                        style={{
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            flexWrap: isPhoneWorkspace
+                                ? "wrap"
+                                : "nowrap",
 
-                {selectedWorkspaceItem && (
-                    <WorkspaceItemDetailsPanel
-                        item={selectedWorkspaceItem}
-                        primaryAction={detailsPrimaryAction}
-                        secondaryAction={detailsSecondaryAction}
-                        tertiaryAction={detailsTertiaryAction}
-                        onClose={handleCloseWorkspaceItemDetails}
-                    />
-                )}
+                            gap: 12,
+
+                            paddingBlock: 10,
+                            paddingInline: isPhoneWorkspace ? 0 : 2,
+
+                            borderTop: `1px solid ${colors.border}`,
+                            borderBottom: `1px solid ${colors.border}`,
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                flexShrink: 0,
+                            }}
+                        >
+                            <WorkspaceViewControls
+                                viewMode={viewMode}
+                                onChangeViewMode={setViewMode}
+                            />
+                        </div>
+
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+
+                                justifyContent: isPhoneWorkspace
+                                    ? "space-between"
+                                    : "flex-end",
+
+                                flexWrap: "wrap",
+                                gap: 10,
+                                minWidth: 0,
+                                flex: 1,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    whiteSpace: "nowrap",
+
+                                    fontSize: 12,
+                                    color: colors.text,
+                                    opacity: 0.78,
+                                }}
+                            >
+                                <span>
+                                    {totalWorkspaceItems === 0
+                                        ? "0"
+                                        : `${paginationStartIndex + 1}–${paginationEndIndex}`}
+                                </span>
+
+                                <span>/</span>
+
+                                <strong
+                                    style={{
+                                        fontWeight: 700,
+                                        opacity: 1,
+                                    }}
+                                >
+                                    {totalWorkspaceItems}
+                                </strong>
+                            </div>
+
+                            <div
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 7,
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                <span
+                                    style={{
+                                        fontSize: 12,
+                                        color: colors.text,
+                                        opacity: 0.72,
+                                    }}
+                                >
+                                    {direction === "rtl"
+                                        ? "تعداد نمایش"
+                                        : "Items per page"}
+                                </span>
+
+                                <select
+                                    value={itemsPerPage}
+                                    onChange={(event) =>
+                                        setItemsPerPage(
+                                            Number(event.target.value)
+                                        )
+                                    }
+                                    aria-label={
+                                        direction === "rtl"
+                                            ? "تعداد آیتم در هر صفحه"
+                                            : "Items per page"
+                                    }
+                                    style={{
+                                        height: 34,
+                                        minWidth: 68,
+                                        paddingInline: 10,
+
+                                        border: `1px solid ${colors.border}`,
+                                        borderRadius: 8,
+
+                                        backgroundColor: colors.surface,
+                                        color: colors.text,
+
+                                        fontSize: 12,
+                                        fontWeight: 600,
+
+                                        cursor: "pointer",
+                                        direction,
+                                        outline: "none",
+                                    }}
+                                >
+                                    {WORKSPACE_PAGE_SIZE_OPTIONS.map(
+                                        (pageSize) => (
+                                            <option
+                                                key={pageSize}
+                                                value={pageSize}
+                                            >
+                                                {pageSize}
+                                            </option>
+                                        )
+                                    )}
+                                </select>
+                            </div>
+
+                            {totalWorkspacePages > 1 && (
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                        direction,
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            direction === "rtl"
+                                                ? "صفحه اول"
+                                                : "First page"
+                                        }
+                                        disabled={safeCurrentPage <= 1}
+                                        onClick={() => setCurrentPage(1)}
+                                        style={{
+                                            width: 32,
+                                            height: 32,
+
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: 8,
+
+                                            backgroundColor: colors.surface,
+                                            color: colors.text,
+
+                                            fontSize: 16,
+
+                                            cursor:
+                                                safeCurrentPage <= 1
+                                                    ? "default"
+                                                    : "pointer",
+
+                                            opacity:
+                                                safeCurrentPage <= 1
+                                                    ? 0.35
+                                                    : 0.9,
+                                        }}
+                                    >
+                                        «
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            direction === "rtl"
+                                                ? "صفحه قبل"
+                                                : "Previous page"
+                                        }
+                                        disabled={safeCurrentPage <= 1}
+                                        onClick={() =>
+                                            setCurrentPage((page) =>
+                                                Math.max(1, page - 1)
+                                            )
+                                        }
+                                        style={{
+                                            width: 32,
+                                            height: 32,
+
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: 8,
+
+                                            backgroundColor: colors.surface,
+                                            color: colors.text,
+
+                                            fontSize: 16,
+
+                                            cursor:
+                                                safeCurrentPage <= 1
+                                                    ? "default"
+                                                    : "pointer",
+
+                                            opacity:
+                                                safeCurrentPage <= 1
+                                                    ? 0.35
+                                                    : 0.9,
+                                        }}
+                                    >
+                                        ‹
+                                    </button>
+
+                                    {paginationPageNumbers.map(
+                                        (pageNumber) => {
+                                            const isActivePage =
+                                                pageNumber ===
+                                                safeCurrentPage;
+
+                                            return (
+                                                <button
+                                                    key={pageNumber}
+                                                    type="button"
+                                                    aria-current={
+                                                        isActivePage
+                                                            ? "page"
+                                                            : undefined
+                                                    }
+                                                    onClick={() =>
+                                                        setCurrentPage(
+                                                            pageNumber
+                                                        )
+                                                    }
+                                                    style={{
+                                                        minWidth: 32,
+                                                        height: 32,
+                                                        paddingInline: 8,
+
+                                                        display:
+                                                            "inline-flex",
+
+                                                        alignItems:
+                                                            "center",
+
+                                                        justifyContent:
+                                                            "center",
+
+                                                        border: `1px solid ${isActivePage
+                                                            ? colors.primary
+                                                            : colors.border
+                                                            }`,
+
+                                                        borderRadius: 8,
+
+                                                        backgroundColor:
+                                                            isActivePage
+                                                                ? colors.primary
+                                                                : colors.surface,
+
+                                                        color:
+                                                            isActivePage
+                                                                ? colors.surface
+                                                                : colors.text,
+
+                                                        fontSize: 12,
+
+                                                        fontWeight:
+                                                            isActivePage
+                                                                ? 700
+                                                                : 500,
+
+                                                        cursor: "pointer",
+
+                                                        boxShadow:
+                                                            isActivePage
+                                                                ? `0 0 0 2px ${colors.primary}22`
+                                                                : "none",
+                                                    }}
+                                                >
+                                                    {pageNumber}
+                                                </button>
+                                            );
+                                        }
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            direction === "rtl"
+                                                ? "صفحه بعد"
+                                                : "Next page"
+                                        }
+                                        disabled={
+                                            safeCurrentPage >=
+                                            totalWorkspacePages
+                                        }
+                                        onClick={() =>
+                                            setCurrentPage((page) =>
+                                                Math.min(
+                                                    totalWorkspacePages,
+                                                    page + 1
+                                                )
+                                            )
+                                        }
+                                        style={{
+                                            width: 32,
+                                            height: 32,
+
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: 8,
+
+                                            backgroundColor: colors.surface,
+                                            color: colors.text,
+
+                                            fontSize: 16,
+
+                                            cursor:
+                                                safeCurrentPage >=
+                                                    totalWorkspacePages
+                                                    ? "default"
+                                                    : "pointer",
+
+                                            opacity:
+                                                safeCurrentPage >=
+                                                    totalWorkspacePages
+                                                    ? 0.35
+                                                    : 0.9,
+                                        }}
+                                    >
+                                        ›
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        aria-label={
+                                            direction === "rtl"
+                                                ? "صفحه آخر"
+                                                : "Last page"
+                                        }
+                                        disabled={
+                                            safeCurrentPage >=
+                                            totalWorkspacePages
+                                        }
+                                        onClick={() =>
+                                            setCurrentPage(
+                                                totalWorkspacePages
+                                            )
+                                        }
+                                        style={{
+                                            width: 32,
+                                            height: 32,
+
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: 8,
+
+                                            backgroundColor: colors.surface,
+                                            color: colors.text,
+
+                                            fontSize: 16,
+
+                                            cursor:
+                                                safeCurrentPage >=
+                                                    totalWorkspacePages
+                                                    ? "default"
+                                                    : "pointer",
+
+                                            opacity:
+                                                safeCurrentPage >=
+                                                    totalWorkspacePages
+                                                    ? 0.35
+                                                    : 0.9,
+                                        }}
+                                    >
+                                        »
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </WorkspaceHeader>
 
                 <ScrollView
                     style={styles.workspaceBody}
@@ -974,59 +1594,232 @@ export default function Workspace({
                     keyboardShouldPersistTaps="handled"
                 >
                     {shouldShowWorkspaceItems && (
-                        <View style={
-                            viewMode === "grid"
-                                ? [
-                                    styles.workspaceGrid,
-                                    isPhoneWorkspace && styles.phoneWorkspaceGrid,
-                                ]
-                                : styles.workspaceList
-                        }>
-                            {/**
-                            * ============================================================================
-                            * Workspace Items With Expanded Preview
-                            * ----------------------------------------------------------------------------
-                            * Keeps cards in the normal grid/list flow and renders preview as a full-width
-                            * expanded row directly after the selected file.
-                            * ============================================================================
-                            */}
+                        <View
+                            style={
+                                viewMode === "grid"
+                                    ? [
+                                        styles.workspaceGrid,
+                                        isPhoneWorkspace &&
+                                        styles.phoneWorkspaceGrid,
+                                    ]
+                                    : styles.workspaceList
+                            }
+                        >
+                            {viewMode === "grid"
+                                ? Array.from(
+                                    {
+                                        length: Math.ceil(
+                                            paginatedWorkspaceItems.length /
+                                            workspaceGridColumnCount
+                                        ),
+                                    },
+                                    (_, rowIndex) => {
+                                        const rowStartIndex =
+                                            rowIndex *
+                                            workspaceGridColumnCount;
 
-                            {visibleWorkspaceItems.map((item) => {
-                                const isPreviewOpen = previewItemId === item.id && item.type === "file";
+                                        const rowItems =
+                                            paginatedWorkspaceItems.slice(
+                                                rowStartIndex,
+                                                rowStartIndex +
+                                                workspaceGridColumnCount
+                                            );
 
-                                return (
-                                    <Fragment key={item.id}>
-                                        <WorkspaceItemCard
-                                            item={item}
-                                            viewMode={viewMode}
-                                            isCompact={isCompactWorkspace}
-                                            isSelected={selectedItemId === item.id || isPreviewOpen}
-                                            onPress={handlePressWorkspaceItem}
-                                            onOpenActions={handleOpenWorkspaceItemActions}
-                                            onTogglePinned={onTogglePinnedItem}
-                                        />
+                                        const selectedRowItem =
+                                            rowItems.find(
+                                                (item) =>
+                                                    selectedItemId ===
+                                                    item.id
+                                            ) ?? null;
 
-                                        {isPreviewOpen && (
-                                            <View style={styles.workspacePreviewRow}>
-                                                {/**
-                                                * ============================================================================
-                                                * Full Preview Navigation
-                                                * ----------------------------------------------------------------------------
-                                                * Opens the dedicated document preview page instead of expanding inside the
-                                                * workspace grid.
-                                                * ============================================================================
-                                                */}
+                                        const previewItem =
+                                            rowItems.find(
+                                                (item) =>
+                                                    previewItemId ===
+                                                    item.id &&
+                                                    item.type === "file"
+                                            ) ?? null;
 
-                                                <WorkspaceDocumentPreviewPanel
+                                        return (
+                                            <Fragment
+                                                key={`workspace-row-${rowIndex}`}
+                                            >
+                                                {selectedRowItem && (
+                                                    <View
+                                                        style={
+                                                            styles.workspaceDetailsRow
+                                                        }
+                                                    >
+                                                        <WorkspaceItemDetailsPanel
+                                                            item={
+                                                                selectedRowItem
+                                                            }
+                                                            primaryAction={
+                                                                detailsPrimaryAction
+                                                            }
+                                                            secondaryAction={
+                                                                detailsSecondaryAction
+                                                            }
+                                                            tertiaryAction={
+                                                                detailsTertiaryAction
+                                                            }
+                                                            pinAction={
+                                                                detailsPinAction
+                                                            }
+                                                            onClose={
+                                                                handleCloseWorkspaceItemDetails
+                                                            }
+                                                        />
+                                                    </View>
+                                                )}
+
+                                                <View
+                                                    style={[
+                                                        styles.workspaceGridRow,
+                                                        isPhoneWorkspace && {
+                                                            gap: spacing.sm,
+                                                        },
+                                                    ]}
+                                                >
+                                                    {rowItems.map(
+                                                        (item) => {
+                                                            const isPreviewOpen =
+                                                                previewItemId ===
+                                                                item.id &&
+                                                                item.type ===
+                                                                "file";
+
+                                                            return (
+                                                                <WorkspaceItemCard
+                                                                    key={
+                                                                        item.id
+                                                                    }
+                                                                    item={
+                                                                        item
+                                                                    }
+                                                                    viewMode={
+                                                                        viewMode
+                                                                    }
+                                                                    isCompact={
+                                                                        isCompactWorkspace
+                                                                    }
+                                                                    isSelected={
+                                                                        selectedItemId ===
+                                                                        item.id ||
+                                                                        isPreviewOpen
+                                                                    }
+                                                                    onPress={
+                                                                        handlePressWorkspaceItem
+                                                                    }
+                                                                    onOpenActions={
+                                                                        handleOpenWorkspaceItemActions
+                                                                    }
+                                                                />
+                                                            );
+                                                        }
+                                                    )}
+                                                </View>
+
+                                                {previewItem && (
+                                                    <View
+                                                        style={
+                                                            styles.workspacePreviewRow
+                                                        }
+                                                    >
+                                                        <WorkspaceDocumentPreviewPanel
+                                                            item={
+                                                                previewItem
+                                                            }
+                                                            onClose={
+                                                                handleCloseDocumentPreview
+                                                            }
+                                                            onOpenFullPreview={
+                                                                onOpenPreviewPage
+                                                            }
+                                                        />
+                                                    </View>
+                                                )}
+                                            </Fragment>
+                                        );
+                                    }
+                                )
+                                : paginatedWorkspaceItems.map(
+                                    (item) => {
+                                        const isSelected =
+                                            selectedItemId === item.id;
+
+                                        const isPreviewOpen =
+                                            previewItemId === item.id &&
+                                            item.type === "file";
+
+                                        return (
+                                            <Fragment key={item.id}>
+                                                {isSelected && (
+                                                    <View
+                                                        style={
+                                                            styles.workspaceDetailsRow
+                                                        }
+                                                    >
+                                                        <WorkspaceItemDetailsPanel
+                                                            item={item}
+                                                            primaryAction={
+                                                                detailsPrimaryAction
+                                                            }
+                                                            secondaryAction={
+                                                                detailsSecondaryAction
+                                                            }
+                                                            tertiaryAction={
+                                                                detailsTertiaryAction
+                                                            }
+                                                            pinAction={
+                                                                detailsPinAction
+                                                            }
+                                                            onClose={
+                                                                handleCloseWorkspaceItemDetails
+                                                            }
+                                                        />
+                                                    </View>
+                                                )}
+
+                                                <WorkspaceItemCard
                                                     item={item}
-                                                    onClose={handleCloseDocumentPreview}
-                                                    onOpenFullPreview={onOpenPreviewPage}
+                                                    viewMode={viewMode}
+                                                    isCompact={
+                                                        isCompactWorkspace
+                                                    }
+                                                    isSelected={
+                                                        isSelected ||
+                                                        isPreviewOpen
+                                                    }
+                                                    onPress={
+                                                        handlePressWorkspaceItem
+                                                    }
+                                                    onOpenActions={
+                                                        handleOpenWorkspaceItemActions
+                                                    }
                                                 />
-                                            </View>
-                                        )}
-                                    </Fragment>
-                                );
-                            })}
+
+                                                {isPreviewOpen && (
+                                                    <View
+                                                        style={
+                                                            styles.workspacePreviewRow
+                                                        }
+                                                    >
+                                                        <WorkspaceDocumentPreviewPanel
+                                                            item={item}
+                                                            onClose={
+                                                                handleCloseDocumentPreview
+                                                            }
+                                                            onOpenFullPreview={
+                                                                onOpenPreviewPage
+                                                            }
+                                                        />
+                                                    </View>
+                                                )}
+                                            </Fragment>
+                                        );
+                                    }
+                                )}
                         </View>
                     )}
 
@@ -1042,13 +1835,20 @@ export default function Workspace({
                         <WorkspaceEmptyState
                             icon="!"
                             title="خطا در دریافت اطلاعات"
-                            description={workspaceErrorMessage ?? "لطفاً دوباره تلاش کنید."}
+                            description={
+                                workspaceErrorMessage ??
+                                "لطفاً دوباره تلاش کنید."
+                            }
                         />
                     )}
 
                     {shouldShowEmptyState && (
                         <WorkspaceEmptyState
-                            icon={normalizedSearchQuery ? "?" : pageContent.emptyIcon}
+                            icon={
+                                normalizedSearchQuery
+                                    ? "?"
+                                    : pageContent.emptyIcon
+                            }
                             title={
                                 normalizedSearchQuery
                                     ? "نتیجه‌ای پیدا نشد"
@@ -1092,17 +1892,65 @@ export default function Workspace({
                         />
                     )}
                 </ScrollView>
+
+                <Pressable
+                    title={
+                        direction === "rtl"
+                            ? "بازگشت به بالا"
+                            : "Back to top"
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        direction === "rtl"
+                            ? "بازگشت به بالای فضای کاری"
+                            : "Back to top of workspace"
+                    }
+                    onPress={handleScrollWorkspaceToTop}
+                    style={({ pressed }) => [
+                        styles.scrollToTopButton,
+                        {
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
+
+                            right:
+                                direction === "ltr"
+                                    ? spacing.xl
+                                    : "auto",
+
+                            left:
+                                direction === "rtl"
+                                    ? spacing.xl
+                                    : "auto",
+                        },
+                        pressed &&
+                        styles.pressedScrollToTopButton,
+                    ]}
+                >
+                    <Feather
+                        name="chevron-up"
+                        size={20}
+                        color="#ffffff"
+                    />
+                </Pressable>
             </View>
 
             <WorkspaceDeleteDialog
-                visible={pageType === "workspace" && pendingDeleteItemId !== null}
-                onMoveToTrash={handleMovePendingWorkspaceItemToTrash}
+                visible={
+                    pageType === "workspace" &&
+                    pendingDeleteItemId !== null
+                }
+                onMoveToTrash={
+                    handleMovePendingWorkspaceItemToTrash
+                }
                 onArchive={handleArchivePendingWorkspaceItem}
                 onCancel={handleCancelDeleteWorkspaceItem}
             />
 
             <WorkspaceRenameDialog
-                visible={pageType === "workspace" && pendingRenameItemId !== null}
+                visible={
+                    pageType === "workspace" &&
+                    pendingRenameItemId !== null
+                }
                 value={renameItemName}
                 onChange={setRenameItemName}
                 onSave={handleSaveRenameWorkspaceItem}
@@ -1110,7 +1958,10 @@ export default function Workspace({
             />
 
             <WorkspaceMoveDialog
-                visible={pageType === "workspace" && pendingMoveItemId !== null}
+                visible={
+                    pageType === "workspace" &&
+                    pendingMoveItemId !== null
+                }
                 value={
                     isMoveDestinationComboOpen
                         ? moveSearchQuery
@@ -1118,10 +1969,16 @@ export default function Workspace({
                 }
                 isOpen={isMoveDestinationComboOpen}
                 destinationFolders={filteredDestinationFolders}
-                outsideFolderDestinationId={MOVE_OUTSIDE_FOLDER_DESTINATION_ID}
-                isOutsideFolderVisible={isOutsideFolderDestinationVisible}
+                outsideFolderDestinationId={
+                    MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+                }
+                isOutsideFolderVisible={
+                    isOutsideFolderDestinationVisible
+                }
                 canSave={canSaveMoveWorkspaceItem}
-                isDestinationDisabled={isMoveDestinationDisabled}
+                isDestinationDisabled={
+                    isMoveDestinationDisabled
+                }
                 onFocus={handleFocusMoveDestination}
                 onChange={handleChangeMoveDestination}
                 onToggle={handleToggleMoveDestination}
@@ -1130,7 +1987,9 @@ export default function Workspace({
                         MOVE_OUTSIDE_FOLDER_DESTINATION_ID
                     )
                 }
-                onSelectDestination={handleSelectMoveDestination}
+                onSelectDestination={
+                    handleSelectMoveDestination
+                }
                 onSave={handleSaveMoveWorkspaceItem}
                 onCancel={handleCancelMoveWorkspaceItem}
             />
@@ -1140,8 +1999,12 @@ export default function Workspace({
                     pageType === "trash" &&
                     pendingPermanentDeleteItemId !== null
                 }
-                onConfirm={handleConfirmPermanentDeleteWorkspaceItem}
-                onCancel={handleCancelPermanentDeleteWorkspaceItem}
+                onConfirm={
+                    handleConfirmPermanentDeleteWorkspaceItem
+                }
+                onCancel={
+                    handleCancelPermanentDeleteWorkspaceItem
+                }
             />
 
             {undoToast && (
@@ -1296,6 +2159,12 @@ const styles = StyleSheet.create({
         flexBasis: "100%",
     },
 
+    workspaceDetailsRow: {
+        width: "100%",
+        maxWidth: "100%",
+        flexBasis: "100%",
+    },
+
     undoToast: {
         position: "absolute",
         right: spacing.xl,
@@ -1335,5 +2204,36 @@ const styles = StyleSheet.create({
     undoToastButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
+    },
+
+    workspaceGridRow: {
+        width: "100%",
+
+        flexDirection: "row",
+        flexWrap: "nowrap",
+        alignItems: "flex-start",
+
+        gap: spacing.lg,
+    },
+
+    scrollToTopButton: {
+        position: "fixed",
+        bottom: spacing.xl,
+        zIndex: 20,
+
+        width: 42,
+        height: 42,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+
+        ...shadows.md,
+    },
+
+    pressedScrollToTopButton: {
+        opacity: 0.82,
     },
 });

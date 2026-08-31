@@ -35,6 +35,7 @@ interface WorkspaceItemDetailsPanelProps {
     primaryAction: WorkspaceItemDetailsAction;
     secondaryAction?: WorkspaceItemDetailsAction;
     tertiaryAction?: WorkspaceItemDetailsAction;
+    pinAction?: WorkspaceItemDetailsAction;
     onClose: () => void;
 }
 
@@ -49,6 +50,7 @@ export default function WorkspaceItemDetailsPanel({
     primaryAction,
     secondaryAction,
     tertiaryAction,
+    pinAction,
     onClose,
 }: WorkspaceItemDetailsPanelProps) {
     const { direction, language, t, theme } = useSettings();
@@ -57,6 +59,7 @@ export default function WorkspaceItemDetailsPanel({
 
     return (
         <View
+            className="workspace-motion-panel"
             style={[
                 styles.container,
                 {
@@ -135,6 +138,7 @@ export default function WorkspaceItemDetailsPanel({
                 primaryAction={primaryAction}
                 secondaryAction={secondaryAction}
                 tertiaryAction={tertiaryAction}
+                pinAction={pinAction}
                 closeLabel={t("closeDetails")}
                 onClose={onClose}
             />
@@ -161,6 +165,9 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.lg,
+
+        animation:
+            "edms-workspace-panel-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1)",
     },
 
     content: {
@@ -206,5 +213,4 @@ const styles = StyleSheet.create({
 
         opacity: 0.64,
     },
-
 });

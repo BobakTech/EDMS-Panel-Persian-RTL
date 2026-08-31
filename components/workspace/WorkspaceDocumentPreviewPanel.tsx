@@ -26,6 +26,7 @@ import {
     type PreviewRendererKind,
 } from "../preview/preview.helpers";
 import {
+    getWorkspaceFileExtension,
     getWorkspaceItemStatusLabel,
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
@@ -132,8 +133,29 @@ export default function WorkspaceDocumentPreviewPanel({
     const rendererInfo = getPreviewRendererInfo(item, t);
     const hasRenderablePreview = hasRenderableWorkspacePreview(item);
 
+    const fileTypeLabel =
+        item.type === "file"
+            ? (
+                item.extension ??
+                getWorkspaceFileExtension(item.name)
+            ).toUpperCase()
+            : t("folder");
+
+    const rawFileSizeLabel =
+        getWorkspaceItemUpdatedAtLabel(item, t, language);
+
+    const fileSizeLabel =
+        item.type === "file" &&
+            /^\d+(?:[.,]\d+)?$/.test(rawFileSizeLabel.trim())
+            ? `${rawFileSizeLabel} MB`
+            : rawFileSizeLabel;
+
+    const fileStatusLabel =
+        getWorkspaceItemStatusLabel(item, direction, t);
+
     return (
         <View
+            className="workspace-motion-panel"
             style={[
                 styles.container,
                 {
@@ -281,86 +303,63 @@ export default function WorkspaceDocumentPreviewPanel({
             </View>
 
             <View style={styles.metaRow}>
-                <View style={styles.metaItem}>
-                    <Text
-                        style={[
-                            styles.metaLabel,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {t("fileType")}
-                    </Text>
+                <Text
+                    style={[
+                        styles.metaValue,
+                        {
+                            color: colors.text,
+                            textAlign,
+                        },
+                    ]}
+                >
+                    {fileTypeLabel}
+                </Text>
 
-                    <Text
-                        numberOfLines={1}
-                        style={[
-                            styles.metaValue,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {getWorkspaceFileTypeLabel(item, t("file"))}
-                    </Text>
-                </View>
+                <Text
+                    style={[
+                        styles.metaSeparator,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                >
+                    •
+                </Text>
 
-                <View style={styles.metaItem}>
-                    <Text
-                        style={[
-                            styles.metaLabel,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {t("fileSize")}
-                    </Text>
+                <Text
+                    style={[
+                        styles.metaValue,
+                        {
+                            color: colors.text,
+                            textAlign,
+                        },
+                    ]}
+                >
+                    {fileSizeLabel}
+                </Text>
 
-                    <Text
-                        numberOfLines={1}
-                        style={[
-                            styles.metaValue,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {getWorkspaceItemUpdatedAtLabel(item, t, language)}
-                    </Text>
-                </View>
+                <Text
+                    style={[
+                        styles.metaSeparator,
+                        {
+                            color: colors.text,
+                        },
+                    ]}
+                >
+                    •
+                </Text>
 
-                <View style={styles.metaItem}>
-                    <Text
-                        style={[
-                            styles.metaLabel,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {direction === "ltr" ? "Status" : t("status")}
-                    </Text>
-
-                    <Text
-                        numberOfLines={1}
-                        style={[
-                            styles.metaValue,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {getWorkspaceItemStatusLabel(item, direction, t)}
-                    </Text>
-                </View>
+                <Text
+                    style={[
+                        styles.metaValue,
+                        {
+                            color: colors.text,
+                            textAlign,
+                        },
+                    ]}
+                >
+                    {fileStatusLabel}
+                </Text>
             </View>
         </View>
     );
@@ -375,12 +374,15 @@ export default function WorkspaceDocumentPreviewPanel({
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        marginTop: spacing.sm,
-        marginBottom: spacing.md,
-        padding: spacing.sm,
+        marginTop: spacing.md,
+        marginBottom: spacing.lg,
+        padding: spacing.md,
 
         borderWidth: 1,
         borderRadius: radius.lg,
+
+        animation:
+            "edms-workspace-panel-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1)",
 
         ...shadows.sm,
     },
@@ -389,6 +391,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
+
         marginBottom: spacing.sm,
     },
 
@@ -424,13 +427,16 @@ const styles = StyleSheet.create({
     previewRow: {
         order: 2,
 
-        minHeight: 74,
+        width: "100%",
+        minHeight: 112,
+
         flexDirection: "row",
         alignItems: "center",
-        gap: spacing.sm,
+        justifyContent: "center",
 
-        marginBottom: spacing.sm,
-        padding: spacing.sm,
+        gap: spacing.md,
+
+        padding: spacing.md,
 
         borderWidth: 1,
         borderRadius: radius.md,
@@ -507,26 +513,28 @@ const styles = StyleSheet.create({
         order: 1,
 
         flexDirection: "row",
-        gap: spacing.sm,
-    },
+        alignItems: "center",
+        justifyContent: "flex-start",
+        flexWrap: "wrap",
 
-    metaItem: {
-        flex: 1,
-        minWidth: 0,
-        gap: 2,
-    },
+        gap: spacing.xs,
 
-    metaLabel: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
-        opacity: 0.64,
+        marginBottom: spacing.sm,
     },
 
     metaValue: {
         fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.medium,
+        fontWeight: typography.fontWeight.semibold,
         textAlign: "right",
+
+        opacity: 0.78,
+    },
+
+    metaSeparator: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.regular,
+
+        opacity: 0.36,
     },
 
     fullPreviewButton: {
