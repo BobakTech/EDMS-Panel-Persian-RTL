@@ -32,9 +32,9 @@ import DocumentPreviewPage from "./DocumentPreviewPage";
 import {
     getProjects,
     createDefaultWorkspaceFilters,
+    type ProjectFilterOption,
     type WorkspaceFilters,
 } from "../project";
-import { projectFilterOptions } from "../project/project.mock";
 
 import {
     getWorkspaceFileExtension,
@@ -133,6 +133,9 @@ export default function AppLayout() {
         createDefaultWorkspaceFilters
     );
 
+    const [projectFilterOptions, setProjectFilterOptions] =
+        useState<ProjectFilterOption[]>([]);
+
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -147,8 +150,16 @@ export default function AppLayout() {
     const fileTypeOptions = Array.from(
         new Set(
             workspaceItems
-                .filter((item) => item.type === "file" && item.extension)
-                .map((item) => item.extension as string)
+                .filter((item) => item.type === "file")
+                .map((item) =>
+                    (
+                        item.extension ??
+                        getWorkspaceFileExtension(item.name)
+                    )
+                        .trim()
+                        .toLowerCase()
+                )
+                .filter(Boolean)
         )
     ).sort();
 
@@ -274,14 +285,19 @@ export default function AppLayout() {
     useEffect(() => {
         let isMounted = true;
 
-        async function checkConnection() {
+        async function loadProjects() {
             try {
                 setIsProjectInfoLoading(true);
                 setProjectInfoError(null);
 
-                await getProjects();
+                const projects = await getProjects();
+
+                if (isMounted) {
+                    setProjectFilterOptions(projects);
+                }
             } catch {
                 if (isMounted) {
+                    setProjectFilterOptions([]);
                     setProjectInfoError("Project service unavailable.");
                 }
             } finally {
@@ -291,7 +307,7 @@ export default function AppLayout() {
             }
         }
 
-        checkConnection();
+        loadProjects();
 
         return () => {
             isMounted = false;
