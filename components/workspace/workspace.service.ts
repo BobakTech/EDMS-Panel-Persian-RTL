@@ -37,6 +37,11 @@ function mapWorkspaceFile(item: WorkspaceFileApiItem): WorkspaceItem {
         mimeType: item.file_type,
         sizeLabel: item.file_size,
         categoryId: item.file_category ?? undefined,
+        
+        fileVersion: item.file_version,
+        fileDate: item.file_date,
+        fileTime: item.file_time,
+        fileTypeLabel: item.noe_file,
     };
 }
 

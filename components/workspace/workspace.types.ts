@@ -47,6 +47,11 @@ export interface WorkspaceItem {
      * Categories are metadata and remain independent from folders.
      */
     categoryId?: string;
+
+    fileVersion?: string;
+    fileDate?: string;
+    fileTime?: string;
+    fileTypeLabel?: string;
 }
 
 /**
@@ -58,7 +63,10 @@ export interface WorkspaceFileApiItem {
     file_project: string;
 
     file_size: string;
+    file_version: string;
     file_date: string;
+    file_time: string;
+    noe_file: string;
 
     file_parent: string | null;
     file_type: string;
