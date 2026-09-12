@@ -25,7 +25,6 @@ import type {
 } from "./workspace.types";
 import {
     getWorkspaceFileExtension,
-    getWorkspaceItemDescription,
     getWorkspaceItemLabel,
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
@@ -64,6 +63,60 @@ function getItemIconName(item: WorkspaceItem): FeatherIconName {
 }
 
 /**
+ * Shortens only the Workspace card label.
+ *
+ * Duplicate suffix detection is intentionally strict:
+ * - It must be the final numeric parenthesized segment immediately before
+ *   the extension, e.g. "(1).jpg", "(12).pdf".
+ * - Other parentheses inside the filename are treated as normal filename text.
+ *
+ * Examples:
+ *   report (draft) final.jpg      -> normal truncation
+ *   report (draft) final (1).jpg  -> preserves "(1).jpg"
+ */
+function getWorkspaceCardItemName(item: WorkspaceItem, maxLength = 26): string {
+    const itemName = item.name;
+
+    if (itemName.length <= maxLength) {
+        return itemName;
+    }
+
+    if (item.type === "folder") {
+        return `${itemName.slice(0, Math.max(4, maxLength - 3))}...`;
+    }
+
+    const duplicateMatch = itemName.match(/(\s*\(\d+\))(\.[^./\\]+)$/);
+
+    if (duplicateMatch) {
+        const duplicateSuffix = duplicateMatch[1];
+        const extension = duplicateMatch[2];
+        const preservedSuffix = `${duplicateSuffix}${extension}`;
+        const baseName = itemName.slice(0, itemName.length - preservedSuffix.length);
+        const availableBaseLength = Math.max(
+            4,
+            maxLength - preservedSuffix.length - 3
+        );
+
+        return `${baseName.slice(0, availableBaseLength)}...${preservedSuffix}`;
+    }
+
+    const extensionMatch = itemName.match(/(\.[^./\\]+)$/);
+
+    if (!extensionMatch) {
+        return `${itemName.slice(0, Math.max(4, maxLength - 3))}...`;
+    }
+
+    const extension = extensionMatch[1];
+    const baseName = itemName.slice(0, itemName.length - extension.length);
+    const availableBaseLength = Math.max(
+        4,
+        maxLength - extension.length - 3
+    );
+
+    return `${baseName.slice(0, availableBaseLength)}...${extension}`;
+}
+
+/**
  * ============================================================================
  * Component
  * ============================================================================
@@ -87,15 +140,6 @@ export default function WorkspaceItemCard({
     const depthColor = `color-mix(in srgb, ${colors.primary} 28%, ${colors.border})`;
     const ambientShadow = "rgba(0, 0, 0, 0.18)";
 
-    const itemDescription = getWorkspaceItemDescription(item, direction);
-
-    const normalizedItemName = item.name.trim().toLocaleLowerCase();
-    const normalizedItemDescription = itemDescription.trim().toLocaleLowerCase();
-
-    const shouldShowDescription =
-        Boolean(itemDescription) &&
-        normalizedItemDescription !== normalizedItemName;
-
     const itemTypeLabel =
         item.type === "folder"
             ? getWorkspaceItemLabel(item, t)
@@ -117,6 +161,8 @@ export default function WorkspaceItemCard({
         item.type === "folder"
             ? itemSizeLabel
             : `${itemTypeLabel} · ${itemSizeLabel}`;
+
+    const displayItemName = getWorkspaceCardItemName(item);
 
     return (
         <View
@@ -274,34 +320,20 @@ export default function WorkspaceItemCard({
                     ]}
                 >
                     <Text
+                        title={item.name}
                         style={[
                             styles.name,
+                            isListMode && styles.listName,
                             {
                                 color: colors.text,
-                                textAlign: isRtl ? "start" : "left",
+                                textAlign: isRtl ? "right" : "left",
                             },
                         ]}
-                        numberOfLines={isListMode ? 1 : 2}
+                        numberOfLines={1}
                         dir="auto"
                     >
-                        {item.name}
+                        {isListMode ? item.name : displayItemName}
                     </Text>
-
-                    {shouldShowDescription && (
-                        <Text
-                            style={[
-                                styles.description,
-                                {
-                                    color: colors.text,
-                                    textAlign: isRtl ? "start" : "left",
-                                },
-                            ]}
-                            numberOfLines={1}
-                            dir="auto"
-                        >
-                            {itemDescription}
-                        </Text>
-                    )}
 
                     <Text
                         style={[
@@ -426,15 +458,13 @@ const styles = StyleSheet.create({
 
         paddingTop: 8,
         paddingBottom: 8,
-        paddingRight: 88,
-        paddingLeft: 88,
+        paddingHorizontal: spacing.md,
 
-        gap: spacing.md,
+        gap: spacing.sm,
     },
 
     ltrListContentButton: {
-        paddingRight: 88,
-        paddingLeft: 88,
+        paddingHorizontal: spacing.md,
     },
 
     iconMetaRow: {
@@ -517,17 +547,18 @@ const styles = StyleSheet.create({
     },
 
     name: {
+        minWidth: 0,
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.bold,
-        textAlign: "right",
     },
 
-    description: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.regular,
-        textAlign: "right",
-
-        opacity: 0.64,
+    listName: {
+        width: "100%",
+        minWidth: 0,
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
     },
 
     meta: {
