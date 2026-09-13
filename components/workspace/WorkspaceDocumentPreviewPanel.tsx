@@ -7,6 +7,8 @@
  * ============================================================================
  */
 
+import { useEffect, useState } from "react";
+
 import { Feather } from "../../web/icons";
 import {
     Pressable,
@@ -27,7 +29,7 @@ import {
 import { getPreviewMetadataPresentation } from "../preview/preview.metadata";
 import type { TranslationKey } from "../../locales";
 
-import type { WorkspaceItem } from "./workspace.types";
+import type { WorkspaceItem, WorkspaceItemUpdate } from "./workspace.types";
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
 
@@ -42,6 +44,7 @@ interface WorkspaceDocumentPreviewPanelProps {
     item: WorkspaceItem;
     onClose: () => void;
     onOpenFullPreview?: (item: WorkspaceItem) => void;
+    onUpdateItem?: (itemId: string, updates: WorkspaceItemUpdate) => void;
 }
 
 type Translate = (key: TranslationKey) => string;
@@ -102,6 +105,7 @@ export default function WorkspaceDocumentPreviewPanel({
     item,
     onClose,
     onOpenFullPreview,
+    onUpdateItem,
 }: WorkspaceDocumentPreviewPanelProps) {
     const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
@@ -115,6 +119,71 @@ export default function WorkspaceDocumentPreviewPanel({
         t,
         language,
     );
+
+    const [isEditing, setIsEditing] = useState(false);
+    const [draftName, setDraftName] = useState(item.name);
+    const [draftVersion, setDraftVersion] = useState(item.fileVersion ?? "");
+    const [draftDate, setDraftDate] = useState(item.fileDate ?? "");
+    const [draftTime, setDraftTime] = useState(item.fileTime ?? "");
+    const [draftFileTypeLabel, setDraftFileTypeLabel] = useState(
+        item.fileTypeLabel ?? ""
+    );
+
+    useEffect(() => {
+        setIsEditing(false);
+        setDraftName(item.name);
+        setDraftVersion(item.fileVersion ?? "");
+        setDraftDate(item.fileDate ?? "");
+        setDraftTime(item.fileTime ?? "");
+        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+    }, [
+        item.id,
+        item.name,
+        item.fileVersion,
+        item.fileDate,
+        item.fileTime,
+        item.fileTypeLabel,
+    ]);
+
+    function handleStartEdit() {
+        setDraftName(item.name);
+        setDraftVersion(item.fileVersion ?? "");
+        setDraftDate(item.fileDate ?? "");
+        setDraftTime(item.fileTime ?? "");
+        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setIsEditing(true);
+    }
+
+    function handleCancelEdit() {
+        setDraftName(item.name);
+        setDraftVersion(item.fileVersion ?? "");
+        setDraftDate(item.fileDate ?? "");
+        setDraftTime(item.fileTime ?? "");
+        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setIsEditing(false);
+    }
+
+    function handleSaveEdit() {
+        if (!onUpdateItem) {
+            return;
+        }
+
+        const trimmedName = draftName.trim();
+
+        if (!trimmedName) {
+            return;
+        }
+
+        onUpdateItem(item.id, {
+            name: trimmedName,
+            fileVersion: draftVersion.trim(),
+            fileDate: draftDate.trim(),
+            fileTime: draftTime.trim(),
+            fileTypeLabel: draftFileTypeLabel.trim(),
+        });
+
+        setIsEditing(false);
+    }
 
     return (
         <View
@@ -171,6 +240,49 @@ export default function WorkspaceDocumentPreviewPanel({
                     </Text>
                 </Pressable>
 
+                {onUpdateItem && (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            direction === "rtl"
+                                ? "ویرایش اطلاعات سند"
+                                : "Edit document details"
+                        }
+                        onPress={isEditing ? handleCancelEdit : handleStartEdit}
+                        style={[
+                            styles.editButton,
+                            {
+                                borderColor: colors.border,
+                                backgroundColor: colors.background,
+                            },
+                        ]}
+                    >
+                        <Feather
+                            name={isEditing ? "x" : "edit"}
+                            size={14}
+                            color={colors.primary}
+                        />
+
+                        <Text
+                            style={[
+                                styles.editButtonText,
+                                {
+                                    color: colors.primary,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {isEditing
+                                ? direction === "rtl"
+                                    ? "انصراف"
+                                    : "Cancel"
+                                : direction === "rtl"
+                                    ? "ویرایش"
+                                    : "Edit"}
+                        </Text>
+                    </Pressable>
+                )}
+
                 <View style={styles.titleArea}>
                     <Text
                         style={[
@@ -184,18 +296,45 @@ export default function WorkspaceDocumentPreviewPanel({
                         {t("documentPreview")}
                     </Text>
 
-                    <Text
-                        dir="auto"
-                        style={[
-                            styles.title,
-                            {
+                    {isEditing ? (
+                        <input
+                            value={draftName}
+                            onChange={(event) => setDraftName(event.target.value)}
+                            dir="auto"
+                            aria-label={
+                                direction === "rtl"
+                                    ? "نام فایل"
+                                    : "File name"
+                            }
+                            style={{
+                                width: "100%",
+                                minWidth: 0,
+                                minHeight: 34,
+                                paddingInline: 10,
+                                paddingBlock: 6,
+                                border: `1px solid ${colors.border}`,
+                                borderRadius: radius.md,
+                                backgroundColor: colors.background,
                                 color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {item.name}
-                    </Text>
+                                fontSize: typography.fontSize.sm,
+                                fontWeight: typography.fontWeight.medium,
+                                outline: "none",
+                            }}
+                        />
+                    ) : (
+                        <Text
+                            dir="auto"
+                            style={[
+                                styles.title,
+                                {
+                                    color: colors.text,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {item.name}
+                        </Text>
+                    )}
                 </View>
             </View>
 
@@ -271,6 +410,215 @@ export default function WorkspaceDocumentPreviewPanel({
                     </View>
                 ))}
             </View>
+
+            {isEditing && (
+                <View
+                    style={[
+                        styles.editPanel,
+                        {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                        },
+                    ]}
+                >
+                    <View style={styles.editGrid}>
+                        <label
+                            style={{
+                                minWidth: 0,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: spacing.xs,
+                            }}
+                        >
+                            <span
+                                style={{
+                                    color: colors.text,
+                                    fontSize: typography.fontSize.xs,
+                                    fontWeight: typography.fontWeight.semibold,
+                                    opacity: 0.72,
+                                }}
+                            >
+                                {direction === "rtl" ? "نسخه" : "Version"}
+                            </span>
+
+                            <input
+                                value={draftVersion}
+                                onChange={(event) =>
+                                    setDraftVersion(event.target.value)
+                                }
+                                dir="auto"
+                                style={{
+                                    ...styles.editInput,
+                                    borderColor: colors.border,
+                                    backgroundColor: colors.surface,
+                                    color: colors.text,
+                                }}
+                            />
+                        </label>
+
+                        <label
+                            style={{
+                                minWidth: 0,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: spacing.xs,
+                            }}
+                        >
+                            <span
+                                style={{
+                                    color: colors.text,
+                                    fontSize: typography.fontSize.xs,
+                                    fontWeight: typography.fontWeight.semibold,
+                                    opacity: 0.72,
+                                }}
+                            >
+                                {direction === "rtl" ? "تاریخ" : "Date"}
+                            </span>
+
+                            <input
+                                value={draftDate}
+                                onChange={(event) =>
+                                    setDraftDate(event.target.value)
+                                }
+                                dir="auto"
+                                style={{
+                                    ...styles.editInput,
+                                    borderColor: colors.border,
+                                    backgroundColor: colors.surface,
+                                    color: colors.text,
+                                }}
+                            />
+                        </label>
+
+                        <label
+                            style={{
+                                minWidth: 0,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: spacing.xs,
+                            }}
+                        >
+                            <span
+                                style={{
+                                    color: colors.text,
+                                    fontSize: typography.fontSize.xs,
+                                    fontWeight: typography.fontWeight.semibold,
+                                    opacity: 0.72,
+                                }}
+                            >
+                                {direction === "rtl" ? "زمان" : "Time"}
+                            </span>
+
+                            <input
+                                value={draftTime}
+                                onChange={(event) =>
+                                    setDraftTime(event.target.value)
+                                }
+                                dir="auto"
+                                style={{
+                                    ...styles.editInput,
+                                    borderColor: colors.border,
+                                    backgroundColor: colors.surface,
+                                    color: colors.text,
+                                }}
+                            />
+                        </label>
+
+                        <label
+                            style={{
+                                minWidth: 0,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: spacing.xs,
+                            }}
+                        >
+                            <span
+                                style={{
+                                    color: colors.text,
+                                    fontSize: typography.fontSize.xs,
+                                    fontWeight: typography.fontWeight.semibold,
+                                    opacity: 0.72,
+                                }}
+                            >
+                                {direction === "rtl" ? "نوع فایل" : "File type"}
+                            </span>
+
+                            <input
+                                value={draftFileTypeLabel}
+                                onChange={(event) =>
+                                    setDraftFileTypeLabel(event.target.value)
+                                }
+                                dir="auto"
+                                style={{
+                                    ...styles.editInput,
+                                    borderColor: colors.border,
+                                    backgroundColor: colors.surface,
+                                    color: colors.text,
+                                }}
+                            />
+                        </label>
+                    </View>
+
+                    <View style={styles.editActions}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                                direction === "rtl"
+                                    ? "ذخیره تغییرات"
+                                    : "Save changes"
+                            }
+                            disabled={!draftName.trim()}
+                            onPress={handleSaveEdit}
+                            style={({ pressed }) => [
+                                styles.saveButton,
+                                {
+                                    backgroundColor: colors.primary,
+                                    borderColor: colors.primary,
+                                },
+                                !draftName.trim() && styles.disabledButton,
+                                pressed &&
+                                Boolean(draftName.trim()) &&
+                                styles.pressedButton,
+                            ]}
+                        >
+                            <Feather name="check" size={14} color="#ffffff" />
+
+                            <Text style={styles.saveButtonText}>
+                                {direction === "rtl" ? "ذخیره" : "Save"}
+                            </Text>
+                        </Pressable>
+
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                                direction === "rtl"
+                                    ? "انصراف از ویرایش"
+                                    : "Cancel editing"
+                            }
+                            onPress={handleCancelEdit}
+                            style={({ pressed }) => [
+                                styles.cancelButton,
+                                {
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.border,
+                                },
+                                pressed && styles.pressedButton,
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.cancelButtonText,
+                                    {
+                                        color: colors.text,
+                                    },
+                                ]}
+                            >
+                                {direction === "rtl" ? "انصراف" : "Cancel"}
+                            </Text>
+                        </Pressable>
+                    </View>
+                </View>
+            )}
 
             <View
                 style={[
@@ -530,6 +878,104 @@ const styles = StyleSheet.create({
         textAlign: "right",
 
         opacity: 0.72,
+    },
+
+    editButton: {
+        minHeight: 32,
+        flexShrink: 0,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    editButtonText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    editPanel: {
+        width: "100%",
+        marginBottom: spacing.sm,
+        padding: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+        gap: spacing.sm,
+    },
+
+    editGrid: {
+        width: "100%",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+        gap: spacing.sm,
+    },
+
+    editField: {
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: spacing.xs,
+    },
+
+    editInput: {
+        width: "100%",
+        minWidth: 0,
+        minHeight: 34,
+        paddingInline: 10,
+        paddingBlock: 6,
+        borderWidth: 1,
+        borderStyle: "solid",
+        borderRadius: radius.md,
+        fontSize: typography.fontSize.sm,
+        outline: "none",
+    },
+
+    editActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.xs,
+    },
+
+    saveButton: {
+        minHeight: 34,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.md,
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    saveButtonText: {
+        color: "#ffffff",
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    cancelButton: {
+        minHeight: 34,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: spacing.md,
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    cancelButtonText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    disabledButton: {
+        opacity: 0.45,
+    },
+
+    pressedButton: {
+        opacity: 0.82,
     },
 
     fullPreviewButton: {

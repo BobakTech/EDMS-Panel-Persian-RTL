@@ -30,6 +30,7 @@ import {
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
+    Pencil,
     Pin,
     RotateCcw,
     Search,
@@ -56,6 +57,8 @@ const icons: Record<string, React.ComponentType<any>> = {
     "cloud-cog": CloudCog,
     "cloud-off": CloudOff,
     download: Download,
+    edit: Pencil,
+    "edit-3": Pencil,
     "external-link": ExternalLink,
     file: File,
     "file-text": FileText,
@@ -84,9 +87,30 @@ const icons: Record<string, React.ComponentType<any>> = {
     x: X,
 };
 
-function FeatherIcon({ name, size = 24, color = "currentColor", style }: { name: string; size?: number; color?: string; style?: CSSProperties }) {
+function FeatherIcon({
+    name,
+    size = 24,
+    color = "currentColor",
+    style,
+}: {
+    name: string;
+    size?: number;
+    color?: string;
+    style?: CSSProperties;
+}) {
     const Icon = icons[name] ?? Circle;
-    return <Icon aria-hidden="true" size={size} color={color} style={style} strokeWidth={1.8} />;
+
+    return (
+        <Icon
+            aria-hidden="true"
+            size={size}
+            color={color}
+            style={style}
+            strokeWidth={1.8}
+        />
+    );
 }
 
-export const Feather = Object.assign(FeatherIcon, { glyphMap: {} as Record<string, number> });
+export const Feather = Object.assign(FeatherIcon, {
+    glyphMap: {} as Record<string, number>,
+});

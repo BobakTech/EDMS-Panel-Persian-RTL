@@ -47,6 +47,7 @@ import {
     updateWorkspaceItem,
     type WorkspaceActionType,
     type WorkspaceItem,
+    type WorkspaceItemUpdate,
     type WorkspacePageType,
     type WorkspacePickedFile,
     type WorkspaceCategoryDefinition,
@@ -186,7 +187,7 @@ export default function AppLayout() {
         onApplyFilters: handleApplyWorkspaceFilters,
         onResetFilters: handleResetWorkspaceFilters,
     };
-    
+
     const workspaceCategoryItems = workspaceItems.filter((item) => {
         if (activeWorkspacePage === "workspace") {
             return item.status === "active";
@@ -557,6 +558,19 @@ export default function AppLayout() {
         );
     }
 
+    function handleUpdateWorkspaceItem(
+        itemId: string,
+        updates: WorkspaceItemUpdate
+    ) {
+        setWorkspaceItems((currentItems) =>
+            updateWorkspaceItem(currentItems, itemId, (item) => ({
+                ...item,
+                ...updates,
+                updatedAt: new Date().toISOString(),
+            }))
+        );
+    }
+
     function handleDeleteWorkspaceItem(itemId: string) {
         setWorkspaceItems((currentItems) =>
             removeWorkspaceItem(currentItems, itemId)
@@ -717,6 +731,7 @@ export default function AppLayout() {
                         <DocumentPreviewPage
                             item={previewPageItem}
                             onBack={handleClosePreviewPage}
+                            onUpdateItem={handleUpdateWorkspaceItem}
                             onPrevious={
                                 previousPreviewPageItem
                                     ? () => setPreviewPageItemId(previousPreviewPageItem.id)
@@ -744,6 +759,7 @@ export default function AppLayout() {
                             onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
                             onRestoreItem={handleRestoreWorkspaceItem}
                             onRenameItem={handleRenameWorkspaceItem}
+                            onUpdateItem={handleUpdateWorkspaceItem}
                             onDeleteItem={handleDeleteWorkspaceItem}
                             onMoveItem={handleMoveWorkspaceItem}
                             onTogglePinnedItem={handleTogglePinnedWorkspaceItem}

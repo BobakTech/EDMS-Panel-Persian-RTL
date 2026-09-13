@@ -54,6 +54,15 @@ export interface WorkspaceItem {
     fileTypeLabel?: string;
 }
 
+export interface WorkspaceItemUpdate {
+    name?: string;
+    fileVersion?: string;
+    fileDate?: string;
+    fileTime?: string;
+    fileTypeLabel?: string;
+    categoryId?: string;
+}
+
 /**
  * File record returned by the files API.
  */

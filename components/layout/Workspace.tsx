@@ -77,6 +77,7 @@ import type { WorkspaceCategory } from "../workspace/workspace.types";
 
 import type {
     WorkspaceItem,
+    WorkspaceItemUpdate,
     WorkspacePageType,
     WorkspaceViewMode,
 } from "../workspace";
@@ -194,6 +195,7 @@ interface WorkspaceProps {
     onMoveItemToTrash: (itemId: string) => void;
     onRestoreItem: (item: WorkspaceItem) => void;
     onRenameItem: (itemId: string, newName: string) => void;
+    onUpdateItem: (itemId: string, updates: WorkspaceItemUpdate) => void;
     onDeleteItem: (itemId: string) => void;
     onMoveItem: (itemId: string, destinationFolderId: string | null) => void;
     onTogglePinnedItem: (itemId: string) => void;
@@ -223,6 +225,7 @@ export default function Workspace({
     onMoveItemToTrash,
     onRestoreItem,
     onRenameItem,
+    onUpdateItem,
     onDeleteItem,
     onMoveItem,
     onTogglePinnedItem,
@@ -1736,6 +1739,9 @@ export default function Workspace({
                                                             onOpenFullPreview={
                                                                 onOpenPreviewPage
                                                             }
+                                                            onUpdateItem={
+                                                                onUpdateItem
+                                                            }
                                                         />
                                                     </View>
                                                 )}
@@ -1812,6 +1818,9 @@ export default function Workspace({
                                                             }
                                                             onOpenFullPreview={
                                                                 onOpenPreviewPage
+                                                            }
+                                                            onUpdateItem={
+                                                                onUpdateItem
                                                             }
                                                         />
                                                     </View>

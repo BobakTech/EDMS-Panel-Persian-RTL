@@ -21,6 +21,7 @@ export { default as WorkspaceHeader } from "./WorkspaceHeader";
 
 export type {
     WorkspaceItem,
+    WorkspaceItemUpdate,
     WorkspaceItemStatus,
     WorkspaceItemType,
     WorkspaceViewMode,
