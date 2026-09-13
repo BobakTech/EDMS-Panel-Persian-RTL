@@ -32,12 +32,19 @@ function mapWorkspaceFile(item: WorkspaceFileApiItem): WorkspaceItem {
         name: item.file_name,
         description: item.file_name,
         updatedAt: item.file_date,
-        status: "active",
+
+        status:
+            item.is_deleted === "1"
+                ? "trashed"
+                : item.is_deleted === "2"
+                    ? "archived"
+                    : "active",
+
         parentFolderId: null,
         mimeType: item.file_type,
         sizeLabel: item.file_size,
         categoryId: item.file_category ?? undefined,
-        
+
         fileVersion: item.file_version,
         fileDate: item.file_date,
         fileTime: item.file_time,

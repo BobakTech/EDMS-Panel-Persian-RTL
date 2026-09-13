@@ -50,10 +50,12 @@ export function getWorkspaceCategories(
         }
 
         if (!categories.has(item.categoryId)) {
+            const fallbackName = item.fileTypeLabel?.trim() || item.categoryId;
+
             categories.set(item.categoryId, {
                 id: item.categoryId,
-                nameFa: item.categoryId,
-                nameEn: item.categoryId,
+                nameFa: fallbackName,
+                nameEn: fallbackName,
                 foldersCount: 0,
                 filesCount: 0,
             });

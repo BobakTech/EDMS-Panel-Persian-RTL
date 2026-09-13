@@ -27,19 +27,9 @@ import {
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
-import {
-    getWorkspaceFileExtension,
-    getWorkspaceItemStatusLabel,
-    getWorkspaceItemUpdatedAtLabel,
-} from "../workspace/workspace.helpers";
+import { getPreviewMetadataPresentation } from "../preview/preview.metadata";
 
 import type { WorkspaceItem } from "../workspace";
-
-/**
- * ============================================================================
- * Props
- * ============================================================================
- */
 
 interface DocumentPreviewPageProps {
     item: WorkspaceItem;
@@ -47,12 +37,6 @@ interface DocumentPreviewPageProps {
     onPrevious?: () => void;
     onNext?: () => void;
 }
-
-/**
- * ============================================================================
- * Component
- * ============================================================================
- */
 
 export default function DocumentPreviewPage({
     item,
@@ -82,24 +66,12 @@ export default function DocumentPreviewPage({
 
     const canAccessOriginal = Boolean(item.localUri);
 
-    const fileTypeLabel =
-        item.type === "file"
-            ? (
-                item.extension ??
-                getWorkspaceFileExtension(item.name)
-            ).toUpperCase()
-            : t("folder");
-
-    const rawFileSizeLabel =
-        getWorkspaceItemUpdatedAtLabel(item, t, language);
-
-    const fileSizeLabel =
-        item.type === "file" &&
-            /^\d+(?:[.,]\d+)?$/.test(rawFileSizeLabel.trim())
-            ? `${rawFileSizeLabel} MB`
-            : rawFileSizeLabel;
-
-    const fileStatusLabel = getWorkspaceItemStatusLabel(item, direction, t);
+    const metadata = getPreviewMetadataPresentation(
+        item,
+        direction,
+        t,
+        language,
+    );
 
     function handleOpenOriginal() {
         if (!item.localUri) {
@@ -207,7 +179,6 @@ export default function DocumentPreviewPage({
 
                         <Text
                             dir="auto"
-                            numberOfLines={1}
                             style={[
                                 styles.title,
                                 {
@@ -234,9 +205,7 @@ export default function DocumentPreviewPage({
                                     borderColor: colors.border,
                                 },
                                 !canAccessOriginal && styles.disabledAction,
-                                pressed &&
-                                canAccessOriginal &&
-                                styles.pressedButton,
+                                pressed && canAccessOriginal && styles.pressedButton,
                             ]}
                         >
                             <Feather
@@ -259,9 +228,7 @@ export default function DocumentPreviewPage({
                                     borderColor: colors.border,
                                 },
                                 !canAccessOriginal && styles.disabledAction,
-                                pressed &&
-                                canAccessOriginal &&
-                                styles.pressedButton,
+                                pressed && canAccessOriginal && styles.pressedButton,
                             ]}
                         >
                             <Feather
@@ -284,9 +251,7 @@ export default function DocumentPreviewPage({
                                     borderColor: colors.border,
                                 },
                                 !onPrevious && styles.disabledAction,
-                                pressed &&
-                                Boolean(onPrevious) &&
-                                styles.pressedButton,
+                                pressed && Boolean(onPrevious) && styles.pressedButton,
                             ]}
                         >
                             <Feather
@@ -309,9 +274,7 @@ export default function DocumentPreviewPage({
                                     borderColor: colors.border,
                                 },
                                 !onNext && styles.disabledAction,
-                                pressed &&
-                                Boolean(onNext) &&
-                                styles.pressedButton,
+                                pressed && Boolean(onNext) && styles.pressedButton,
                             ]}
                         >
                             <Feather
@@ -324,63 +287,76 @@ export default function DocumentPreviewPage({
                 </View>
 
                 <View style={styles.compactMetaRow}>
-                    <Text
+                    <View
                         style={[
-                            styles.compactMetaText,
+                            styles.statusChip,
                             {
-                                color: colors.text,
-                                textAlign,
+                                backgroundColor: metadata.status.backgroundColor,
+                                borderColor: metadata.status.borderColor,
                             },
                         ]}
                     >
-                        {fileTypeLabel}
-                    </Text>
+                        <Text
+                            style={[
+                                styles.metaLabel,
+                                {
+                                    color: metadata.status.foregroundColor,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {metadata.status.label}
+                        </Text>
 
-                    <Text
-                        style={[
-                            styles.compactMetaSeparator,
-                            {
-                                color: colors.text,
-                            },
-                        ]}
-                    >
-                        •
-                    </Text>
+                        <Text
+                            style={[
+                                styles.statusValue,
+                                {
+                                    color: metadata.status.foregroundColor,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {metadata.status.value}
+                        </Text>
+                    </View>
 
-                    <Text
-                        style={[
-                            styles.compactMetaText,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {fileSizeLabel}
-                    </Text>
+                    {metadata.entries.map((entry) => (
+                        <View
+                            key={entry.key}
+                            style={[
+                                styles.metaChip,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.metaLabel,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {entry.label}
+                            </Text>
 
-                    <Text
-                        style={[
-                            styles.compactMetaSeparator,
-                            {
-                                color: colors.text,
-                            },
-                        ]}
-                    >
-                        •
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.compactMetaText,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {fileStatusLabel}
-                    </Text>
+                            <Text
+                                style={[
+                                    styles.metaValue,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {entry.value}
+                            </Text>
+                        </View>
+                    ))}
                 </View>
             </View>
 
@@ -448,40 +424,27 @@ export default function DocumentPreviewPage({
     );
 }
 
-/**
- * ============================================================================
- * Styles
- * ============================================================================
- */
-
 const styles = StyleSheet.create({
     container: {
         flexGrow: 0,
         flexShrink: 0,
-
         minWidth: 0,
         minHeight: 0,
-
         overflowY: "visible",
     },
 
     content: {
         gap: spacing.sm,
-
         paddingBottom: spacing.xl,
     },
 
     topPanel: {
         width: "100%",
-
         paddingHorizontal: spacing.sm,
         paddingVertical: 7,
-
         borderWidth: 1,
         borderRadius: radius.lg,
-
-        gap: 4,
-
+        gap: spacing.sm,
         ...shadows.sm,
     },
 
@@ -490,10 +453,11 @@ const styles = StyleSheet.create({
     },
 
     topMainRow: {
+        width: "100%",
+        minWidth: 0,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-
         gap: spacing.md,
     },
 
@@ -503,47 +467,43 @@ const styles = StyleSheet.create({
 
     headerText: {
         flex: 1,
-
-        minWidth: 160,
-
+        minWidth: 0,
         paddingHorizontal: spacing.xs,
     },
 
     eyebrow: {
         marginBottom: 1,
-
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.semibold,
         textAlign: "right",
     },
 
     title: {
+        width: "100%",
+        minWidth: 0,
         fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.bold,
+        fontWeight: typography.fontWeight.medium,
         textAlign: "right",
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
+        wordBreak: "break-word",
     },
 
     compactActions: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "flex-end",
-
         flexShrink: 0,
-
         gap: spacing.xs,
     },
 
     compactButton: {
         minHeight: 34,
-
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-
         gap: spacing.xs,
-
         paddingHorizontal: spacing.sm,
-
         borderWidth: 1,
         borderRadius: radius.md,
     },
@@ -556,35 +516,59 @@ const styles = StyleSheet.create({
     iconActionButton: {
         width: 34,
         height: 34,
-
         alignItems: "center",
         justifyContent: "center",
-
         borderWidth: 1,
         borderRadius: radius.md,
     },
 
     compactMetaRow: {
+        width: "100%",
         flexDirection: "row",
-        alignItems: "center",
-
-        gap: 6,
-
+        flexWrap: "wrap",
+        alignItems: "stretch",
+        gap: spacing.xs,
         paddingHorizontal: spacing.xs,
         paddingTop: 2,
     },
 
-    compactMetaText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-
-        opacity: 0.78,
+    metaChip: {
+        minWidth: 96,
+        maxWidth: "100%",
+        flexGrow: 1,
+        flexBasis: 110,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderWidth: 1,
+        borderRadius: radius.md,
     },
 
-    compactMetaSeparator: {
-        fontSize: typography.fontSize.sm,
+    statusChip: {
+        minWidth: 104,
+        maxWidth: "100%",
+        flexGrow: 1,
+        flexBasis: 110,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
 
-        opacity: 0.38,
+    metaLabel: {
+        marginBottom: 2,
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.regular,
+        opacity: 0.68,
+    },
+
+    metaValue: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    statusValue: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.bold,
     },
 
     disabledAction: {
@@ -598,15 +582,11 @@ const styles = StyleSheet.create({
     previewShell: {
         minHeight: 0,
         minWidth: 0,
-
         alignItems: "center",
         justifyContent: "flex-start",
-
         padding: spacing.md,
-
         borderWidth: 1,
         borderRadius: radius.lg,
-
         ...shadows.sm,
     },
 
@@ -616,7 +596,6 @@ const styles = StyleSheet.create({
 
     imagePreview: {
         width: "100%",
-
         height: 500,
         maxHeight: 500,
     },
@@ -629,14 +608,10 @@ const styles = StyleSheet.create({
     placeholder: {
         width: "100%",
         minHeight: 420,
-
         alignItems: "center",
         justifyContent: "center",
-
         gap: spacing.sm,
-
         padding: spacing.lg,
-
         borderWidth: 1,
         borderRadius: radius.lg,
         borderStyle: "dashed",
@@ -656,7 +631,6 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.regular,
         textAlign: "center",
-
         opacity: 0.72,
     },
 });

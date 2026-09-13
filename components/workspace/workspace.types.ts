@@ -73,6 +73,8 @@ export interface WorkspaceFileApiItem {
 
     file_category: string | null;
 
+    is_deleted: string;
+
     /**
      * Total available records for paginated responses.
      * A value of "-1" means the endpoint returned the complete result set.

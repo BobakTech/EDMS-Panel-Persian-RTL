@@ -186,10 +186,28 @@ export default function AppLayout() {
         onApplyFilters: handleApplyWorkspaceFilters,
         onResetFilters: handleResetWorkspaceFilters,
     };
+    
+    const workspaceCategoryItems = workspaceItems.filter((item) => {
+        if (activeWorkspacePage === "workspace") {
+            return item.status === "active";
+        }
+
+        if (activeWorkspacePage === "archive") {
+            return item.status === "archived";
+        }
+
+        if (activeWorkspacePage === "trash") {
+            return item.status === "trashed";
+        }
+
+        return false;
+    });
+
     const workspaceCategories = getWorkspaceCategories(
-        workspaceItems,
+        workspaceCategoryItems,
         workspaceCategoryDefinitions,
     );
+
     const toolbarProps = {
         activeAction: activeWorkspaceAction,
         searchQuery: workspaceSearchQuery,

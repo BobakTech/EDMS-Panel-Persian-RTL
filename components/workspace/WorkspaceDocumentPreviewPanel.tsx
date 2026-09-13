@@ -21,24 +21,13 @@ import { getDirectionalLayout } from "../../settings/direction";
 import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
 import {
     getPreviewRendererKind,
-    getWorkspaceFileTypeLabel,
     hasRenderableWorkspacePreview,
     type PreviewRendererKind,
 } from "../preview/preview.helpers";
-import {
-    getWorkspaceFileExtension,
-    getWorkspaceItemStatusLabel,
-    getWorkspaceItemUpdatedAtLabel,
-} from "./workspace.helpers";
+import { getPreviewMetadataPresentation } from "../preview/preview.metadata";
 import type { TranslationKey } from "../../locales";
 
 import type { WorkspaceItem } from "./workspace.types";
-
-/**
- * ============================================================================
- * Types
- * ============================================================================
- */
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
 
@@ -49,25 +38,18 @@ interface PreviewRendererInfo {
     description: string;
 }
 
-/**
- * ============================================================================
- * Props
- * ============================================================================
- */
-
 interface WorkspaceDocumentPreviewPanelProps {
     item: WorkspaceItem;
     onClose: () => void;
-
-    /**
-     * Opens the selected file in the standalone document preview layout.
-     */
     onOpenFullPreview?: (item: WorkspaceItem) => void;
 }
 
 type Translate = (key: TranslationKey) => string;
 
-function getPreviewRendererInfo(item: WorkspaceItem, t: Translate): PreviewRendererInfo {
+function getPreviewRendererInfo(
+    item: WorkspaceItem,
+    t: Translate
+): PreviewRendererInfo {
     const kind = getPreviewRendererKind(item);
 
     if (kind === "pdf") {
@@ -116,12 +98,6 @@ function getPreviewRendererInfo(item: WorkspaceItem, t: Translate): PreviewRende
     };
 }
 
-/**
- * ============================================================================
- * Component
- * ============================================================================
- */
-
 export default function WorkspaceDocumentPreviewPanel({
     item,
     onClose,
@@ -130,28 +106,15 @@ export default function WorkspaceDocumentPreviewPanel({
     const { direction, language, t, theme } = useSettings();
     const colors = theme.colors;
     const { textAlign } = getDirectionalLayout(direction);
+
     const rendererInfo = getPreviewRendererInfo(item, t);
     const hasRenderablePreview = hasRenderableWorkspacePreview(item);
-
-    const fileTypeLabel =
-        item.type === "file"
-            ? (
-                item.extension ??
-                getWorkspaceFileExtension(item.name)
-            ).toUpperCase()
-            : t("folder");
-
-    const rawFileSizeLabel =
-        getWorkspaceItemUpdatedAtLabel(item, t, language);
-
-    const fileSizeLabel =
-        item.type === "file" &&
-            /^\d+(?:[.,]\d+)?$/.test(rawFileSizeLabel.trim())
-            ? `${rawFileSizeLabel} MB`
-            : rawFileSizeLabel;
-
-    const fileStatusLabel =
-        getWorkspaceItemStatusLabel(item, direction, t);
+    const metadata = getPreviewMetadataPresentation(
+        item,
+        direction,
+        t,
+        language,
+    );
 
     return (
         <View
@@ -222,7 +185,7 @@ export default function WorkspaceDocumentPreviewPanel({
                     </Text>
 
                     <Text
-                        numberOfLines={1}
+                        dir="auto"
                         style={[
                             styles.title,
                             {
@@ -234,6 +197,79 @@ export default function WorkspaceDocumentPreviewPanel({
                         {item.name}
                     </Text>
                 </View>
+            </View>
+
+            <View style={styles.metaRow}>
+                <View
+                    style={[
+                        styles.statusChip,
+                        {
+                            backgroundColor: metadata.status.backgroundColor,
+                            borderColor: metadata.status.borderColor,
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.metaLabel,
+                            {
+                                color: metadata.status.foregroundColor,
+                                textAlign,
+                            },
+                        ]}
+                    >
+                        {metadata.status.label}
+                    </Text>
+
+                    <Text
+                        style={[
+                            styles.statusValue,
+                            {
+                                color: metadata.status.foregroundColor,
+                                textAlign,
+                            },
+                        ]}
+                    >
+                        {metadata.status.value}
+                    </Text>
+                </View>
+
+                {metadata.entries.map((entry) => (
+                    <View
+                        key={entry.key}
+                        style={[
+                            styles.metaChip,
+                            {
+                                backgroundColor: colors.background,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.metaLabel,
+                                {
+                                    color: colors.text,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {entry.label}
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.metaValue,
+                                {
+                                    color: colors.text,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {entry.value}
+                        </Text>
+                    </View>
+                ))}
             </View>
 
             <View
@@ -301,75 +337,9 @@ export default function WorkspaceDocumentPreviewPanel({
                     }
                 />
             </View>
-
-            <View style={styles.metaRow}>
-                <Text
-                    style={[
-                        styles.metaValue,
-                        {
-                            color: colors.text,
-                            textAlign,
-                        },
-                    ]}
-                >
-                    {fileTypeLabel}
-                </Text>
-
-                <Text
-                    style={[
-                        styles.metaSeparator,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    •
-                </Text>
-
-                <Text
-                    style={[
-                        styles.metaValue,
-                        {
-                            color: colors.text,
-                            textAlign,
-                        },
-                    ]}
-                >
-                    {fileSizeLabel}
-                </Text>
-
-                <Text
-                    style={[
-                        styles.metaSeparator,
-                        {
-                            color: colors.text,
-                        },
-                    ]}
-                >
-                    •
-                </Text>
-
-                <Text
-                    style={[
-                        styles.metaValue,
-                        {
-                            color: colors.text,
-                            textAlign,
-                        },
-                    ]}
-                >
-                    {fileStatusLabel}
-                </Text>
-            </View>
         </View>
     );
 }
-
-/**
- * ============================================================================
- * Styles
- * ============================================================================
- */
 
 const styles = StyleSheet.create({
     container: {
@@ -388,16 +358,22 @@ const styles = StyleSheet.create({
     },
 
     topRow: {
+        width: "100%",
+        minWidth: 0,
+
         flexDirection: "row",
         alignItems: "center",
-        gap: spacing.sm,
 
+        gap: spacing.sm,
         marginBottom: spacing.sm,
     },
 
     closeButton: {
         width: 32,
         height: 32,
+
+        flexShrink: 0,
+
         alignItems: "center",
         justifyContent: "center",
 
@@ -419,14 +395,78 @@ const styles = StyleSheet.create({
     },
 
     title: {
+        width: "100%",
+        minWidth: 0,
+
         fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.bold,
+        fontWeight: typography.fontWeight.medium,
+
         textAlign: "right",
+
+        whiteSpace: "normal",
+        overflowWrap: "anywhere",
+        wordBreak: "break-word",
+    },
+
+    metaRow: {
+        width: "100%",
+
+        flexDirection: "row",
+        flexWrap: "wrap",
+        alignItems: "stretch",
+
+        gap: spacing.xs,
+        marginBottom: spacing.sm,
+    },
+
+    metaChip: {
+        minWidth: 96,
+        maxWidth: "100%",
+
+        flexGrow: 1,
+        flexBasis: 110,
+
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    statusChip: {
+        minWidth: 104,
+        maxWidth: "100%",
+
+        flexGrow: 1,
+        flexBasis: 110,
+
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    metaLabel: {
+        marginBottom: 2,
+
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.regular,
+
+        opacity: 0.68,
+    },
+
+    metaValue: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    statusValue: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.bold,
     },
 
     previewRow: {
-        order: 2,
-
         width: "100%",
         minHeight: 112,
 
@@ -435,7 +475,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
 
         gap: spacing.md,
-
         padding: spacing.md,
 
         borderWidth: 1,
@@ -443,36 +482,18 @@ const styles = StyleSheet.create({
         borderStyle: "dashed",
     },
 
-    /**
-     * ============================================================================
-     * Image Preview Frame
-     * ----------------------------------------------------------------------------
-     * Gives uploaded images enough space while keeping them contained.
-     * ============================================================================
-     */
-
     imagePreviewFrame: {
-        order: 2,
-
         minHeight: 420,
+
         alignItems: "center",
         justifyContent: "center",
 
-        marginBottom: spacing.sm,
         padding: spacing.sm,
 
         borderWidth: 1,
         borderRadius: radius.md,
         overflow: "hidden",
     },
-
-    /**
-     * ============================================================================
-     * Image Preview
-     * ----------------------------------------------------------------------------
-     * Renders the image larger inside the expanded workspace preview.
-     * ============================================================================
-     */
 
     imagePreview: {
         width: "100%",
@@ -482,6 +503,7 @@ const styles = StyleSheet.create({
     previewIcon: {
         width: 44,
         height: 44,
+
         alignItems: "center",
         justifyContent: "center",
 
@@ -506,45 +528,20 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.xs,
         fontWeight: typography.fontWeight.regular,
         textAlign: "right",
+
         opacity: 0.72,
-    },
-
-    metaRow: {
-        order: 1,
-
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        flexWrap: "wrap",
-
-        gap: spacing.xs,
-
-        marginBottom: spacing.sm,
-    },
-
-    metaValue: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "right",
-
-        opacity: 0.78,
-    },
-
-    metaSeparator: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.regular,
-
-        opacity: 0.36,
     },
 
     fullPreviewButton: {
         minHeight: 32,
 
+        flexShrink: 0,
+
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        gap: spacing.xs,
 
+        gap: spacing.xs,
         paddingHorizontal: spacing.sm,
 
         borderWidth: 1,
