@@ -29,7 +29,11 @@ import {
 import { getPreviewMetadataPresentation } from "../preview/preview.metadata";
 import type { TranslationKey } from "../../locales";
 
-import type { WorkspaceItem, WorkspaceItemUpdate } from "./workspace.types";
+import type {
+    WorkspaceCategoryDefinition,
+    WorkspaceItem,
+    WorkspaceItemUpdate,
+} from "./workspace.types";
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
 
@@ -42,6 +46,7 @@ interface PreviewRendererInfo {
 
 interface WorkspaceDocumentPreviewPanelProps {
     item: WorkspaceItem;
+    categoryDefinitions: WorkspaceCategoryDefinition[];
     onClose: () => void;
     onOpenFullPreview?: (item: WorkspaceItem) => void;
     onUpdateItem?: (itemId: string, updates: WorkspaceItemUpdate) => void;
@@ -103,6 +108,7 @@ function getPreviewRendererInfo(
 
 export default function WorkspaceDocumentPreviewPanel({
     item,
+    categoryDefinitions,
     onClose,
     onOpenFullPreview,
     onUpdateItem,
@@ -128,6 +134,9 @@ export default function WorkspaceDocumentPreviewPanel({
     const [draftFileTypeLabel, setDraftFileTypeLabel] = useState(
         item.fileTypeLabel ?? ""
     );
+    const [draftCategoryId, setDraftCategoryId] = useState(
+        item.categoryId ?? ""
+    );
 
     useEffect(() => {
         setIsEditing(false);
@@ -136,6 +145,7 @@ export default function WorkspaceDocumentPreviewPanel({
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setDraftCategoryId(item.categoryId ?? "");
     }, [
         item.id,
         item.name,
@@ -143,6 +153,7 @@ export default function WorkspaceDocumentPreviewPanel({
         item.fileDate,
         item.fileTime,
         item.fileTypeLabel,
+        item.categoryId,
     ]);
 
     function handleStartEdit() {
@@ -151,6 +162,7 @@ export default function WorkspaceDocumentPreviewPanel({
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setDraftCategoryId(item.categoryId ?? "");
         setIsEditing(true);
     }
 
@@ -160,6 +172,7 @@ export default function WorkspaceDocumentPreviewPanel({
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setDraftCategoryId(item.categoryId ?? "");
         setIsEditing(false);
     }
 
@@ -180,6 +193,7 @@ export default function WorkspaceDocumentPreviewPanel({
             fileDate: draftDate.trim(),
             fileTime: draftTime.trim(),
             fileTypeLabel: draftFileTypeLabel.trim(),
+            categoryId: draftCategoryId || undefined,
         });
 
         setIsEditing(false);
@@ -258,7 +272,7 @@ export default function WorkspaceDocumentPreviewPanel({
                         ]}
                     >
                         <Feather
-                            name={isEditing ? "x" : "edit"}
+                            name={isEditing ? "x" : "edit-3"}
                             size={14}
                             color={colors.primary}
                         />
@@ -300,7 +314,7 @@ export default function WorkspaceDocumentPreviewPanel({
                         <input
                             value={draftName}
                             onChange={(event) => setDraftName(event.target.value)}
-                            dir="auto"
+                            dir="ltr"
                             aria-label={
                                 direction === "rtl"
                                     ? "نام فایل"
@@ -323,7 +337,7 @@ export default function WorkspaceDocumentPreviewPanel({
                         />
                     ) : (
                         <Text
-                            dir="auto"
+                            dir="ltr"
                             style={[
                                 styles.title,
                                 {
@@ -543,19 +557,61 @@ export default function WorkspaceDocumentPreviewPanel({
                                 {direction === "rtl" ? "نوع فایل" : "File type"}
                             </span>
 
-                            <input
-                                value={draftFileTypeLabel}
-                                onChange={(event) =>
-                                    setDraftFileTypeLabel(event.target.value)
-                                }
-                                dir="auto"
-                                style={{
-                                    ...styles.editInput,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.surface,
-                                    color: colors.text,
-                                }}
-                            />
+                            <select
+                                    value={draftCategoryId}
+                                    onChange={(event) => {
+                                        const selectedCategoryId =
+                                            event.target.value;
+
+                                        const selectedCategory =
+                                            categoryDefinitions.find(
+                                                (category) =>
+                                                    category.id ===
+                                                    selectedCategoryId
+                                            );
+
+                                        setDraftCategoryId(
+                                            selectedCategoryId
+                                        );
+
+                                        setDraftFileTypeLabel(
+                                            selectedCategory?.nameFa?.trim() ||
+                                            selectedCategory?.nameEn?.trim() ||
+                                            ""
+                                        );
+                                    }}
+                                    aria-label={
+                                        direction === "rtl"
+                                            ? "نوع فایل"
+                                            : "File type"
+                                    }
+                                    style={{
+                                        ...styles.editInput,
+                                        minHeight: 32,
+                                        paddingInline: 8,
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.surface,
+                                        color: colors.text,
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <option value="">
+                                        {direction === "rtl"
+                                            ? "انتخاب دسته‌بندی"
+                                            : "Select category"}
+                                    </option>
+
+                                    {categoryDefinitions.map((category) => (
+                                        <option
+                                            key={category.id}
+                                            value={category.id}
+                                        >
+                                            {category.nameFa?.trim() ||
+                                                category.nameEn?.trim() ||
+                                                category.id}
+                                        </option>
+                                    ))}
+                                </select>
                         </label>
                     </View>
 
@@ -577,8 +633,8 @@ export default function WorkspaceDocumentPreviewPanel({
                                 },
                                 !draftName.trim() && styles.disabledButton,
                                 pressed &&
-                                Boolean(draftName.trim()) &&
-                                styles.pressedButton,
+                                    Boolean(draftName.trim()) &&
+                                    styles.pressedButton,
                             ]}
                         >
                             <Feather name="check" size={14} color="#ffffff" />

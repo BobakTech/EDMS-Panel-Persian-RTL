@@ -730,6 +730,7 @@ export default function AppLayout() {
                     {previewPageItem ? (
                         <DocumentPreviewPage
                             item={previewPageItem}
+                            categoryDefinitions={workspaceCategoryDefinitions}
                             onBack={handleClosePreviewPage}
                             onUpdateItem={handleUpdateWorkspaceItem}
                             onPrevious={
@@ -749,6 +750,7 @@ export default function AppLayout() {
                             currentFolderId={currentFolderId}
                             workspaceItems={filteredWorkspaceItems}
                             workspaceCategories={workspaceCategories}
+                            workspaceCategoryDefinitions={workspaceCategoryDefinitions}
                             activeWorkspaceCategory={activeWorkspaceCategory}
                             setActiveWorkspaceCategory={setActiveWorkspaceCategory}
                             searchQuery={workspaceSearchQuery}

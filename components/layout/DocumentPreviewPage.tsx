@@ -31,10 +31,15 @@ import { getDirectionalLayout } from "../../settings/direction";
 import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
 import { getPreviewMetadataPresentation } from "../preview/preview.metadata";
 
-import type { WorkspaceItem, WorkspaceItemUpdate } from "../workspace";
+import type {
+    WorkspaceCategoryDefinition,
+    WorkspaceItem,
+    WorkspaceItemUpdate,
+} from "../workspace";
 
 interface DocumentPreviewPageProps {
     item: WorkspaceItem;
+    categoryDefinitions: WorkspaceCategoryDefinition[];
     onBack: () => void;
     onPrevious?: () => void;
     onNext?: () => void;
@@ -43,6 +48,7 @@ interface DocumentPreviewPageProps {
 
 export default function DocumentPreviewPage({
     item,
+    categoryDefinitions,
     onBack,
     onPrevious,
     onNext,
@@ -85,6 +91,9 @@ export default function DocumentPreviewPage({
     const [draftFileTypeLabel, setDraftFileTypeLabel] = useState(
         item.fileTypeLabel ?? ""
     );
+    const [draftCategoryId, setDraftCategoryId] = useState(
+        item.categoryId ?? ""
+    );
 
     useEffect(() => {
         setIsEditing(false);
@@ -93,6 +102,7 @@ export default function DocumentPreviewPage({
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setDraftCategoryId(item.categoryId ?? "");
     }, [
         item.id,
         item.name,
@@ -100,6 +110,7 @@ export default function DocumentPreviewPage({
         item.fileDate,
         item.fileTime,
         item.fileTypeLabel,
+        item.categoryId,
     ]);
 
     function handleStartEdit() {
@@ -108,6 +119,7 @@ export default function DocumentPreviewPage({
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setDraftCategoryId(item.categoryId ?? "");
         setIsEditing(true);
     }
 
@@ -117,6 +129,7 @@ export default function DocumentPreviewPage({
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
+        setDraftCategoryId(item.categoryId ?? "");
         setIsEditing(false);
     }
 
@@ -137,6 +150,7 @@ export default function DocumentPreviewPage({
             fileDate: draftDate.trim(),
             fileTime: draftTime.trim(),
             fileTypeLabel: draftFileTypeLabel.trim(),
+            categoryId: draftCategoryId || undefined,
         });
 
         setIsEditing(false);
@@ -252,7 +266,7 @@ export default function DocumentPreviewPage({
                                 onChange={(event) =>
                                     setDraftName(event.target.value)
                                 }
-                                dir="auto"
+                                dir="ltr"
                                 aria-label={
                                     direction === "rtl"
                                         ? "نام فایل"
@@ -275,7 +289,7 @@ export default function DocumentPreviewPage({
                             />
                         ) : (
                             <Text
-                                dir="auto"
+                                dir="ltr"
                                 style={[
                                     styles.title,
                                     {
@@ -318,8 +332,8 @@ export default function DocumentPreviewPage({
                                 ]}
                             >
                                 <Feather
-                                    name={isEditing ? "x" : "edit"}
-                                    size={14}
+                                    name={isEditing ? "x" : "edit-3"}
+                                    size={15}
                                     color={colors.primary}
                                 />
                             </Pressable>
@@ -631,21 +645,61 @@ export default function DocumentPreviewPage({
                                         : "File type"}
                                 </span>
 
-                                <input
-                                    value={draftFileTypeLabel}
-                                    onChange={(event) =>
+                                <select
+                                    value={draftCategoryId}
+                                    onChange={(event) => {
+                                        const selectedCategoryId =
+                                            event.target.value;
+
+                                        const selectedCategory =
+                                            categoryDefinitions.find(
+                                                (category) =>
+                                                    category.id ===
+                                                    selectedCategoryId
+                                            );
+
+                                        setDraftCategoryId(
+                                            selectedCategoryId
+                                        );
+
                                         setDraftFileTypeLabel(
-                                            event.target.value
-                                        )
+                                            selectedCategory?.nameFa?.trim() ||
+                                            selectedCategory?.nameEn?.trim() ||
+                                            ""
+                                        );
+                                    }}
+                                    aria-label={
+                                        direction === "rtl"
+                                            ? "نوع فایل"
+                                            : "File type"
                                     }
-                                    dir="auto"
                                     style={{
                                         ...styles.editInput,
+                                        minHeight: 32,
+                                        paddingInline: 8,
                                         borderColor: colors.border,
                                         backgroundColor: colors.surface,
                                         color: colors.text,
+                                        cursor: "pointer",
                                     }}
-                                />
+                                >
+                                    <option value="">
+                                        {direction === "rtl"
+                                            ? "انتخاب دسته‌بندی"
+                                            : "Select category"}
+                                    </option>
+
+                                    {categoryDefinitions.map((category) => (
+                                        <option
+                                            key={category.id}
+                                            value={category.id}
+                                        >
+                                            {category.nameFa?.trim() ||
+                                                category.nameEn?.trim() ||
+                                                category.id}
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
                         </View>
 
@@ -666,10 +720,10 @@ export default function DocumentPreviewPage({
                                         borderColor: colors.primary,
                                     },
                                     !draftName.trim() &&
-                                    styles.disabledAction,
+                                        styles.disabledAction,
                                     pressed &&
-                                    Boolean(draftName.trim()) &&
-                                    styles.pressedButton,
+                                        Boolean(draftName.trim()) &&
+                                        styles.pressedButton,
                                 ]}
                             >
                                 <Feather

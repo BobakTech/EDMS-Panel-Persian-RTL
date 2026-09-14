@@ -76,6 +76,7 @@ import type { WorkspaceCategory } from "../workspace/workspace.types";
  */
 
 import type {
+    WorkspaceCategoryDefinition,
     WorkspaceItem,
     WorkspaceItemUpdate,
     WorkspacePageType,
@@ -203,6 +204,7 @@ interface WorkspaceProps {
     onDropFiles: (files: DroppedWorkspaceFile[]) => void;
     onOpenPreviewPage: (item: WorkspaceItem) => void;
     workspaceCategories: WorkspaceCategory[];
+    workspaceCategoryDefinitions: WorkspaceCategoryDefinition[];
     activeWorkspaceCategory: string;
     setActiveWorkspaceCategory: (categoryId: string) => void;
 }
@@ -233,6 +235,7 @@ export default function Workspace({
     onDropFiles,
     onOpenPreviewPage,
     workspaceCategories,
+    workspaceCategoryDefinitions,
     activeWorkspaceCategory,
     setActiveWorkspaceCategory,
 }: WorkspaceProps) {
@@ -1733,6 +1736,9 @@ export default function Workspace({
                                                             item={
                                                                 previewItem
                                                             }
+                                                            categoryDefinitions={
+                                                                workspaceCategoryDefinitions
+                                                            }
                                                             onClose={
                                                                 handleCloseDocumentPreview
                                                             }
@@ -1813,6 +1819,9 @@ export default function Workspace({
                                                     >
                                                         <WorkspaceDocumentPreviewPanel
                                                             item={item}
+                                                            categoryDefinitions={
+                                                                workspaceCategoryDefinitions
+                                                            }
                                                             onClose={
                                                                 handleCloseDocumentPreview
                                                             }

@@ -13,11 +13,11 @@ import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 
 import {
-    getWorkspaceItemDescription,
     getWorkspaceItemLabel,
     getWorkspaceItemStatusLabel,
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
+
 import WorkspaceItemDetailsActions, {
     type WorkspaceItemDetailsAction,
 } from "./WorkspaceItemDetailsActions";
@@ -83,6 +83,7 @@ export default function WorkspaceItemDetailsPanel({
                 </Text>
 
                 <Text
+                    dir="ltr"
                     style={[
                         styles.title,
                         {
@@ -92,18 +93,6 @@ export default function WorkspaceItemDetailsPanel({
                     ]}
                 >
                     {item.name}
-                </Text>
-
-                <Text
-                    style={[
-                        styles.description,
-                        {
-                            color: colors.text,
-                            textAlign,
-                        },
-                    ]}
-                >
-                    {getWorkspaceItemDescription(item, direction)}
                 </Text>
 
                 <View style={styles.metaRow}>
@@ -188,16 +177,6 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
         textAlign: "start",
-    },
-
-    description: {
-        marginBottom: spacing.xs,
-
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.regular,
-        textAlign: "start",
-
-        opacity: 0.72,
     },
 
     metaRow: {
