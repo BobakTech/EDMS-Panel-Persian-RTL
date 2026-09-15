@@ -26,6 +26,7 @@ import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import type { TranslationKey } from "../../locales";
+import Tooltip from "../common/Tooltip";
 import { getProjectConnectionPresentation } from "../project";
 
 import type { WorkspacePageType } from "../workspace";
@@ -140,27 +141,28 @@ export default function Sidebar({
     );
 
     const connectionStatus = (showLabel: boolean) => (
-        <View
-            accessibilityRole="status"
-            accessibilityLabel={connection.label}
-            title={connection.shortLabel}
-            style={
-                showLabel
-                    ? styles.expandedConnectionStatus
-                    : styles.collapsedConnectionStatus
-            }
-        >
-            <Feather
-                name={connection.icon}
-                size={showLabel ? 18 : 20}
-                color={connection.color}
-            />
-            {showLabel && (
-                <Text style={[styles.connectionText, { color: connection.color }]}>
-                    {connection.label}
-                </Text>
-            )}
-        </View>
+        <Tooltip label={connection.shortLabel}>
+            <View
+                accessibilityRole="status"
+                accessibilityLabel={connection.label}
+                style={
+                    showLabel
+                        ? styles.expandedConnectionStatus
+                        : styles.collapsedConnectionStatus
+                }
+            >
+                <Feather
+                    name={connection.icon}
+                    size={showLabel ? 18 : 20}
+                    color={connection.color}
+                />
+                {showLabel && (
+                    <Text style={[styles.connectionText, { color: connection.color }]}>
+                        {connection.label}
+                    </Text>
+                )}
+            </View>
+        </Tooltip>
     );
 
     return (
@@ -174,29 +176,33 @@ export default function Sidebar({
             ]}
         >
             {variant === "desktop" && (
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
-                    accessibilityState={{ selected: isPinnedOpen }}
-                    title={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
-                    onPress={() => setIsPinnedOpen((current) => !current)}
-                    style={[
-                        styles.sidebarPinButton,
-                        isRtl
-                            ? { left: -18 }
-                            : { right: -18 },
-                        {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.border,
-                        },
+                <Tooltip
+                    label={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
+                    wrapperStyle={[
+                        styles.sidebarPinWrapper,
+                        isRtl ? { left: -18 } : { right: -18 },
                     ]}
                 >
-                    <Feather
-                        name={sidebarToggleIcon}
-                        size={18}
-                        color={colors.primary}
-                    />
-                </Pressable>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
+                        accessibilityState={{ selected: isPinnedOpen }}
+                        onPress={() => setIsPinnedOpen((current) => !current)}
+                        style={[
+                            styles.sidebarPinButton,
+                            {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                    >
+                        <Feather
+                            name={sidebarToggleIcon}
+                            size={18}
+                            color={colors.primary}
+                        />
+                    </Pressable>
+                </Tooltip>
             )}
 
             <View
@@ -299,81 +305,89 @@ export default function Sidebar({
                             : colors.text;
 
                         return (
-                            <Pressable
+                            <Tooltip
                                 key={item.page}
-                                accessibilityRole="button"
-                                accessibilityLabel={t(item.accessibilityLabelKey)}
-                                title={!isExpanded ? t(item.labelKey) : undefined}
-                                onPress={() => onChangePage(item.page)}
-                                style={({ pressed }) => [
-                                    styles.navigationButton,
-                                    { order: item.order },
-                                    !isExpanded && styles.collapsedNavigationButton,
-                                    isSelected && {
-                                        backgroundColor: colors.background,
-                                        borderColor: colors.border,
-                                    },
-                                    pressed && styles.pressedNavigationButton,
-                                ]}
+                                label={!isExpanded ? t(item.labelKey) : undefined}
+                                fill
                             >
-                                <View
-                                    style={[
-                                        styles.navigationButtonContent,
-                                        !isExpanded && styles.collapsedButtonContent,
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t(item.accessibilityLabelKey)}
+                                    onPress={() => onChangePage(item.page)}
+                                    style={({ pressed }) => [
+                                        styles.navigationButton,
+                                        { order: item.order },
+                                        !isExpanded && styles.collapsedNavigationButton,
+                                        isSelected && {
+                                            backgroundColor: colors.background,
+                                            borderColor: colors.border,
+                                        },
+                                        pressed && styles.pressedNavigationButton,
                                     ]}
                                 >
-                                    <View style={styles.navigationIconBox}>
-                                        <Feather
-                                            name={item.icon}
-                                            size={18}
-                                            color={itemColor}
-                                        />
-                                    </View>
-
-                                    {isExpanded && <Text
+                                    <View
                                         style={[
-                                            styles.navigationItem,
-                                            {
-                                                color: itemColor,
-                                                textAlign,
-                                            },
+                                            styles.navigationButtonContent,
+                                            !isExpanded && styles.collapsedButtonContent,
                                         ]}
                                     >
-                                        {t(item.labelKey)}
-                                    </Text>}
-                                </View>
-                            </Pressable>
+                                        <View style={styles.navigationIconBox}>
+                                            <Feather
+                                                name={item.icon}
+                                                size={18}
+                                                color={itemColor}
+                                            />
+                                        </View>
+
+                                        {isExpanded && <Text
+                                            style={[
+                                                styles.navigationItem,
+                                                {
+                                                    color: itemColor,
+                                                    textAlign,
+                                                },
+                                            ]}
+                                        >
+                                            {t(item.labelKey)}
+                                        </Text>}
+                                    </View>
+                                </Pressable>
+                            </Tooltip>
                         );
                     })}
 
-                    <View
-                        title={!isExpanded ? t("sharedDocuments") : undefined}
-                        style={[
-                            styles.staticNavigationItem,
-                            !isExpanded && styles.collapsedStaticNavigationItem,
-                            { order: 2 },
-                        ]}
+                    <Tooltip
+                        label={!isExpanded ? t("sharedDocuments") : undefined}
+                        fill
                     >
-                        <View style={styles.navigationIconBox}>
-                            <Feather
-                                name="users"
-                                size={18}
-                                color={colors.text}
-                            />
-                        </View>
-
-                        {isExpanded && <Text
+                        <View
                             style={[
-                                styles.navigationItem,
-                                {
-                                    color: colors.text,
-                                    textAlign,
-                                },
+                                styles.staticNavigationItem,
+                                !isExpanded && styles.collapsedStaticNavigationItem,
+                                { order: 2 },
                             ]}
                         >
-                            {t("sharedDocuments")}
-                        </Text>}
-                    </View>
+                            <View style={styles.navigationIconBox}>
+                                <Feather
+                                    name="users"
+                                    size={18}
+                                    color={colors.text}
+                                />
+                            </View>
+
+                            {isExpanded && <Text
+                                style={[
+                                    styles.navigationItem,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {t("sharedDocuments")}
+                            </Text>}
+                        </View>
+                    </Tooltip>
                 </View>
 
                 <View style={styles.utilities}>
@@ -384,55 +398,59 @@ export default function Sidebar({
                         ]}
                     />
 
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("showSettings")}
-                        title={!isExpanded ? t("settings") : undefined}
-                        onPress={() => onChangePage("settings")}
-                        style={({ pressed }) => [
-                            styles.utilityButton,
-                            !isExpanded && styles.collapsedNavigationButton,
-                            activePage === "settings" && {
-                                backgroundColor: colors.background,
-                                borderColor: colors.border,
-                            },
-                            pressed && styles.pressedUtilityButton,
-                        ]}
+                    <Tooltip
+                        label={!isExpanded ? t("settings") : undefined}
+                        fill
                     >
-                        <View
-                            style={[
-                                styles.utilityButtonContent,
-                                !isExpanded && styles.collapsedButtonContent,
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t("showSettings")}
+                            onPress={() => onChangePage("settings")}
+                            style={({ pressed }) => [
+                                styles.utilityButton,
+                                !isExpanded && styles.collapsedNavigationButton,
+                                activePage === "settings" && {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                                pressed && styles.pressedUtilityButton,
                             ]}
                         >
-                            <View style={styles.navigationIconBox}>
-                                <Feather
-                                    name="settings"
-                                    size={18}
-                                    color={
-                                        activePage === "settings"
-                                            ? colors.primary
-                                            : colors.text
-                                    }
-                                />
-                            </View>
-
-                            {isExpanded && <Text
+                            <View
                                 style={[
-                                    styles.utilityItem,
-                                    {
-                                        color:
-                                            activePage === "settings"
-                                                ? colors.primary
-                                                : colors.text,
-                                        textAlign,
-                                    },
+                                    styles.utilityButtonContent,
+                                    !isExpanded && styles.collapsedButtonContent,
                                 ]}
                             >
-                                {t("settings")}
-                            </Text>}
-                        </View>
-                    </Pressable>
+                                <View style={styles.navigationIconBox}>
+                                    <Feather
+                                        name="settings"
+                                        size={18}
+                                        color={
+                                            activePage === "settings"
+                                                ? colors.primary
+                                                : colors.text
+                                        }
+                                    />
+                                </View>
+
+                                {isExpanded && <Text
+                                    style={[
+                                        styles.utilityItem,
+                                        {
+                                            color:
+                                                activePage === "settings"
+                                                    ? colors.primary
+                                                    : colors.text,
+                                            textAlign,
+                                        },
+                                    ]}
+                                >
+                                    {t("settings")}
+                                </Text>}
+                            </View>
+                        </Pressable>
+                    </Tooltip>
 
                     {isExpanded && <View
                         style={[
@@ -592,13 +610,15 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    sidebarPinButton: {
-        width: 36,
-        height: 36,
-
+    sidebarPinWrapper: {
         position: "absolute",
         top: 42,
         zIndex: 60,
+    },
+
+    sidebarPinButton: {
+        width: 36,
+        height: 36,
 
         alignItems: "center",
         justifyContent: "center",

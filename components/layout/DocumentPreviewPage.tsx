@@ -28,6 +28,7 @@ import {
 } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
+import Tooltip from "../common/Tooltip";
 import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
 import { getPreviewMetadataPresentation } from "../preview/preview.metadata";
 
@@ -135,11 +136,11 @@ export default function DocumentPreviewPage({
     function getCategoryLabel(category: WorkspaceCategoryDefinition) {
         return direction === "rtl"
             ? category.nameFa?.trim() ||
-            category.nameEn?.trim() ||
-            category.id
+              category.nameEn?.trim() ||
+              category.id
             : category.nameEn?.trim() ||
-            category.nameFa?.trim() ||
-            category.id;
+              category.nameFa?.trim() ||
+              category.id;
     }
 
     const [isEditing, setIsEditing] = useState(false);
@@ -279,37 +280,38 @@ export default function DocumentPreviewPage({
                         isPhonePreview && styles.phoneTopMainRow,
                     ]}
                 >
-                    <Pressable
-                        title={t("backToWorkspace")}
-                        accessibilityRole="button"
-                        accessibilityLabel={t("backToWorkspace")}
-                        onPress={onBack}
-                        style={({ pressed }) => [
-                            styles.compactButton,
-                            {
-                                backgroundColor: colors.primary,
-                                borderColor: colors.primary,
-                            },
-                            pressed && styles.pressedButton,
-                        ]}
-                    >
-                        <Feather
-                            name={backIcon}
-                            size={15}
-                            color={primaryForeground}
-                        />
-
-                        <Text
-                            style={[
-                                styles.compactButtonText,
+                    <Tooltip label={t("backToWorkspace")}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t("backToWorkspace")}
+                            onPress={onBack}
+                            style={({ pressed }) => [
+                                styles.compactButton,
                                 {
-                                    color: primaryForeground,
+                                    backgroundColor: colors.primary,
+                                    borderColor: colors.primary,
                                 },
+                                pressed && styles.pressedButton,
                             ]}
                         >
-                            {t("back")}
-                        </Text>
-                    </Pressable>
+                            <Feather
+                                name={backIcon}
+                                size={15}
+                                color={primaryForeground}
+                            />
+                        
+                            <Text
+                                style={[
+                                    styles.compactButtonText,
+                                    {
+                                        color: primaryForeground,
+                                    },
+                                ]}
+                            >
+                                {t("back")}
+                            </Text>
+                        </Pressable>
+                    </Tooltip>
 
                     <View style={styles.headerText}>
                         <Text
@@ -395,137 +397,174 @@ export default function DocumentPreviewPage({
 
                     <View style={styles.compactActions}>
                         {onUpdateItem && !isEditing && (
+                            <Tooltip label={direction === "rtl" ? "ویرایش اطلاعات سند" : "Edit document details"}>
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={
+                                        direction === "rtl"
+                                            ? "ویرایش اطلاعات سند"
+                                            : "Edit document details"
+                                    }
+                                    onPress={handleStartEdit}
+                                    style={({ pressed }) => [
+                                        styles.iconActionButton,
+                                        {
+                                            backgroundColor: colors.background,
+                                            borderColor: colors.border,
+                                        },
+                                        pressed && styles.pressedButton,
+                                    ]}
+                                >
+                                    <Feather
+                                        name="edit-3"
+                                        size={15}
+                                        color={colors.primary}
+                                    />
+                                </Pressable>
+                            </Tooltip>
+                        )}
+                        <Tooltip label={t("openOriginal")}>
                             <Pressable
-                                title={
-                                    direction === "rtl"
-                                        ? "ویرایش اطلاعات سند"
-                                        : "Edit document details"
-                                }
                                 accessibilityRole="button"
-                                accessibilityLabel={
-                                    direction === "rtl"
-                                        ? "ویرایش اطلاعات سند"
-                                        : "Edit document details"
-                                }
-                                onPress={handleStartEdit}
+                                accessibilityLabel={t("openOriginal")}
+                                disabled={!canAccessOriginal}
+                                onPress={handleOpenOriginal}
                                 style={({ pressed }) => [
                                     styles.iconActionButton,
                                     {
                                         backgroundColor: colors.background,
                                         borderColor: colors.border,
                                     },
-                                    pressed && styles.pressedButton,
+                                    !canAccessOriginal && styles.disabledAction,
+                                    pressed && canAccessOriginal && styles.pressedButton,
                                 ]}
                             >
                                 <Feather
-                                    name="edit-3"
+                                    name="external-link"
                                     size={15}
-                                    color={colors.primary}
+                                    color={colors.text}
                                 />
                             </Pressable>
-                        )}
-                        <Pressable
-                            title={t("openOriginal")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("openOriginal")}
-                            disabled={!canAccessOriginal}
-                            onPress={handleOpenOriginal}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !canAccessOriginal && styles.disabledAction,
-                                pressed && canAccessOriginal && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name="external-link"
-                                size={15}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        </Tooltip>
 
-                        <Pressable
-                            title={t("downloadOriginal")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("downloadOriginal")}
-                            disabled={!canAccessOriginal}
-                            onPress={handleDownloadOriginal}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !canAccessOriginal && styles.disabledAction,
-                                pressed && canAccessOriginal && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name="download"
-                                size={15}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        <Tooltip label={t("downloadOriginal")}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("downloadOriginal")}
+                                disabled={!canAccessOriginal}
+                                onPress={handleDownloadOriginal}
+                                style={({ pressed }) => [
+                                    styles.iconActionButton,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    !canAccessOriginal && styles.disabledAction,
+                                    pressed && canAccessOriginal && styles.pressedButton,
+                                ]}
+                            >
+                                <Feather
+                                    name="download"
+                                    size={15}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </Tooltip>
 
-                        <Pressable
-                            title={t("previousFile")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("previousFile")}
-                            disabled={!onPrevious}
-                            onPress={onPrevious}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !onPrevious && styles.disabledAction,
-                                pressed && Boolean(onPrevious) && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name={previousIcon}
-                                size={16}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        <Tooltip label={t("previousFile")}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("previousFile")}
+                                disabled={!onPrevious}
+                                onPress={onPrevious}
+                                style={({ pressed }) => [
+                                    styles.iconActionButton,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    !onPrevious && styles.disabledAction,
+                                    pressed && Boolean(onPrevious) && styles.pressedButton,
+                                ]}
+                            >
+                                <Feather
+                                    name={previousIcon}
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </Tooltip>
 
-                        <Pressable
-                            title={t("nextFile")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("nextFile")}
-                            disabled={!onNext}
-                            onPress={onNext}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !onNext && styles.disabledAction,
-                                pressed && Boolean(onNext) && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name={nextIcon}
-                                size={16}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        <Tooltip label={t("nextFile")}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("nextFile")}
+                                disabled={!onNext}
+                                onPress={onNext}
+                                style={({ pressed }) => [
+                                    styles.iconActionButton,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    !onNext && styles.disabledAction,
+                                    pressed && Boolean(onNext) && styles.pressedButton,
+                                ]}
+                            >
+                                <Feather
+                                    name={nextIcon}
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </Tooltip>
                     </View>
                 </View>
 
                 {!isEditing && (
                     <View style={styles.compactMetaRow}>
-                        <View
+                    <View
+                        style={[
+                            styles.statusChip,
+                            {
+                                backgroundColor: metadata.status.backgroundColor,
+                                borderColor: metadata.status.borderColor,
+                            },
+                        ]}
+                    >
+                        <Text
                             style={[
-                                styles.statusChip,
+                                styles.metaLabel,
                                 {
-                                    backgroundColor: metadata.status.backgroundColor,
-                                    borderColor: metadata.status.borderColor,
+                                    color: metadata.status.foregroundColor,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {metadata.status.label}
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.statusValue,
+                                {
+                                    color: metadata.status.foregroundColor,
+                                    textAlign,
+                                },
+                            ]}
+                        >
+                            {metadata.status.value}
+                        </Text>
+                    </View>
+
+                    {metadata.entries.map((entry) => (
+                        <View
+                            key={entry.key}
+                            style={[
+                                styles.metaChip,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
                                 },
                             ]}
                         >
@@ -533,63 +572,27 @@ export default function DocumentPreviewPage({
                                 style={[
                                     styles.metaLabel,
                                     {
-                                        color: metadata.status.foregroundColor,
+                                        color: colors.text,
                                         textAlign,
                                     },
                                 ]}
                             >
-                                {metadata.status.label}
+                                {entry.label}
                             </Text>
 
                             <Text
                                 style={[
-                                    styles.statusValue,
+                                    styles.metaValue,
                                     {
-                                        color: metadata.status.foregroundColor,
+                                        color: colors.text,
                                         textAlign,
                                     },
                                 ]}
                             >
-                                {metadata.status.value}
+                                {entry.value}
                             </Text>
                         </View>
-
-                        {metadata.entries.map((entry) => (
-                            <View
-                                key={entry.key}
-                                style={[
-                                    styles.metaChip,
-                                    {
-                                        backgroundColor: colors.background,
-                                        borderColor: colors.border,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.metaLabel,
-                                        {
-                                            color: colors.text,
-                                            textAlign,
-                                        },
-                                    ]}
-                                >
-                                    {entry.label}
-                                </Text>
-
-                                <Text
-                                    style={[
-                                        styles.metaValue,
-                                        {
-                                            color: colors.text,
-                                            textAlign,
-                                        },
-                                    ]}
-                                >
-                                    {entry.value}
-                                </Text>
-                            </View>
-                        ))}
+                    ))}
                     </View>
                 )}
 
@@ -827,10 +830,10 @@ export default function DocumentPreviewPage({
                                         borderColor: colors.primary,
                                     },
                                     !draftName.trim() &&
-                                    styles.disabledAction,
+                                        styles.disabledAction,
                                     pressed &&
-                                    Boolean(draftName.trim()) &&
-                                    styles.pressedButton,
+                                        Boolean(draftName.trim()) &&
+                                        styles.pressedButton,
                                 ]}
                             >
                                 <Feather

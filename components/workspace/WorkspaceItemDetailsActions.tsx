@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { Feather } from "../../web/icons";
-import { Pressable, StyleSheet, Text, View } from "../../web/ui";
-import { radius, semanticColors, shadows, spacing, typography } from "../../theme";
+import { Pressable, StyleSheet, Text } from "../../web/ui";
+import { radius, semanticColors, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
+import Tooltip from "../common/Tooltip";
 
 type WorkspaceItemDetailsActionTone = "primary" | "warning" | "danger";
 
@@ -13,13 +13,6 @@ export interface WorkspaceItemDetailsAction {
     tone?: WorkspaceItemDetailsActionTone;
     isActive?: boolean;
     onPress: (itemId: string) => void;
-}
-
-interface WorkspaceTooltipState {
-    key: string;
-    label: string;
-    x: number;
-    y: number;
 }
 
 interface WorkspaceItemDetailsActionsProps {
@@ -43,8 +36,6 @@ export default function WorkspaceItemDetailsActions({
 }: WorkspaceItemDetailsActionsProps) {
     const { theme } = useSettings();
     const colors = theme.colors;
-    const [visibleTooltip, setVisibleTooltip] =
-        useState<WorkspaceTooltipState | null>(null);
 
     function getDetailsActionColor(action: WorkspaceItemDetailsAction) {
         if (action.tone === "danger") {
@@ -56,41 +47,6 @@ export default function WorkspaceItemDetailsActions({
         }
 
         return colors.primary;
-    }
-
-    function handleShowTooltip(key: string, label: string, event: any) {
-        const nativeEvent = event.nativeEvent ?? {};
-
-        setVisibleTooltip({
-            key,
-            label,
-            x: (nativeEvent.locationX ?? nativeEvent.offsetX ?? 0) + 14,
-            y: (nativeEvent.locationY ?? nativeEvent.offsetY ?? 0) + 14,
-        });
-    }
-
-    function renderTooltip(key: string) {
-        if (!visibleTooltip || visibleTooltip.key !== key) {
-            return null;
-        }
-
-        return (
-            <View
-                style={[
-                    styles.tooltip,
-                    {
-                        left: visibleTooltip.x,
-                        top: visibleTooltip.y,
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                    },
-                ]}
-            >
-                <Text style={[styles.tooltipText, { color: colors.text }]}>
-                    {visibleTooltip.label}
-                </Text>
-            </View>
-        );
     }
 
     const actions = [
@@ -110,106 +66,77 @@ export default function WorkspaceItemDetailsActions({
                 const actionColor = getDetailsActionColor(action);
 
                 return (
-                    <Pressable
+                    <Tooltip
                         key={key}
-                        accessibilityRole="button"
-                        accessibilityLabel={action.accessibilityLabel}
-                        onHoverIn={(event) =>
-                            handleShowTooltip(
-                                key,
-                                action.accessibilityLabel,
-                                event
-                            )
-                        }
-                        onPointerMove={(event) =>
-                            handleShowTooltip(
-                                key,
-                                action.accessibilityLabel,
-                                event
-                            )
-                        }
-                        onHoverOut={() => setVisibleTooltip(null)}
-                        onPress={() => action.onPress(itemId)}
-                        style={[
-                            styles.button,
-                            {
-                                borderColor: actionColor,
-                                backgroundColor: action.isActive
-                                    ? `color-mix(in srgb, ${actionColor} 14%, transparent)`
-                                    : "transparent",
-                            },
-                        ]}
+                        label={action.accessibilityLabel}
                     >
-                        {action.icon === "pin" ? (
-                            <Feather
-                                name="pin"
-                                size={16}
-                                color={actionColor}
-                            />
-                        ) : (
-                            <Text
-                                style={[
-                                    styles.actionButtonText,
-                                    {
-                                        color: actionColor,
-                                    },
-                                ]}
-                            >
-                                {action.icon ?? action.label}
-                            </Text>
-                        )}
-
-                        {renderTooltip(key)}
-                    </Pressable>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={action.accessibilityLabel}
+                            onPress={() => action.onPress(itemId)}
+                            style={[
+                                styles.button,
+                                {
+                                    borderColor: actionColor,
+                                    backgroundColor: action.isActive
+                                        ? `color-mix(in srgb, ${actionColor} 14%, transparent)`
+                                        : "transparent",
+                                },
+                            ]}
+                        >
+                            {action.icon === "pin" ? (
+                                <Feather
+                                    name="pin"
+                                    size={16}
+                                    color={actionColor}
+                                />
+                            ) : (
+                                <Text
+                                    style={[
+                                        styles.actionButtonText,
+                                        {
+                                            color: actionColor,
+                                        },
+                                    ]}
+                                >
+                                    {action.icon ?? action.label}
+                                </Text>
+                            )}
+                        </Pressable>
+                    </Tooltip>
                 );
             })}
 
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={closeLabel}
-                onHoverIn={(event) =>
-                    handleShowTooltip(
-                        "close",
-                        closeLabel,
-                        event
-                    )
-                }
-                onPointerMove={(event) =>
-                    handleShowTooltip(
-                        "close",
-                        closeLabel,
-                        event
-                    )
-                }
-                onHoverOut={() => setVisibleTooltip(null)}
-                onPress={onClose}
-                style={[
-                    styles.button,
-                    {
-                        borderColor: colors.border,
-                    },
-                ]}
-            >
-                <Text
+            <Tooltip label={closeLabel}>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={closeLabel}
+                    onPress={onClose}
                     style={[
-                        styles.closeButtonText,
+                        styles.button,
                         {
-                            color: colors.primary,
+                            borderColor: colors.border,
                         },
                     ]}
                 >
-                    ×
-                </Text>
-
-                {renderTooltip("close")}
-            </Pressable>
+                    <Text
+                        style={[
+                            styles.closeButtonText,
+                            {
+                                color: colors.primary,
+                            },
+                        ]}
+                    >
+                        ×
+                    </Text>
+                </Pressable>
+            </Tooltip>
         </>
     );
 }
 
 const styles = StyleSheet.create({
     button: {
-        position: "relative",
         minWidth: 40,
         marginRight: spacing.md,
         paddingHorizontal: spacing.md,
@@ -218,7 +145,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         borderWidth: 1,
         borderRadius: radius.md,
-        overflow: "visible",
     },
 
     actionButtonText: {
@@ -229,23 +155,5 @@ const styles = StyleSheet.create({
     closeButtonText: {
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.semibold,
-    },
-
-    tooltip: {
-        position: "absolute",
-        minWidth: 120,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderWidth: 1,
-        borderRadius: radius.md,
-        zIndex: 50,
-        pointerEvents: "none",
-        ...shadows.sm,
-    },
-
-    tooltipText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "center",
     },
 });
