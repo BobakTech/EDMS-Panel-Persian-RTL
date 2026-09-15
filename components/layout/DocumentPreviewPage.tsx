@@ -46,6 +46,25 @@ interface DocumentPreviewPageProps {
     onUpdateItem?: (itemId: string, updates: WorkspaceItemUpdate) => void;
 }
 
+function splitFileName(fileName: string) {
+    const lastDotIndex = fileName.lastIndexOf(".");
+
+    if (
+        lastDotIndex <= 0 ||
+        lastDotIndex === fileName.length - 1
+    ) {
+        return {
+            baseName: fileName,
+            extension: "",
+        };
+    }
+
+    return {
+        baseName: fileName.slice(0, lastDotIndex),
+        extension: fileName.slice(lastDotIndex),
+    };
+}
+
 export default function DocumentPreviewPage({
     item,
     categoryDefinitions,
@@ -83,8 +102,50 @@ export default function DocumentPreviewPage({
         language,
     );
 
+    /**
+     * File Type options come from the File Categories API definitions.
+     * Keep the file's currently assigned category available and selected even
+     * if that category is temporarily missing from the returned definitions.
+     */
+    const assignedCategoryId = String(item.categoryId ?? "").trim();
+
+    const fileCategoryOptions = [
+        ...categoryDefinitions
+            .map((category) => ({
+                ...category,
+                id: String(category.id ?? "").trim(),
+            }))
+            .filter((category) => category.id),
+    ];
+
+    if (
+        assignedCategoryId &&
+        !fileCategoryOptions.some(
+            (category) => category.id === assignedCategoryId
+        )
+    ) {
+        fileCategoryOptions.unshift({
+            id: assignedCategoryId,
+            nameFa: item.fileTypeLabel?.trim() || assignedCategoryId,
+            nameEn: item.fileTypeLabel?.trim() || assignedCategoryId,
+            order: -1,
+        });
+    }
+
+    function getCategoryLabel(category: WorkspaceCategoryDefinition) {
+        return direction === "rtl"
+            ? category.nameFa?.trim() ||
+            category.nameEn?.trim() ||
+            category.id
+            : category.nameEn?.trim() ||
+            category.nameFa?.trim() ||
+            category.id;
+    }
+
     const [isEditing, setIsEditing] = useState(false);
-    const [draftName, setDraftName] = useState(item.name);
+    const [draftName, setDraftName] = useState(
+        splitFileName(item.name).baseName
+    );
     const [draftVersion, setDraftVersion] = useState(item.fileVersion ?? "");
     const [draftDate, setDraftDate] = useState(item.fileDate ?? "");
     const [draftTime, setDraftTime] = useState(item.fileTime ?? "");
@@ -92,17 +153,17 @@ export default function DocumentPreviewPage({
         item.fileTypeLabel ?? ""
     );
     const [draftCategoryId, setDraftCategoryId] = useState(
-        item.categoryId ?? ""
+        String(item.categoryId ?? "").trim()
     );
 
     useEffect(() => {
         setIsEditing(false);
-        setDraftName(item.name);
+        setDraftName(splitFileName(item.name).baseName);
         setDraftVersion(item.fileVersion ?? "");
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(item.categoryId ?? "");
+        setDraftCategoryId(String(item.categoryId ?? "").trim());
     }, [
         item.id,
         item.name,
@@ -114,22 +175,22 @@ export default function DocumentPreviewPage({
     ]);
 
     function handleStartEdit() {
-        setDraftName(item.name);
+        setDraftName(splitFileName(item.name).baseName);
         setDraftVersion(item.fileVersion ?? "");
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(item.categoryId ?? "");
+        setDraftCategoryId(String(item.categoryId ?? "").trim());
         setIsEditing(true);
     }
 
     function handleCancelEdit() {
-        setDraftName(item.name);
+        setDraftName(splitFileName(item.name).baseName);
         setDraftVersion(item.fileVersion ?? "");
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(item.categoryId ?? "");
+        setDraftCategoryId(String(item.categoryId ?? "").trim());
         setIsEditing(false);
     }
 
@@ -138,14 +199,17 @@ export default function DocumentPreviewPage({
             return;
         }
 
-        const trimmedName = draftName.trim();
+        const trimmedBaseName = draftName.trim();
 
-        if (!trimmedName) {
+        if (!trimmedBaseName) {
             return;
         }
 
+        const { extension } = splitFileName(item.name);
+        const updatedName = `${trimmedBaseName}${extension}`;
+
         onUpdateItem(item.id, {
-            name: trimmedName,
+            name: updatedName,
             fileVersion: draftVersion.trim(),
             fileDate: draftDate.trim(),
             fileTime: draftTime.trim(),
@@ -261,32 +325,58 @@ export default function DocumentPreviewPage({
                         </Text>
 
                         {isEditing ? (
-                            <input
-                                value={draftName}
-                                onChange={(event) =>
-                                    setDraftName(event.target.value)
-                                }
-                                dir="ltr"
-                                aria-label={
-                                    direction === "rtl"
-                                        ? "نام فایل"
-                                        : "File name"
-                                }
+                            <View
                                 style={{
                                     width: "100%",
                                     minWidth: 0,
-                                    minHeight: 34,
-                                    paddingInline: 10,
-                                    paddingBlock: 6,
-                                    border: `1px solid ${colors.border}`,
-                                    borderRadius: radius.md,
-                                    backgroundColor: colors.background,
-                                    color: colors.text,
-                                    fontSize: typography.fontSize.md,
-                                    fontWeight: typography.fontWeight.medium,
-                                    outline: "none",
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    direction: "ltr",
                                 }}
-                            />
+                            >
+                                <input
+                                    value={draftName}
+                                    onChange={(event) =>
+                                        setDraftName(event.target.value)
+                                    }
+                                    dir="ltr"
+                                    aria-label={
+                                        direction === "rtl"
+                                            ? "نام فایل"
+                                            : "File name"
+                                    }
+                                    style={{
+                                        flex: 1,
+                                        width: "100%",
+                                        minWidth: 0,
+                                        minHeight: 34,
+                                        paddingInline: 10,
+                                        paddingBlock: 6,
+                                        border: `1px solid ${colors.border}`,
+                                        borderRadius: radius.md,
+                                        backgroundColor: colors.background,
+                                        color: colors.text,
+                                        fontSize: typography.fontSize.sm,
+                                        fontWeight: typography.fontWeight.medium,
+                                        outline: "none",
+                                    }}
+                                />
+
+                                {splitFileName(item.name).extension && (
+                                    <Text
+                                        dir="ltr"
+                                        style={{
+                                            color: colors.text,
+                                            fontSize: typography.fontSize.sm,
+                                            fontWeight: typography.fontWeight.medium,
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {splitFileName(item.name).extension}
+                                    </Text>
+                                )}
+                            </View>
                         ) : (
                             <Text
                                 dir="ltr"
@@ -304,7 +394,7 @@ export default function DocumentPreviewPage({
                     </View>
 
                     <View style={styles.compactActions}>
-                        {onUpdateItem && (
+                        {onUpdateItem && !isEditing && (
                             <Pressable
                                 title={
                                     direction === "rtl"
@@ -317,11 +407,7 @@ export default function DocumentPreviewPage({
                                         ? "ویرایش اطلاعات سند"
                                         : "Edit document details"
                                 }
-                                onPress={
-                                    isEditing
-                                        ? handleCancelEdit
-                                        : handleStartEdit
-                                }
+                                onPress={handleStartEdit}
                                 style={({ pressed }) => [
                                     styles.iconActionButton,
                                     {
@@ -332,7 +418,7 @@ export default function DocumentPreviewPage({
                                 ]}
                             >
                                 <Feather
-                                    name={isEditing ? "x" : "edit-3"}
+                                    name="edit-3"
                                     size={15}
                                     color={colors.primary}
                                 />
@@ -432,49 +518,14 @@ export default function DocumentPreviewPage({
                     </View>
                 </View>
 
-                <View style={styles.compactMetaRow}>
-                    <View
-                        style={[
-                            styles.statusChip,
-                            {
-                                backgroundColor: metadata.status.backgroundColor,
-                                borderColor: metadata.status.borderColor,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.metaLabel,
-                                {
-                                    color: metadata.status.foregroundColor,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {metadata.status.label}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.statusValue,
-                                {
-                                    color: metadata.status.foregroundColor,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {metadata.status.value}
-                        </Text>
-                    </View>
-
-                    {metadata.entries.map((entry) => (
+                {!isEditing && (
+                    <View style={styles.compactMetaRow}>
                         <View
-                            key={entry.key}
                             style={[
-                                styles.metaChip,
+                                styles.statusChip,
                                 {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
+                                    backgroundColor: metadata.status.backgroundColor,
+                                    borderColor: metadata.status.borderColor,
                                 },
                             ]}
                         >
@@ -482,28 +533,65 @@ export default function DocumentPreviewPage({
                                 style={[
                                     styles.metaLabel,
                                     {
-                                        color: colors.text,
+                                        color: metadata.status.foregroundColor,
                                         textAlign,
                                     },
                                 ]}
                             >
-                                {entry.label}
+                                {metadata.status.label}
                             </Text>
 
                             <Text
                                 style={[
-                                    styles.metaValue,
+                                    styles.statusValue,
                                     {
-                                        color: colors.text,
+                                        color: metadata.status.foregroundColor,
                                         textAlign,
                                     },
                                 ]}
                             >
-                                {entry.value}
+                                {metadata.status.value}
                             </Text>
                         </View>
-                    ))}
-                </View>
+
+                        {metadata.entries.map((entry) => (
+                            <View
+                                key={entry.key}
+                                style={[
+                                    styles.metaChip,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.metaLabel,
+                                        {
+                                            color: colors.text,
+                                            textAlign,
+                                        },
+                                    ]}
+                                >
+                                    {entry.label}
+                                </Text>
+
+                                <Text
+                                    style={[
+                                        styles.metaValue,
+                                        {
+                                            color: colors.text,
+                                            textAlign,
+                                        },
+                                    ]}
+                                >
+                                    {entry.value}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
 
                 {isEditing && (
                     <View
@@ -539,11 +627,21 @@ export default function DocumentPreviewPage({
                                 </span>
 
                                 <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
                                     value={draftVersion}
                                     onChange={(event) =>
                                         setDraftVersion(event.target.value)
                                     }
-                                    dir="auto"
+                                    onBlur={() => {
+                                        const value = Number(draftVersion);
+
+                                        if (Number.isFinite(value)) {
+                                            setDraftVersion(value.toFixed(2));
+                                        }
+                                    }}
+                                    dir="ltr"
                                     style={{
                                         ...styles.editInput,
                                         borderColor: colors.border,
@@ -609,11 +707,13 @@ export default function DocumentPreviewPage({
                                 </span>
 
                                 <input
+                                    type="time"
+                                    step="1"
                                     value={draftTime}
                                     onChange={(event) =>
                                         setDraftTime(event.target.value)
                                     }
-                                    dir="auto"
+                                    dir="ltr"
                                     style={{
                                         ...styles.editInput,
                                         borderColor: colors.border,
@@ -649,10 +749,10 @@ export default function DocumentPreviewPage({
                                     value={draftCategoryId}
                                     onChange={(event) => {
                                         const selectedCategoryId =
-                                            event.target.value;
+                                            String(event.target.value).trim();
 
                                         const selectedCategory =
-                                            categoryDefinitions.find(
+                                            fileCategoryOptions.find(
                                                 (category) =>
                                                     category.id ===
                                                     selectedCategoryId
@@ -663,9 +763,11 @@ export default function DocumentPreviewPage({
                                         );
 
                                         setDraftFileTypeLabel(
-                                            selectedCategory?.nameFa?.trim() ||
-                                            selectedCategory?.nameEn?.trim() ||
-                                            ""
+                                            selectedCategory
+                                                ? getCategoryLabel(
+                                                    selectedCategory
+                                                )
+                                                : ""
                                         );
                                     }}
                                     aria-label={
@@ -681,24 +783,29 @@ export default function DocumentPreviewPage({
                                         backgroundColor: colors.surface,
                                         color: colors.text,
                                         cursor: "pointer",
+                                        direction,
                                     }}
                                 >
-                                    <option value="">
-                                        {direction === "rtl"
-                                            ? "انتخاب دسته‌بندی"
-                                            : "Select category"}
-                                    </option>
-
-                                    {categoryDefinitions.map((category) => (
-                                        <option
-                                            key={category.id}
-                                            value={category.id}
-                                        >
-                                            {category.nameFa?.trim() ||
-                                                category.nameEn?.trim() ||
-                                                category.id}
+                                    {!draftCategoryId && (
+                                        <option value="">
+                                            {direction === "rtl"
+                                                ? "انتخاب دسته‌بندی"
+                                                : "Select category"}
                                         </option>
-                                    ))}
+                                    )}
+
+                                    {fileCategoryOptions.map(
+                                        (category) => (
+                                            <option
+                                                key={category.id}
+                                                value={category.id}
+                                            >
+                                                {getCategoryLabel(
+                                                    category
+                                                )}
+                                            </option>
+                                        )
+                                    )}
                                 </select>
                             </label>
                         </View>
@@ -720,10 +827,10 @@ export default function DocumentPreviewPage({
                                         borderColor: colors.primary,
                                     },
                                     !draftName.trim() &&
-                                        styles.disabledAction,
+                                    styles.disabledAction,
                                     pressed &&
-                                        Boolean(draftName.trim()) &&
-                                        styles.pressedButton,
+                                    Boolean(draftName.trim()) &&
+                                    styles.pressedButton,
                                 ]}
                             >
                                 <Feather

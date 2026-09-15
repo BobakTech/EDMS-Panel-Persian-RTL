@@ -106,6 +106,25 @@ function getPreviewRendererInfo(
     };
 }
 
+function splitFileName(fileName: string) {
+    const lastDotIndex = fileName.lastIndexOf(".");
+
+    if (
+        lastDotIndex <= 0 ||
+        lastDotIndex === fileName.length - 1
+    ) {
+        return {
+            baseName: fileName,
+            extension: "",
+        };
+    }
+
+    return {
+        baseName: fileName.slice(0, lastDotIndex),
+        extension: fileName.slice(lastDotIndex),
+    };
+}
+
 export default function WorkspaceDocumentPreviewPanel({
     item,
     categoryDefinitions,
@@ -126,8 +145,50 @@ export default function WorkspaceDocumentPreviewPanel({
         language,
     );
 
+    /**
+     * File Type options come from the File Categories API definitions.
+     * Keep the file's currently assigned category available and selected even
+     * if that category is temporarily missing from the returned definitions.
+     */
+    const assignedCategoryId = String(item.categoryId ?? "").trim();
+
+    const fileCategoryOptions = [
+        ...categoryDefinitions
+            .map((category) => ({
+                ...category,
+                id: String(category.id ?? "").trim(),
+            }))
+            .filter((category) => category.id),
+    ];
+
+    if (
+        assignedCategoryId &&
+        !fileCategoryOptions.some(
+            (category) => category.id === assignedCategoryId
+        )
+    ) {
+        fileCategoryOptions.unshift({
+            id: assignedCategoryId,
+            nameFa: item.fileTypeLabel?.trim() || assignedCategoryId,
+            nameEn: item.fileTypeLabel?.trim() || assignedCategoryId,
+            order: -1,
+        });
+    }
+
+    function getCategoryLabel(category: WorkspaceCategoryDefinition) {
+        return direction === "rtl"
+            ? category.nameFa?.trim() ||
+            category.nameEn?.trim() ||
+            category.id
+            : category.nameEn?.trim() ||
+            category.nameFa?.trim() ||
+            category.id;
+    }
+
     const [isEditing, setIsEditing] = useState(false);
-    const [draftName, setDraftName] = useState(item.name);
+    const [draftName, setDraftName] = useState(
+        splitFileName(item.name).baseName
+    );
     const [draftVersion, setDraftVersion] = useState(item.fileVersion ?? "");
     const [draftDate, setDraftDate] = useState(item.fileDate ?? "");
     const [draftTime, setDraftTime] = useState(item.fileTime ?? "");
@@ -135,17 +196,17 @@ export default function WorkspaceDocumentPreviewPanel({
         item.fileTypeLabel ?? ""
     );
     const [draftCategoryId, setDraftCategoryId] = useState(
-        item.categoryId ?? ""
+        String(item.categoryId ?? "").trim()
     );
 
     useEffect(() => {
         setIsEditing(false);
-        setDraftName(item.name);
+        setDraftName(splitFileName(item.name).baseName);
         setDraftVersion(item.fileVersion ?? "");
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(item.categoryId ?? "");
+        setDraftCategoryId(String(item.categoryId ?? "").trim());
     }, [
         item.id,
         item.name,
@@ -157,22 +218,22 @@ export default function WorkspaceDocumentPreviewPanel({
     ]);
 
     function handleStartEdit() {
-        setDraftName(item.name);
+        setDraftName(splitFileName(item.name).baseName);
         setDraftVersion(item.fileVersion ?? "");
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(item.categoryId ?? "");
+        setDraftCategoryId(String(item.categoryId ?? "").trim());
         setIsEditing(true);
     }
 
     function handleCancelEdit() {
-        setDraftName(item.name);
+        setDraftName(splitFileName(item.name).baseName);
         setDraftVersion(item.fileVersion ?? "");
         setDraftDate(item.fileDate ?? "");
         setDraftTime(item.fileTime ?? "");
         setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(item.categoryId ?? "");
+        setDraftCategoryId(String(item.categoryId ?? "").trim());
         setIsEditing(false);
     }
 
@@ -181,14 +242,17 @@ export default function WorkspaceDocumentPreviewPanel({
             return;
         }
 
-        const trimmedName = draftName.trim();
+        const trimmedBaseName = draftName.trim();
 
-        if (!trimmedName) {
+        if (!trimmedBaseName) {
             return;
         }
 
+        const { extension } = splitFileName(item.name);
+        const updatedName = `${trimmedBaseName}${extension}`;
+
         onUpdateItem(item.id, {
-            name: trimmedName,
+            name: updatedName,
             fileVersion: draftVersion.trim(),
             fileDate: draftDate.trim(),
             fileTime: draftTime.trim(),
@@ -254,7 +318,7 @@ export default function WorkspaceDocumentPreviewPanel({
                     </Text>
                 </Pressable>
 
-                {onUpdateItem && (
+                {onUpdateItem && !isEditing && (
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={
@@ -262,7 +326,7 @@ export default function WorkspaceDocumentPreviewPanel({
                                 ? "ویرایش اطلاعات سند"
                                 : "Edit document details"
                         }
-                        onPress={isEditing ? handleCancelEdit : handleStartEdit}
+                        onPress={handleStartEdit}
                         style={[
                             styles.editButton,
                             {
@@ -272,7 +336,7 @@ export default function WorkspaceDocumentPreviewPanel({
                         ]}
                     >
                         <Feather
-                            name={isEditing ? "x" : "edit-3"}
+                            name="edit-3"
                             size={14}
                             color={colors.primary}
                         />
@@ -286,13 +350,7 @@ export default function WorkspaceDocumentPreviewPanel({
                                 },
                             ]}
                         >
-                            {isEditing
-                                ? direction === "rtl"
-                                    ? "انصراف"
-                                    : "Cancel"
-                                : direction === "rtl"
-                                    ? "ویرایش"
-                                    : "Edit"}
+                            {direction === "rtl" ? "ویرایش" : "Edit"}
                         </Text>
                     </Pressable>
                 )}
@@ -311,30 +369,58 @@ export default function WorkspaceDocumentPreviewPanel({
                     </Text>
 
                     {isEditing ? (
-                        <input
-                            value={draftName}
-                            onChange={(event) => setDraftName(event.target.value)}
-                            dir="ltr"
-                            aria-label={
-                                direction === "rtl"
-                                    ? "نام فایل"
-                                    : "File name"
-                            }
+                        <View
                             style={{
                                 width: "100%",
                                 minWidth: 0,
-                                minHeight: 34,
-                                paddingInline: 10,
-                                paddingBlock: 6,
-                                border: `1px solid ${colors.border}`,
-                                borderRadius: radius.md,
-                                backgroundColor: colors.background,
-                                color: colors.text,
-                                fontSize: typography.fontSize.sm,
-                                fontWeight: typography.fontWeight.medium,
-                                outline: "none",
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 4,
+                                direction: "ltr",
                             }}
-                        />
+                        >
+                            <input
+                                value={draftName}
+                                onChange={(event) =>
+                                    setDraftName(event.target.value)
+                                }
+                                dir="ltr"
+                                aria-label={
+                                    direction === "rtl"
+                                        ? "نام فایل"
+                                        : "File name"
+                                }
+                                style={{
+                                    flex: 1,
+                                    width: "100%",
+                                    minWidth: 0,
+                                    minHeight: 34,
+                                    paddingInline: 10,
+                                    paddingBlock: 6,
+                                    border: `1px solid ${colors.border}`,
+                                    borderRadius: radius.md,
+                                    backgroundColor: colors.background,
+                                    color: colors.text,
+                                    fontSize: typography.fontSize.sm,
+                                    fontWeight: typography.fontWeight.medium,
+                                    outline: "none",
+                                }}
+                            />
+
+                            {splitFileName(item.name).extension && (
+                                <Text
+                                    dir="ltr"
+                                    style={{
+                                        color: colors.text,
+                                        fontSize: typography.fontSize.sm,
+                                        fontWeight: typography.fontWeight.medium,
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {splitFileName(item.name).extension}
+                                </Text>
+                            )}
+                        </View>
                     ) : (
                         <Text
                             dir="ltr"
@@ -352,49 +438,14 @@ export default function WorkspaceDocumentPreviewPanel({
                 </View>
             </View>
 
-            <View style={styles.metaRow}>
-                <View
-                    style={[
-                        styles.statusChip,
-                        {
-                            backgroundColor: metadata.status.backgroundColor,
-                            borderColor: metadata.status.borderColor,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.metaLabel,
-                            {
-                                color: metadata.status.foregroundColor,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {metadata.status.label}
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.statusValue,
-                            {
-                                color: metadata.status.foregroundColor,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {metadata.status.value}
-                    </Text>
-                </View>
-
-                {metadata.entries.map((entry) => (
+            {!isEditing && (
+                <View style={styles.metaRow}>
                     <View
-                        key={entry.key}
                         style={[
-                            styles.metaChip,
+                            styles.statusChip,
                             {
-                                backgroundColor: colors.background,
-                                borderColor: colors.border,
+                                backgroundColor: metadata.status.backgroundColor,
+                                borderColor: metadata.status.borderColor,
                             },
                         ]}
                     >
@@ -402,28 +453,65 @@ export default function WorkspaceDocumentPreviewPanel({
                             style={[
                                 styles.metaLabel,
                                 {
-                                    color: colors.text,
+                                    color: metadata.status.foregroundColor,
                                     textAlign,
                                 },
                             ]}
                         >
-                            {entry.label}
+                            {metadata.status.label}
                         </Text>
 
                         <Text
                             style={[
-                                styles.metaValue,
+                                styles.statusValue,
                                 {
-                                    color: colors.text,
+                                    color: metadata.status.foregroundColor,
                                     textAlign,
                                 },
                             ]}
                         >
-                            {entry.value}
+                            {metadata.status.value}
                         </Text>
                     </View>
-                ))}
-            </View>
+
+                    {metadata.entries.map((entry) => (
+                        <View
+                            key={entry.key}
+                            style={[
+                                styles.metaChip,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.metaLabel,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {entry.label}
+                            </Text>
+
+                            <Text
+                                style={[
+                                    styles.metaValue,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {entry.value}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            )}
 
             {isEditing && (
                 <View
@@ -456,11 +544,21 @@ export default function WorkspaceDocumentPreviewPanel({
                             </span>
 
                             <input
+                                type="number"
+                                min="0"
+                                step="0.01"
                                 value={draftVersion}
                                 onChange={(event) =>
                                     setDraftVersion(event.target.value)
                                 }
-                                dir="auto"
+                                onBlur={() => {
+                                    const value = Number(draftVersion);
+
+                                    if (Number.isFinite(value)) {
+                                        setDraftVersion(value.toFixed(2));
+                                    }
+                                }}
+                                dir="ltr"
                                 style={{
                                     ...styles.editInput,
                                     borderColor: colors.border,
@@ -524,11 +622,13 @@ export default function WorkspaceDocumentPreviewPanel({
                             </span>
 
                             <input
+                                type="time"
+                                step="1"
                                 value={draftTime}
                                 onChange={(event) =>
                                     setDraftTime(event.target.value)
                                 }
-                                dir="auto"
+                                dir="ltr"
                                 style={{
                                     ...styles.editInput,
                                     borderColor: colors.border,
@@ -558,60 +658,67 @@ export default function WorkspaceDocumentPreviewPanel({
                             </span>
 
                             <select
-                                    value={draftCategoryId}
-                                    onChange={(event) => {
-                                        const selectedCategoryId =
-                                            event.target.value;
+                                value={draftCategoryId}
+                                onChange={(event) => {
+                                    const selectedCategoryId =
+                                        String(event.target.value).trim();
 
-                                        const selectedCategory =
-                                            categoryDefinitions.find(
-                                                (category) =>
-                                                    category.id ===
-                                                    selectedCategoryId
-                                            );
-
-                                        setDraftCategoryId(
-                                            selectedCategoryId
+                                    const selectedCategory =
+                                        fileCategoryOptions.find(
+                                            (category) =>
+                                                category.id ===
+                                                selectedCategoryId
                                         );
 
-                                        setDraftFileTypeLabel(
-                                            selectedCategory?.nameFa?.trim() ||
-                                            selectedCategory?.nameEn?.trim() ||
-                                            ""
-                                        );
-                                    }}
-                                    aria-label={
-                                        direction === "rtl"
-                                            ? "نوع فایل"
-                                            : "File type"
-                                    }
-                                    style={{
-                                        ...styles.editInput,
-                                        minHeight: 32,
-                                        paddingInline: 8,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-                                        cursor: "pointer",
-                                    }}
-                                >
+                                    setDraftCategoryId(
+                                        selectedCategoryId
+                                    );
+
+                                    setDraftFileTypeLabel(
+                                        selectedCategory
+                                            ? getCategoryLabel(
+                                                selectedCategory
+                                            )
+                                            : ""
+                                    );
+                                }}
+                                aria-label={
+                                    direction === "rtl"
+                                        ? "نوع فایل"
+                                        : "File type"
+                                }
+                                style={{
+                                    ...styles.editInput,
+                                    minHeight: 32,
+                                    paddingInline: 8,
+                                    borderColor: colors.border,
+                                    backgroundColor: colors.surface,
+                                    color: colors.text,
+                                    cursor: "pointer",
+                                    direction,
+                                }}
+                            >
+                                {!draftCategoryId && (
                                     <option value="">
                                         {direction === "rtl"
                                             ? "انتخاب دسته‌بندی"
                                             : "Select category"}
                                     </option>
+                                )}
 
-                                    {categoryDefinitions.map((category) => (
+                                {fileCategoryOptions.map(
+                                    (category) => (
                                         <option
                                             key={category.id}
                                             value={category.id}
                                         >
-                                            {category.nameFa?.trim() ||
-                                                category.nameEn?.trim() ||
-                                                category.id}
+                                            {getCategoryLabel(
+                                                category
+                                            )}
                                         </option>
-                                    ))}
-                                </select>
+                                    )
+                                )}
+                            </select>
                         </label>
                     </View>
 
@@ -633,8 +740,8 @@ export default function WorkspaceDocumentPreviewPanel({
                                 },
                                 !draftName.trim() && styles.disabledButton,
                                 pressed &&
-                                    Boolean(draftName.trim()) &&
-                                    styles.pressedButton,
+                                Boolean(draftName.trim()) &&
+                                styles.pressedButton,
                             ]}
                         >
                             <Feather name="check" size={14} color="#ffffff" />

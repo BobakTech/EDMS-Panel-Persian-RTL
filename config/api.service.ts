@@ -52,7 +52,9 @@ export async function postApi<T>(
         search: query?.search,
     });
 
-    const response = await fetch(`${apiConfig.baseUrl}${endpoint}`, {
+    const url = `${apiConfig.baseUrl}${endpoint}`;
+
+    const response = await fetch(url, {
         method: "POST",
         headers: {
             Accept: "application/json",
@@ -60,11 +62,19 @@ export async function postApi<T>(
         body: formData,
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
         throw new Error(
-            `API request failed with status ${response.status}.`,
+            `API request failed with status ${response.status}.`
         );
     }
 
-    return response.json();
+    try {
+        return JSON.parse(responseText) as T;
+    } catch {
+        throw new Error(
+            `API returned non-JSON content from ${endpoint}.`
+        );
+    }
 }

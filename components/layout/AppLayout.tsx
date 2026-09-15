@@ -368,8 +368,22 @@ export default function AppLayout() {
 
     useEffect(() => {
         getWorkspaceCategoryDefinitions()
-            .then(setWorkspaceCategoryDefinitions)
-            .catch(() => setWorkspaceCategoryDefinitions([]));
+            .then((categories) => {
+                console.log(
+                    "FILE CATEGORIES API RESULT:",
+                    categories
+                );
+
+                setWorkspaceCategoryDefinitions(categories);
+            })
+            .catch((error) => {
+                console.error(
+                    "FILE CATEGORIES API ERROR:",
+                    error
+                );
+
+                setWorkspaceCategoryDefinitions([]);
+            });
     }, []);
 
     /**
