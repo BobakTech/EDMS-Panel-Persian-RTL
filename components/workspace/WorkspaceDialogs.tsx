@@ -5,6 +5,7 @@ import { radius, semanticColors, shadows, spacing, typography } from "../../them
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import type { WorkspaceItem } from "./workspace.types";
+import Tooltip from "../common/Tooltip";
 
 interface WorkspaceDialogFrameProps {
     visible: boolean;
@@ -160,7 +161,7 @@ export function WorkspaceRenameDialog({
                 value={value}
                 onChangeText={onChange}
                 placeholder={t("newNamePlaceholder")}
-                placeholderTextColor={colors.border}
+                placeholderTextColor={colors.text}
                 style={[
                     styles.renameInput,
                     {
@@ -239,7 +240,8 @@ export function WorkspaceMoveDialog({
 }: WorkspaceMoveDialogProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
-    const { textAlign } = getDirectionalLayout(direction);
+    const { isRtl, textAlign } = getDirectionalLayout(direction);
+
     return (
         <WorkspaceDialogFrame
             visible={visible}
@@ -248,40 +250,67 @@ export function WorkspaceMoveDialog({
             onClose={onCancel}
         >
             <View style={styles.destinationCombo}>
-                <TextInput
-                    value={value}
-                    onFocus={onFocus}
-                    onChangeText={onChange}
-                    placeholder={`${t("selectDestination")}...`}
-                    placeholderTextColor={colors.border}
+                <View
                     style={[
-                        styles.destinationComboInput,
+                        styles.destinationComboControl,
                         {
-                            color: colors.text,
-                            borderColor: colors.border,
                             backgroundColor: colors.background,
-                            textAlign,
+                            borderColor: colors.border,
                         },
                     ]}
-                />
-
-                <Pressable
-                    title={isOpen ? t("closeDestinationList") : t("openDestinationList")}
-                    accessibilityRole="button"
-                    accessibilityLabel={isOpen ? t("closeDestinationList") : t("openDestinationList")}
-                    accessibilityState={{ expanded: isOpen }}
-                    onPress={onToggle}
-                    style={({ pressed }) => [
-                        styles.destinationComboIcon,
-                        pressed && styles.destinationComboIconPressed,
-                    ]}
                 >
-                    <Feather
-                        name={isOpen ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color={colors.text}
+                    <TextInput
+                        value={value}
+                        onFocus={() => {
+                            onFocus();
+                            if (!isOpen) onToggle();
+                        }}
+                        onChangeText={onChange}
+                        placeholder={`${t("selectDestination")}...`}
+                        placeholderTextColor={colors.text}
+                        style={[
+                            styles.destinationComboInput,
+                            {
+                                color: colors.text,
+                                backgroundColor: "transparent",
+                                textAlign,
+                                direction,
+                            },
+                        ]}
                     />
-                </Pressable>
+
+                    <Tooltip
+                        label={isOpen ? t("closeDestinationList") : t("openDestinationList")}
+                        wrapperStyle={[
+                            styles.destinationComboIconWrapper,
+                            isRtl ? { left: 6 } : { right: 6 },
+                        ]}
+                    >
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                                isOpen
+                                    ? t("closeDestinationList")
+                                    : t("openDestinationList")
+                            }
+                            accessibilityState={{ expanded: isOpen }}
+                            onPress={onToggle}
+                            style={({ pressed }) => [
+                                styles.destinationComboIcon,
+                                {
+                                    backgroundColor: `color-mix(in srgb, ${colors.text} 7%, transparent)`,
+                                },
+                                pressed && styles.destinationComboIconPressed,
+                            ]}
+                        >
+                            <Feather
+                                name={isOpen ? "chevron-up" : "chevron-down"}
+                                size={18}
+                                color={colors.text}
+                            />
+                        </Pressable>
+                    </Tooltip>
+                </View>
 
                 {isOpen && (
                     <View
@@ -302,7 +331,7 @@ export function WorkspaceMoveDialog({
                                 style={[
                                     styles.destinationOption,
                                     isDestinationDisabled(outsideFolderDestinationId) &&
-                                        styles.destinationOptionCurrentLocation,
+                                    styles.destinationOptionCurrentLocation,
                                     {
                                         backgroundColor: isDestinationDisabled(
                                             outsideFolderDestinationId
@@ -312,23 +341,41 @@ export function WorkspaceMoveDialog({
                                     },
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.destinationOptionText,
-                                        { color: colors.text },
-                                    ]}
-                                >
-                                    {t("outsideFolder")}
-                                    {isDestinationDisabled(outsideFolderDestinationId)
-                                        ? `  ${t("currentLocation")}`
-                                        : ""}
-                                </Text>
+                                <View style={styles.destinationOptionContent}>
+                                    <Text
+                                        style={[
+                                            styles.destinationOptionText,
+                                            { color: colors.text, textAlign },
+                                        ]}
+                                        numberOfLines={1}
+                                    >
+                                        {t("outsideFolder")}
+                                    </Text>
+
+                                    {isDestinationDisabled(outsideFolderDestinationId) && (
+                                        <View style={styles.currentLocationIndicator}>
+                                            <Feather
+                                                name="folder"
+                                                size={13}
+                                                color={colors.primary}
+                                            />
+
+                                            <Text
+                                                style={[
+                                                    styles.currentLocationText,
+                                                    { color: colors.primary },
+                                                ]}
+                                            >
+                                                {t("currentLocation")}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
                             </Pressable>
                         )}
 
                         {destinationFolders.map((folder) => {
-                            const isCurrentDestination =
-                                isDestinationDisabled(folder.id);
+                            const isCurrentDestination = isDestinationDisabled(folder.id);
 
                             return (
                                 <Pressable
@@ -340,7 +387,7 @@ export function WorkspaceMoveDialog({
                                     style={[
                                         styles.destinationOption,
                                         isCurrentDestination &&
-                                            styles.destinationOptionCurrentLocation,
+                                        styles.destinationOptionCurrentLocation,
                                         {
                                             backgroundColor: isCurrentDestination
                                                 ? colors.background
@@ -348,31 +395,52 @@ export function WorkspaceMoveDialog({
                                         },
                                     ]}
                                 >
-                                    <Text
-                                        style={[
-                                            styles.destinationOptionText,
-                                            { color: colors.text },
-                                        ]}
-                                    >
-                                        {folder.name}
-                                        {isCurrentDestination
-                                            ? `  ${t("currentLocation")}`
-                                            : ""}
-                                    </Text>
+                                    <View style={styles.destinationOptionContent}>
+                                        <Text
+                                            style={[
+                                                styles.destinationOptionText,
+                                                { color: colors.text, textAlign },
+                                            ]}
+                                            numberOfLines={1}
+                                            dir="auto"
+                                        >
+                                            {folder.name}
+                                        </Text>
+
+                                        {isCurrentDestination && (
+                                            <View style={styles.currentLocationIndicator}>
+                                                <Feather
+                                                    name="folder"
+                                                    size={13}
+                                                    color={colors.primary}
+                                                />
+
+                                                <Text
+                                                    style={[
+                                                        styles.currentLocationText,
+                                                        { color: colors.primary },
+                                                    ]}
+                                                >
+                                                    {t("currentLocation")}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </View>
                                 </Pressable>
                             );
                         })}
 
-                        {!isOutsideFolderVisible && destinationFolders.length === 0 && (
-                            <Text
-                                style={[
-                                    styles.destinationEmptyText,
-                                    { color: colors.text },
-                                ]}
-                            >
-                                {t("noDestinationFound")}
-                            </Text>
-                        )}
+                        {!isOutsideFolderVisible &&
+                            destinationFolders.length === 0 && (
+                                <Text
+                                    style={[
+                                        styles.destinationEmptyText,
+                                        { color: colors.text, textAlign },
+                                    ]}
+                                >
+                                    {t("noDestinationFound")}
+                                </Text>
+                            )}
                     </View>
                 )}
             </View>
@@ -393,7 +461,12 @@ export function WorkspaceMoveDialog({
                         },
                     ]}
                 >
-                    <Text style={[styles.modalPrimaryButtonText, { color: colors.surface }]}>
+                    <Text
+                        style={[
+                            styles.modalPrimaryButtonText,
+                            { color: colors.surface },
+                        ]}
+                    >
                         {t("moveItem")}
                     </Text>
                 </Pressable>
@@ -404,7 +477,12 @@ export function WorkspaceMoveDialog({
                     onPress={onCancel}
                     style={styles.modalTextButton}
                 >
-                    <Text style={[styles.modalTextButtonText, { color: colors.text }]}>
+                    <Text
+                        style={[
+                            styles.modalTextButtonText,
+                            { color: colors.text },
+                        ]}
+                    >
                         {t("cancel")}
                     </Text>
                 </Pressable>
@@ -444,7 +522,12 @@ export function WorkspacePermanentDeleteDialog({
                         { backgroundColor: semanticColors.destructive },
                     ]}
                 >
-                    <Text style={[styles.modalDangerButtonText, { color: colors.surface }]}>
+                    <Text
+                        style={[
+                            styles.modalDangerButtonText,
+                            { color: colors.surface },
+                        ]}
+                    >
                         {t("permanentlyDeleteItem")}
                     </Text>
                 </Pressable>
@@ -455,7 +538,12 @@ export function WorkspacePermanentDeleteDialog({
                     onPress={onCancel}
                     style={styles.modalTextButton}
                 >
-                    <Text style={[styles.modalTextButtonText, { color: colors.text }]}>
+                    <Text
+                        style={[
+                            styles.modalTextButtonText,
+                            { color: colors.text },
+                        ]}
+                    >
                         {t("cancel")}
                     </Text>
                 </Pressable>
@@ -476,6 +564,7 @@ const styles = StyleSheet.create({
         padding: spacing.xl,
         backgroundColor: semanticColors.backdropSubtle,
     },
+
     modalCard: {
         width: "100%",
         maxWidth: 460,
@@ -484,12 +573,14 @@ const styles = StyleSheet.create({
         borderRadius: radius.xl,
         ...shadows.md,
     },
+
     modalTitle: {
         marginBottom: spacing.sm,
         fontSize: typography.fontSize.lg,
         fontWeight: typography.fontWeight.semibold,
         textAlign: "start",
     },
+
     modalDescription: {
         marginBottom: spacing.lg,
         fontSize: typography.fontSize.sm,
@@ -497,38 +588,49 @@ const styles = StyleSheet.create({
         textAlign: "start",
         opacity: 0.72,
     },
+
     modalActions: {
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
     },
-    modalActionSpacer: { flex: 1 },
+
+    modalActionSpacer: {
+        flex: 1,
+    },
+
     modalDangerButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: radius.md,
     },
+
     modalDangerButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
+
     modalPrimaryButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: radius.md,
     },
+
     modalPrimaryButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
+
     modalTextButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
     },
+
     modalTextButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
+
     renameInput: {
         marginBottom: spacing.lg,
         paddingHorizontal: spacing.md,
@@ -538,50 +640,110 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.medium,
         textAlign: "start",
+        outline: "none",
     },
+
     destinationCombo: {
         position: "relative",
         marginBottom: spacing.lg,
     },
-    destinationComboInput: {
-        minHeight: 40,
-        paddingRight: spacing.md,
-        paddingLeft: 40,
-        paddingVertical: spacing.sm,
+
+    destinationComboControl: {
+        position: "relative",
+        width: "100%",
+        minHeight: 38,
         borderWidth: 1,
+        borderRadius: radius.md,
+        overflow: "visible",
+    },
+
+    destinationComboInput: {
+        width: "100%",
+        height: 36,
+        minHeight: 36,
+        paddingHorizontal: 40,
+        paddingVertical: 6,
+        borderWidth: 0,
         borderRadius: radius.md,
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.medium,
         textAlign: "start",
+        outline: "none",
+        boxShadow: "none",
+        appearance: "none",
+        WebkitAppearance: "none",
     },
-    destinationComboIcon: {
+
+    destinationComboIconWrapper: {
         position: "absolute",
-        left: spacing.md,
-        top: 7,
-        zIndex: 2,
-        width: 26,
-        height: 26,
+        top: 4,
+        zIndex: 3,
+    },
+
+    destinationComboIcon: {
+        width: 28,
+        height: 28,
         alignItems: "center",
         justifyContent: "center",
-        opacity: 0.72,
+        borderRadius: radius.sm,
+        cursor: "pointer",
+        opacity: 0.82,
     },
-    destinationComboIconPressed: { opacity: 1 },
+
+    destinationComboIconPressed: {
+        opacity: 1,
+    },
+
     destinationDropdown: {
         marginTop: spacing.xs,
+        maxHeight: 220,
         borderWidth: 1,
         borderRadius: radius.md,
-        overflow: "hidden",
+        overflowY: "auto",
+        overflowX: "hidden",
     },
+
     destinationOption: {
+        minHeight: 36,
         paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
+        paddingVertical: 7,
+        justifyContent: "center",
     },
-    destinationOptionCurrentLocation: { opacity: 0.78 },
+
+    destinationOptionCurrentLocation: {
+        opacity: 0.86,
+    },
+
+    destinationOptionContent: {
+        width: "100%",
+        minWidth: 0,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: spacing.sm,
+    },
+
     destinationOptionText: {
+        flex: 1,
+        minWidth: 0,
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
         textAlign: "start",
     },
+
+    currentLocationIndicator: {
+        flexDirection: "row",
+        alignItems: "center",
+        flexShrink: 0,
+        gap: 5,
+    },
+
+    currentLocationText: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+        whiteSpace: "nowrap",
+    },
+
     destinationEmptyText: {
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,

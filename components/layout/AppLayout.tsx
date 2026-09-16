@@ -366,26 +366,6 @@ export default function AppLayout() {
         };
     }, [workspaceSearchQuery]);
 
-    useEffect(() => {
-        getWorkspaceCategoryDefinitions()
-            .then((categories) => {
-                console.log(
-                    "FILE CATEGORIES API RESULT:",
-                    categories
-                );
-
-                setWorkspaceCategoryDefinitions(categories);
-            })
-            .catch((error) => {
-                console.error(
-                    "FILE CATEGORIES API ERROR:",
-                    error
-                );
-
-                setWorkspaceCategoryDefinitions([]);
-            });
-    }, []);
-
     /**
      * ============================================================================
      * Workspace Actions

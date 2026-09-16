@@ -29,6 +29,8 @@ import {
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
 
+import Tooltip from "../common/Tooltip";
+
 /**
  * ============================================================================
  * Types
@@ -215,24 +217,25 @@ export default function WorkspaceItemCard({
                 ]}
             >
                 {item.isPinned && (
-                    <View
-                        title={t("unpinItem")}
-                        accessibilityRole="img"
-                        accessibilityLabel={t("unpinItem")}
-                        style={[
-                            styles.pinnedIndicator,
-                            {
-                                backgroundColor: `color-mix(in srgb, ${colors.primary} 16%, ${colors.surface})`,
-                                borderColor: colors.primary,
-                            },
-                        ]}
-                    >
-                        <Feather
-                            name="pin"
-                            size={14}
-                            color={colors.primary}
-                        />
-                    </View>
+                    <Tooltip label={t("unpinItem")}>
+                        <View
+                            accessibilityRole="img"
+                            accessibilityLabel={t("unpinItem")}
+                            style={[
+                                styles.pinnedIndicator,
+                                {
+                                    backgroundColor: `color-mix(in srgb, ${colors.primary} 16%, ${colors.surface})`,
+                                    borderColor: colors.primary,
+                                },
+                            ]}
+                        >
+                            <Feather
+                                name="pin"
+                                size={14}
+                                color={colors.primary}
+                            />
+                        </View>
+                    </Tooltip>
                 )}
 
                 <Pressable

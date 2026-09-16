@@ -462,7 +462,6 @@ export default function Toolbar({
                             </Text>
 
                             <View
-                                title={connection.label}
                                 accessibilityLabel={connection.label}
                                 style={[
                                     styles.mobileProjectStatusDot,
