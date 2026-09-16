@@ -52,7 +52,6 @@ import {
     WorkspaceDocumentPreviewPanel,
     WorkspaceHeader,
     WorkspaceItemCard,
-    WorkspaceItemDetailsPanel,
     WorkspaceViewControls,
 } from "../workspace";
 import {
@@ -291,8 +290,6 @@ export default function Workspace({
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [currentPage, setCurrentPage] = useState(1);
 
-    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-
     /**
      * Workspace multi-selection is independent from preview/details selection.
      * Pagination only changes rendering; selected ids remain selected across pages.
@@ -321,21 +318,6 @@ export default function Workspace({
     const [undoToast, setUndoToast] = useState<WorkspaceUndoToast | null>(null);
     const undoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => {
-        if (!selectedItemId) {
-            return;
-        }
-
-        const selectedItemStillVisible = workspaceItems.some(
-            (item) =>
-                item.id === selectedItemId &&
-                isWorkspaceItemVisibleOnPage(item, pageType)
-        );
-
-        if (!selectedItemStillVisible) {
-            setSelectedItemId(null);
-        }
-    }, [pageType, selectedItemId, workspaceItems]);
 
     useEffect(() => {
         return () => {
@@ -389,7 +371,6 @@ export default function Workspace({
     function handleToggleWorkspaceItemSelection(itemId: string) {
         setSelectedItemIdsSafe(itemId);
         setPreviewItemId(null);
-        setSelectedItemId(null);
     }
 
     function setSelectedItemIdsSafe(itemId: string) {
@@ -411,14 +392,12 @@ export default function Workspace({
 
         if (pageType === "workspace" && pressedItem?.type === "folder") {
             onChangeFolder(pressedItem.id);
-            setSelectedItemId(null);
             setPreviewItemId(null);
 
             return;
         }
 
         if (pressedItem?.type === "file") {
-            setSelectedItemId(null);
 
             setPreviewItemId((currentPreviewItemId) =>
                 currentPreviewItemId === itemId ? null : itemId
@@ -429,28 +408,8 @@ export default function Workspace({
 
         setPreviewItemId(null);
 
-        setSelectedItemId((currentItemId) =>
-            currentItemId === itemId
-                ? null
-                : itemId
-        );
     }
 
-    /**
-     * ============================================================================
-     * Toggle Workspace Item Actions
-     * ----------------------------------------------------------------------------
-     * Opens item details/actions and closes the document preview panel.
-     * ============================================================================
-     */
-
-    function handleOpenWorkspaceItemActions(itemId: string) {
-        setPreviewItemId(null);
-
-        setSelectedItemId((currentSelectedItemId) =>
-            currentSelectedItemId === itemId ? null : itemId
-        );
-    }
 
     function handlePressEmptyStateCreateFolder() {
         onPressCreateFolder();
@@ -477,23 +436,26 @@ export default function Workspace({
         onChangeFolder(currentWorkspaceFolder.parentFolderId ?? null);
     }
 
-    function handleCloseWorkspaceItemDetails() {
-        setSelectedItemId(null);
-    }
-
-    /**
-     * ============================================================================
-     * Close Document Preview
-     * ----------------------------------------------------------------------------
-     * Closes the selected file preview panel.
-     * ============================================================================
-     */
-
     function handleCloseDocumentPreview() {
         setPreviewItemId(null);
     }
 
+    function handleRequestDeleteWorkspaceItem(itemId: string) {
+        setPendingDeleteItemId(itemId);
+    }
 
+    function handleRequestRenameWorkspaceItem(itemId: string) {
+        const itemToRename = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (!itemToRename) {
+            return;
+        }
+
+        setPendingRenameItemId(itemToRename.id);
+        setRenameItemName(itemToRename.name);
+    }
 
     function handleCancelRenameWorkspaceItem() {
         setPendingRenameItemId(null);
@@ -555,15 +517,63 @@ export default function Workspace({
             showUndoToast(pendingMoveWorkspaceItem, t("itemMoved"));
         }
 
-        setSelectedItemId(null);
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
         setIsBulkMovePending(false);
     }
 
+    function handleRestoreArchivedWorkspaceItem(itemId: string) {
+        const archivedItem = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
 
+        if (!archivedItem) {
+            return;
+        }
 
+        onRestoreItem({
+            ...archivedItem,
+            status: "active",
+            updatedAt: new Date().toISOString(),
+        });
 
+        showUndoToast(archivedItem, t("itemRestoredToWorkspace"));
+    }
+
+    function handleMoveArchivedWorkspaceItemToTrash(itemId: string) {
+        const archivedItem = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (!archivedItem) {
+            return;
+        }
+
+        onMoveItemToTrash(archivedItem.id);
+        showUndoToast(archivedItem, t("itemMovedToTrash"));
+    }
+
+    function handleRestoreTrashedWorkspaceItem(itemId: string) {
+        const trashedItem = visibleWorkspaceItems.find(
+            (item) => item.id === itemId
+        );
+
+        if (!trashedItem) {
+            return;
+        }
+
+        onRestoreItem({
+            ...trashedItem,
+            status: "active",
+            updatedAt: new Date().toISOString(),
+        });
+
+        showUndoToast(trashedItem, t("itemRestoredFromTrash"));
+    }
+
+    function handleRequestPermanentDeleteWorkspaceItem(itemId: string) {
+        setPendingPermanentDeleteItemId(itemId);
+    }
 
     function handleCancelPermanentDeleteWorkspaceItem() {
         setPendingPermanentDeleteItemId(null);
@@ -583,7 +593,6 @@ export default function Workspace({
         }
 
         onDeleteItem(pendingPermanentDeleteWorkspaceItem.id);
-        setSelectedItemId(null);
         setPendingPermanentDeleteItemId(null);
     }
 
@@ -653,7 +662,6 @@ export default function Workspace({
 
         onMoveItemToTrash(pendingDeleteWorkspaceItem.id);
         showUndoToast(pendingDeleteWorkspaceItem, t("itemMovedToTrash"));
-        setSelectedItemId(null);
         setPendingDeleteItemId(null);
     }
 
@@ -792,7 +800,6 @@ export default function Workspace({
             paginatedWorkspaceItems.forEach((item) => nextIds.add(item.id));
             return Array.from(nextIds);
         });
-        setSelectedItemId(null);
         setPreviewItemId(null);
     }
 
@@ -810,7 +817,6 @@ export default function Workspace({
             });
             return Array.from(nextIds);
         });
-        setSelectedItemId(null);
         setPreviewItemId(null);
     }
 
@@ -864,9 +870,6 @@ export default function Workspace({
         );
     }, [workspaceItems, pageType, currentFolderId, activeWorkspaceCategory, normalizedSearchQuery]);
 
-    const selectedWorkspaceItem = visibleWorkspaceItems.find(
-        (item) => item.id === selectedItemId
-    );
 
 
     const pendingDeleteWorkspaceItem = visibleWorkspaceItems.find(
@@ -1080,7 +1083,6 @@ export default function Workspace({
                                             type="button"
                                             aria-pressed={isActiveCategory}
                                             onClick={() => {
-                                                setSelectedItemId(null);
                                                 setPreviewItemId(null);
                                                 setActiveWorkspaceCategory(
                                                     category.id
@@ -1425,8 +1427,8 @@ export default function Workspace({
                                                     alignItems: "center",
                                                     justifyContent: "center",
                                                     border: `1px solid ${isActivePage
-                                                            ? colors.primary
-                                                            : colors.border
+                                                        ? colors.primary
+                                                        : colors.border
                                                         }`,
                                                     borderRadius: 8,
                                                     backgroundColor:
@@ -1914,12 +1916,6 @@ export default function Workspace({
                                                 workspaceGridColumnCount
                                             );
 
-                                        const selectedRowItem =
-                                            rowItems.find(
-                                                (item) =>
-                                                    selectedItemId ===
-                                                    item.id
-                                            ) ?? null;
 
                                         const previewItem =
                                             rowItems.find(
@@ -1933,18 +1929,6 @@ export default function Workspace({
                                             <Fragment
                                                 key={`workspace-row-${rowIndex}`}
                                             >
-                                                {selectedRowItem && (
-                                                    <View
-                                                        style={
-                                                            styles.workspaceDetailsRow
-                                                        }
-                                                    >
-                                                        <WorkspaceItemDetailsPanel
-                                                            item={selectedRowItem}
-                                                            onClose={handleCloseWorkspaceItemDetails}
-                                                        />
-                                                    </View>
-                                                )}
 
                                                 <View
                                                     style={[
@@ -1977,8 +1961,6 @@ export default function Workspace({
                                                                         isCompactWorkspace
                                                                     }
                                                                     isSelected={
-                                                                        selectedItemId ===
-                                                                        item.id ||
                                                                         isPreviewOpen
                                                                     }
                                                                     isMultiSelected={
@@ -2027,8 +2009,6 @@ export default function Workspace({
                                 )
                                 : paginatedWorkspaceItems.map(
                                     (item) => {
-                                        const isSelected =
-                                            selectedItemId === item.id;
 
                                         const isPreviewOpen =
                                             previewItemId === item.id &&
@@ -2036,18 +2016,6 @@ export default function Workspace({
 
                                         return (
                                             <Fragment key={item.id}>
-                                                {isSelected && (
-                                                    <View
-                                                        style={
-                                                            styles.workspaceDetailsRow
-                                                        }
-                                                    >
-                                                        <WorkspaceItemDetailsPanel
-                                                            item={item}
-                                                            onClose={handleCloseWorkspaceItemDetails}
-                                                        />
-                                                    </View>
-                                                )}
 
                                                 <WorkspaceItemCard
                                                     item={item}
@@ -2056,7 +2024,6 @@ export default function Workspace({
                                                         isCompactWorkspace
                                                     }
                                                     isSelected={
-                                                        isSelected ||
                                                         isPreviewOpen
                                                     }
                                                     isMultiSelected={
@@ -2423,11 +2390,6 @@ const styles = StyleSheet.create({
         flexBasis: "100%",
     },
 
-    workspaceDetailsRow: {
-        width: "100%",
-        maxWidth: "100%",
-        flexBasis: "100%",
-    },
 
     selectionToolbar: {
         position: "sticky",
