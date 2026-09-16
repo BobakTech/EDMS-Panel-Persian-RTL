@@ -242,39 +242,33 @@ export function WorkspaceMoveDialog({
         >
             <EdmsSelect
                 value={selectedDestinationId ?? ""}
-                onChange={(event) => onSelectDestination(event.target.value)}
                 ariaLabel={t("selectDestination")}
+                placeholder={t("selectDestination")}
+                options={[
+                    ...(isOutsideFolderVisible
+                        ? [
+                            {
+                                value: outsideFolderDestinationId,
+                                label: isDestinationDisabled(outsideFolderDestinationId)
+                                    ? `${t("outsideFolder")} — ${t("currentLocation")}`
+                                    : t("outsideFolder"),
+                                disabled: isDestinationDisabled(
+                                    outsideFolderDestinationId
+                                ),
+                            },
+                        ]
+                        : []),
+                    ...destinationFolders.map((folder) => ({
+                        value: folder.id,
+                        label: isDestinationDisabled(folder.id)
+                            ? `${folder.name} — ${t("currentLocation")}`
+                            : folder.name,
+                        disabled: isDestinationDisabled(folder.id),
+                    })),
+                ]}
+                onChange={onSelectDestination}
                 style={{ marginBottom: spacing.lg }}
-            >
-                <option value="" disabled>
-                    {t("selectDestination")}
-                </option>
-
-                {isOutsideFolderVisible && (
-                    <option
-                        value={outsideFolderDestinationId}
-                        disabled={isDestinationDisabled(outsideFolderDestinationId)}
-                    >
-                        {t("outsideFolder")}
-                        {isDestinationDisabled(outsideFolderDestinationId)
-                            ? ` — ${t("currentLocation")}`
-                            : ""}
-                    </option>
-                )}
-
-                {destinationFolders.map((folder) => (
-                    <option
-                        key={folder.id}
-                        value={folder.id}
-                        disabled={isDestinationDisabled(folder.id)}
-                    >
-                        {folder.name}
-                        {isDestinationDisabled(folder.id)
-                            ? ` — ${t("currentLocation")}`
-                            : ""}
-                    </option>
-                ))}
-            </EdmsSelect>
+            />
 
             <View style={styles.modalActions}>
                 <Pressable
