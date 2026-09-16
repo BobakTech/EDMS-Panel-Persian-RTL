@@ -35,6 +35,8 @@ import type {
     WorkspaceItemUpdate,
 } from "./workspace.types";
 
+import EdmsSelect from "../common/EdmsSelect";
+
 type FeatherIconName = keyof typeof Feather.glyphMap;
 
 interface PreviewRendererInfo {
@@ -657,68 +659,40 @@ export default function WorkspaceDocumentPreviewPanel({
                                 {direction === "rtl" ? "نوع فایل" : "File type"}
                             </span>
 
-                            <select
+                            <EdmsSelect
                                 value={draftCategoryId}
-                                onChange={(event) => {
-                                    const selectedCategoryId =
-                                        String(event.target.value).trim();
+                                options={fileCategoryOptions.map((category) => ({
+                                    value: category.id,
+                                    label: getCategoryLabel(category),
+                                }))}
+                                onChange={(value) => {
+                                    const selectedCategoryId = String(value).trim();
 
-                                    const selectedCategory =
-                                        fileCategoryOptions.find(
-                                            (category) =>
-                                                category.id ===
-                                                selectedCategoryId
-                                        );
-
-                                    setDraftCategoryId(
-                                        selectedCategoryId
+                                    const selectedCategory = fileCategoryOptions.find(
+                                        (category) => category.id === selectedCategoryId
                                     );
+
+                                    setDraftCategoryId(selectedCategoryId);
 
                                     setDraftFileTypeLabel(
                                         selectedCategory
-                                            ? getCategoryLabel(
-                                                selectedCategory
-                                            )
+                                            ? getCategoryLabel(selectedCategory)
                                             : ""
                                     );
                                 }}
-                                aria-label={
+                                ariaLabel={
                                     direction === "rtl"
                                         ? "نوع فایل"
                                         : "File type"
                                 }
-                                style={{
-                                    ...styles.editInput,
-                                    minHeight: 32,
-                                    paddingInline: 8,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.surface,
-                                    color: colors.text,
-                                    cursor: "pointer",
-                                    direction,
-                                }}
-                            >
-                                {!draftCategoryId && (
-                                    <option value="">
-                                        {direction === "rtl"
-                                            ? "انتخاب دسته‌بندی"
-                                            : "Select category"}
-                                    </option>
-                                )}
-
-                                {fileCategoryOptions.map(
-                                    (category) => (
-                                        <option
-                                            key={category.id}
-                                            value={category.id}
-                                        >
-                                            {getCategoryLabel(
-                                                category
-                                            )}
-                                        </option>
-                                    )
-                                )}
-                            </select>
+                                placeholder={
+                                    direction === "rtl"
+                                        ? "انتخاب دسته‌بندی"
+                                        : "Select category"
+                                }
+                                height={32}
+                                maxMenuHeight={240}
+                            />
                         </label>
                     </View>
 
