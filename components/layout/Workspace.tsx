@@ -37,6 +37,8 @@ import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import type { TranslationKey } from "../../locales";
 
+import EdmsSelect from "../common/EdmsSelect";
+
 /**
  * ============================================================================
  * Workspace Component Imports
@@ -1167,121 +1169,124 @@ export default function Workspace({
 
                         <div
                             style={{
+                                position: "relative",
                                 display: "flex",
                                 alignItems: "center",
-
-                                justifyContent: isPhoneWorkspace
-                                    ? "space-between"
-                                    : "flex-end",
-
-                                flexWrap: "wrap",
+                                justifyContent: "center",
+                                flexWrap: isPhoneWorkspace ? "wrap" : "nowrap",
                                 gap: 10,
                                 minWidth: 0,
                                 flex: 1,
                             }}
                         >
+                            {/* File count + page size */}
                             <div
                                 style={{
-                                    display: "inline-flex",
+                                    display: "flex",
                                     alignItems: "center",
-                                    gap: 6,
-                                    whiteSpace: "nowrap",
-
-                                    fontSize: 12,
-                                    color: colors.text,
-                                    opacity: 0.78,
+                                    gap: 10,
+                                    flexWrap: "wrap",
+                                    ...(isPhoneWorkspace
+                                        ? {
+                                            position: "relative",
+                                            width: "100%",
+                                            justifyContent: "center",
+                                            order: 2,
+                                        }
+                                        : {
+                                            position: "absolute",
+                                            [direction === "rtl" ? "left" : "right"]: 0,
+                                        }),
                                 }}
                             >
-                                <span>
-                                    {totalWorkspaceItems === 0
-                                        ? "0"
-                                        : `${paginationStartIndex + 1}–${paginationEndIndex}`}
-                                </span>
-
-                                <span>/</span>
-
-                                <strong
+                                <div
                                     style={{
-                                        fontWeight: 700,
-                                        opacity: 1,
-                                    }}
-                                >
-                                    {totalWorkspaceItems}
-                                </strong>
-                            </div>
-
-                            <div
-                                style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 7,
-                                    whiteSpace: "nowrap",
-                                }}
-                            >
-                                <span
-                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        whiteSpace: "nowrap",
                                         fontSize: 12,
                                         color: colors.text,
-                                        opacity: 0.72,
+                                        opacity: 0.78,
                                     }}
                                 >
-                                    {direction === "rtl"
-                                        ? "تعداد نمایش"
-                                        : "Items per page"}
-                                </span>
+                                    <span>
+                                        {totalWorkspaceItems === 0
+                                            ? "0"
+                                            : `${paginationStartIndex + 1}–${paginationEndIndex}`}
+                                    </span>
 
-                                <select
-                                    value={itemsPerPage}
-                                    onChange={(event) =>
-                                        setItemsPerPage(
-                                            Number(event.target.value)
-                                        )
-                                    }
-                                    aria-label={
-                                        direction === "rtl"
-                                            ? "تعداد آیتم در هر صفحه"
-                                            : "Items per page"
-                                    }
+                                    <span>/</span>
+
+                                    <strong
+                                        style={{
+                                            fontWeight: 700,
+                                            opacity: 1,
+                                        }}
+                                    >
+                                        {totalWorkspaceItems}
+                                    </strong>
+                                </div>
+
+                                <div
                                     style={{
-                                        height: 34,
-                                        minWidth: 68,
-                                        paddingInline: 10,
-
-                                        border: `1px solid ${colors.border}`,
-                                        borderRadius: 8,
-
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-
-                                        fontSize: 12,
-                                        fontWeight: 600,
-
-                                        cursor: "pointer",
-                                        direction,
-                                        outline: "none",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 7,
+                                        whiteSpace: "nowrap",
                                     }}
                                 >
-                                    {WORKSPACE_PAGE_SIZE_OPTIONS.map(
-                                        (pageSize) => (
-                                            <option
-                                                key={pageSize}
-                                                value={pageSize}
-                                            >
-                                                {pageSize}
-                                            </option>
-                                        )
-                                    )}
-                                </select>
+                                    <span
+                                        style={{
+                                            fontSize: 12,
+                                            color: colors.text,
+                                            opacity: 0.72,
+                                        }}
+                                    >
+                                        {direction === "rtl"
+                                            ? "تعداد نمایش"
+                                            : "Items per page"}
+                                    </span>
+
+                                    <EdmsSelect
+                                        value={itemsPerPage}
+                                        options={WORKSPACE_PAGE_SIZE_OPTIONS.map((pageSize) => ({
+                                            value: pageSize,
+                                            label: String(pageSize),
+                                        }))}
+                                        onChange={(value) => {
+                                            setItemsPerPage(Number(value));
+                                            setCurrentPage(1);
+                                        }}
+                                        ariaLabel={
+                                            direction === "rtl"
+                                                ? "تعداد آیتم در هر صفحه"
+                                                : "Items per page"
+                                        }
+                                        width={82}
+                                        minWidth={82}
+                                        height={36}
+                                        maxMenuHeight={180}
+                                    />
+                                </div>
                             </div>
 
+                            {/* Pagination */}
                             {totalWorkspacePages > 1 && (
                                 <div
                                     style={{
                                         display: "flex",
                                         alignItems: "center",
+                                        justifyContent: "center",
                                         gap: 4,
                                         direction,
                                         flexShrink: 0,
+                                        ...(isPhoneWorkspace
+                                            ? {
+                                                width: "100%",
+                                                order: 1,
+                                            }
+                                            : {}),
                                     }}
                                 >
                                     <button
@@ -1296,24 +1301,18 @@ export default function Workspace({
                                         style={{
                                             width: 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
                                                 safeCurrentPage <= 1
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
                                                 safeCurrentPage <= 1
                                                     ? 0.35
@@ -1339,24 +1338,18 @@ export default function Workspace({
                                         style={{
                                             width: 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
                                                 safeCurrentPage <= 1
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
                                                 safeCurrentPage <= 1
                                                     ? 0.35
@@ -1366,77 +1359,58 @@ export default function Workspace({
                                         ‹
                                     </button>
 
-                                    {paginationPageNumbers.map(
-                                        (pageNumber) => {
-                                            const isActivePage =
-                                                pageNumber ===
-                                                safeCurrentPage;
+                                    {paginationPageNumbers.map((pageNumber) => {
+                                        const isActivePage =
+                                            pageNumber === safeCurrentPage;
 
-                                            return (
-                                                <button
-                                                    key={pageNumber}
-                                                    type="button"
-                                                    aria-current={
-                                                        isActivePage
-                                                            ? "page"
-                                                            : undefined
-                                                    }
-                                                    onClick={() =>
-                                                        setCurrentPage(
-                                                            pageNumber
-                                                        )
-                                                    }
-                                                    style={{
-                                                        minWidth: 32,
-                                                        height: 32,
-                                                        paddingInline: 8,
-
-                                                        display:
-                                                            "inline-flex",
-
-                                                        alignItems:
-                                                            "center",
-
-                                                        justifyContent:
-                                                            "center",
-
-                                                        border: `1px solid ${isActivePage
+                                        return (
+                                            <button
+                                                key={pageNumber}
+                                                type="button"
+                                                aria-current={
+                                                    isActivePage
+                                                        ? "page"
+                                                        : undefined
+                                                }
+                                                onClick={() =>
+                                                    setCurrentPage(pageNumber)
+                                                }
+                                                style={{
+                                                    minWidth: 32,
+                                                    height: 32,
+                                                    paddingInline: 8,
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    border: `1px solid ${isActivePage
                                                             ? colors.primary
                                                             : colors.border
-                                                            }`,
-
-                                                        borderRadius: 8,
-
-                                                        backgroundColor:
-                                                            isActivePage
-                                                                ? colors.primary
-                                                                : colors.surface,
-
-                                                        color:
-                                                            isActivePage
-                                                                ? colors.surface
-                                                                : colors.text,
-
-                                                        fontSize: 12,
-
-                                                        fontWeight:
-                                                            isActivePage
-                                                                ? 700
-                                                                : 500,
-
-                                                        cursor: "pointer",
-
-                                                        boxShadow:
-                                                            isActivePage
-                                                                ? `0 0 0 2px ${colors.primary}22`
-                                                                : "none",
-                                                    }}
-                                                >
-                                                    {pageNumber}
-                                                </button>
-                                            );
-                                        }
-                                    )}
+                                                        }`,
+                                                    borderRadius: 8,
+                                                    backgroundColor:
+                                                        isActivePage
+                                                            ? colors.primary
+                                                            : colors.surface,
+                                                    color:
+                                                        isActivePage
+                                                            ? colors.surface
+                                                            : colors.text,
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        isActivePage
+                                                            ? 700
+                                                            : 500,
+                                                    cursor: "pointer",
+                                                    boxShadow:
+                                                        isActivePage
+                                                            ? `0 0 0 2px ${colors.primary}22`
+                                                            : "none",
+                                                }}
+                                            >
+                                                {pageNumber}
+                                            </button>
+                                        );
+                                    })}
 
                                     <button
                                         type="button"
@@ -1446,8 +1420,7 @@ export default function Workspace({
                                                 : "Next page"
                                         }
                                         disabled={
-                                            safeCurrentPage >=
-                                            totalWorkspacePages
+                                            safeCurrentPage >= totalWorkspacePages
                                         }
                                         onClick={() =>
                                             setCurrentPage((page) =>
@@ -1460,28 +1433,20 @@ export default function Workspace({
                                         style={{
                                             width: 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? 0.35
                                                     : 0.9,
                                         }}
@@ -1497,39 +1462,28 @@ export default function Workspace({
                                                 : "Last page"
                                         }
                                         disabled={
-                                            safeCurrentPage >=
-                                            totalWorkspacePages
+                                            safeCurrentPage >= totalWorkspacePages
                                         }
                                         onClick={() =>
-                                            setCurrentPage(
-                                                totalWorkspacePages
-                                            )
+                                            setCurrentPage(totalWorkspacePages)
                                         }
                                         style={{
                                             width: 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? 0.35
                                                     : 0.9,
                                         }}
