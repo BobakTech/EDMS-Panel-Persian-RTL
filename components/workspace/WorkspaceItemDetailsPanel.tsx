@@ -2,11 +2,13 @@
  * ============================================================================
  * Workspace Item Details Panel
  * ----------------------------------------------------------------------------
- * Displays metadata and actions for the selected workspace item.
+ * Displays metadata for the selected workspace item.
+ * Operational item actions are handled by the workspace selection toolbar.
  * ============================================================================
  */
 
-import { StyleSheet, Text, View } from "../../web/ui";
+import { Feather } from "../../web/icons";
+import { Pressable, StyleSheet, Text, View } from "../../web/ui";
 
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -18,10 +20,6 @@ import {
     getWorkspaceItemUpdatedAtLabel,
 } from "./workspace.helpers";
 
-import WorkspaceItemDetailsActions, {
-    type WorkspaceItemDetailsAction,
-} from "./WorkspaceItemDetailsActions";
-
 import type { WorkspaceItem } from "./workspace.types";
 
 /**
@@ -32,10 +30,6 @@ import type { WorkspaceItem } from "./workspace.types";
 
 interface WorkspaceItemDetailsPanelProps {
     item: WorkspaceItem;
-    primaryAction: WorkspaceItemDetailsAction;
-    secondaryAction?: WorkspaceItemDetailsAction;
-    tertiaryAction?: WorkspaceItemDetailsAction;
-    pinAction?: WorkspaceItemDetailsAction;
     onClose: () => void;
 }
 
@@ -47,10 +41,6 @@ interface WorkspaceItemDetailsPanelProps {
 
 export default function WorkspaceItemDetailsPanel({
     item,
-    primaryAction,
-    secondaryAction,
-    tertiaryAction,
-    pinAction,
     onClose,
 }: WorkspaceItemDetailsPanelProps) {
     const { direction, language, t, theme } = useSettings();
@@ -105,7 +95,7 @@ export default function WorkspaceItemDetailsPanel({
                             },
                         ]}
                     >
-                        {direction === "ltr" ? "Status" : t("status")}: {getWorkspaceItemStatusLabel(item, direction, t)}
+                        {t("status")}: {getWorkspaceItemStatusLabel(item, direction, t)}
                     </Text>
 
                     <Text
@@ -122,15 +112,21 @@ export default function WorkspaceItemDetailsPanel({
                 </View>
             </View>
 
-            <WorkspaceItemDetailsActions
-                itemId={item.id}
-                primaryAction={primaryAction}
-                secondaryAction={secondaryAction}
-                tertiaryAction={tertiaryAction}
-                pinAction={pinAction}
-                closeLabel={t("closeDetails")}
-                onClose={onClose}
-            />
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t("closeDetails")}
+                onPress={onClose}
+                style={({ pressed }) => [
+                    styles.closeButton,
+                    {
+                        borderColor: colors.border,
+                        backgroundColor: colors.background,
+                    },
+                    pressed && styles.pressedCloseButton,
+                ]}
+            >
+                <Feather name="x" size={16} color={colors.text} />
+            </Pressable>
         </View>
     );
 }
@@ -161,6 +157,7 @@ const styles = StyleSheet.create({
 
     content: {
         flex: 1,
+        minWidth: 0,
     },
 
     label: {
@@ -182,6 +179,7 @@ const styles = StyleSheet.create({
     metaRow: {
         flexDirection: "row",
         alignItems: "center",
+        flexWrap: "wrap",
 
         gap: spacing.md,
     },
@@ -191,5 +189,27 @@ const styles = StyleSheet.create({
         fontWeight: typography.fontWeight.medium,
 
         opacity: 0.64,
+    },
+
+    closeButton: {
+        width: 34,
+        height: 34,
+
+        flexShrink: 0,
+
+        alignItems: "center",
+        justifyContent: "center",
+
+        marginInlineStart: spacing.md,
+
+        borderWidth: 1,
+        borderRadius: radius.pill,
+
+        transition: "transform 140ms ease, opacity 140ms ease",
+    },
+
+    pressedCloseButton: {
+        opacity: 0.78,
+        transform: "scale(0.96)",
     },
 });

@@ -493,22 +493,7 @@ export default function Workspace({
         setPreviewItemId(null);
     }
 
-    function handleRequestDeleteWorkspaceItem(itemId: string) {
-        setPendingDeleteItemId(itemId);
-    }
 
-    function handleRequestRenameWorkspaceItem(itemId: string) {
-        const itemToRename = visibleWorkspaceItems.find(
-            (item) => item.id === itemId
-        );
-
-        if (!itemToRename) {
-            return;
-        }
-
-        setPendingRenameItemId(itemToRename.id);
-        setRenameItemName(itemToRename.name);
-    }
 
     function handleCancelRenameWorkspaceItem() {
         setPendingRenameItemId(null);
@@ -576,61 +561,9 @@ export default function Workspace({
         setIsBulkMovePending(false);
     }
 
-    function handleRestoreArchivedWorkspaceItem(itemId: string) {
-        const archivedItem = visibleWorkspaceItems.find(
-            (item) => item.id === itemId
-        );
 
-        if (!archivedItem) {
-            return;
-        }
 
-        onRestoreItem({
-            ...archivedItem,
-            status: "active",
-            updatedAt: new Date().toISOString(),
-        });
 
-        showUndoToast(archivedItem, t("itemRestoredToWorkspace"));
-        setSelectedItemId(null);
-    }
-
-    function handleMoveArchivedWorkspaceItemToTrash(itemId: string) {
-        const archivedItem = visibleWorkspaceItems.find(
-            (item) => item.id === itemId
-        );
-
-        if (!archivedItem) {
-            return;
-        }
-
-        onMoveItemToTrash(archivedItem.id);
-        showUndoToast(archivedItem, t("itemMovedToTrash"));
-        setSelectedItemId(null);
-    }
-
-    function handleRestoreTrashedWorkspaceItem(itemId: string) {
-        const trashedItem = visibleWorkspaceItems.find(
-            (item) => item.id === itemId
-        );
-
-        if (!trashedItem) {
-            return;
-        }
-
-        onRestoreItem({
-            ...trashedItem,
-            status: "active",
-            updatedAt: new Date().toISOString(),
-        });
-
-        showUndoToast(trashedItem, t("itemRestoredFromTrash"));
-        setSelectedItemId(null);
-    }
-
-    function handleRequestPermanentDeleteWorkspaceItem(itemId: string) {
-        setPendingPermanentDeleteItemId(itemId);
-    }
 
     function handleCancelPermanentDeleteWorkspaceItem() {
         setPendingPermanentDeleteItemId(null);
@@ -935,20 +868,6 @@ export default function Workspace({
         (item) => item.id === selectedItemId
     );
 
-    const detailsPinAction =
-        selectedWorkspaceItem
-            ? {
-                label: selectedWorkspaceItem.isPinned
-                    ? t("unpinItem")
-                    : t("pinItem"),
-                icon: "pin",
-                accessibilityLabel: selectedWorkspaceItem.isPinned
-                    ? t("unpinItem")
-                    : t("pinItem"),
-                isActive: Boolean(selectedWorkspaceItem.isPinned),
-                onPress: onTogglePinnedItem,
-            }
-            : undefined;
 
     const pendingDeleteWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === pendingDeleteItemId
@@ -1024,64 +943,6 @@ export default function Workspace({
     const shouldShowEmptyStateActions =
         pageType === "workspace" && !normalizedSearchQuery;
 
-    const detailsPrimaryAction =
-        pageType === "archive"
-            ? {
-                label: t("restore"),
-                icon: "↩",
-                accessibilityLabel: t("restoreFromArchive"),
-                onPress: handleRestoreArchivedWorkspaceItem,
-            }
-            : pageType === "trash"
-                ? {
-                    label: t("restore"),
-                    icon: "↩",
-                    accessibilityLabel: t("restoreFromTrash"),
-                    onPress: handleRestoreTrashedWorkspaceItem,
-                }
-                : {
-                    label: t("deleteOrArchive"),
-                    icon: "⚠",
-                    accessibilityLabel: t("deleteOrArchiveItem"),
-                    tone: "warning" as const,
-                    onPress: handleRequestDeleteWorkspaceItem,
-                };
-
-    const detailsSecondaryAction =
-        pageType === "archive"
-            ? {
-                label: t("moveToTrash"),
-                icon: "🗑",
-                accessibilityLabel: t("moveArchivedToTrash"),
-                tone: "danger" as const,
-                onPress: handleMoveArchivedWorkspaceItemToTrash,
-            }
-            : pageType === "workspace"
-                ? {
-                    label: t("renameItem"),
-                    icon: "✎",
-                    accessibilityLabel: t("renameItem"),
-                    onPress: handleRequestRenameWorkspaceItem,
-                }
-                : pageType === "trash"
-                    ? {
-                        label: t("permanentlyDeleteItem"),
-                        icon: "🗑",
-                        accessibilityLabel: t("permanentlyDeleteItem"),
-                        tone: "danger" as const,
-                        onPress: handleRequestPermanentDeleteWorkspaceItem,
-                    }
-                    : undefined;
-
-    const detailsTertiaryAction =
-        pageType === "workspace"
-            ? {
-                label: t("moveItem"),
-                icon: "⇄",
-                accessibilityLabel: t("moveItem"),
-                onPress: handleRequestMoveWorkspaceItem,
-            }
-            : undefined;
 
     /**
      * ============================================================================
@@ -2079,24 +1940,8 @@ export default function Workspace({
                                                         }
                                                     >
                                                         <WorkspaceItemDetailsPanel
-                                                            item={
-                                                                selectedRowItem
-                                                            }
-                                                            primaryAction={
-                                                                detailsPrimaryAction
-                                                            }
-                                                            secondaryAction={
-                                                                detailsSecondaryAction
-                                                            }
-                                                            tertiaryAction={
-                                                                detailsTertiaryAction
-                                                            }
-                                                            pinAction={
-                                                                detailsPinAction
-                                                            }
-                                                            onClose={
-                                                                handleCloseWorkspaceItemDetails
-                                                            }
+                                                            item={selectedRowItem}
+                                                            onClose={handleCloseWorkspaceItemDetails}
                                                         />
                                                     </View>
                                                 )}
@@ -2199,21 +2044,7 @@ export default function Workspace({
                                                     >
                                                         <WorkspaceItemDetailsPanel
                                                             item={item}
-                                                            primaryAction={
-                                                                detailsPrimaryAction
-                                                            }
-                                                            secondaryAction={
-                                                                detailsSecondaryAction
-                                                            }
-                                                            tertiaryAction={
-                                                                detailsTertiaryAction
-                                                            }
-                                                            pinAction={
-                                                                detailsPinAction
-                                                            }
-                                                            onClose={
-                                                                handleCloseWorkspaceItemDetails
-                                                            }
+                                                            onClose={handleCloseWorkspaceItemDetails}
                                                         />
                                                     </View>
                                                 )}
