@@ -38,6 +38,8 @@ import type {
     WorkspaceItemUpdate,
 } from "../workspace";
 
+import EdmsSelect from "../common/EdmsSelect";
+
 interface DocumentPreviewPageProps {
     item: WorkspaceItem;
     categoryDefinitions: WorkspaceCategoryDefinition[];
@@ -136,11 +138,11 @@ export default function DocumentPreviewPage({
     function getCategoryLabel(category: WorkspaceCategoryDefinition) {
         return direction === "rtl"
             ? category.nameFa?.trim() ||
-              category.nameEn?.trim() ||
-              category.id
+            category.nameEn?.trim() ||
+            category.id
             : category.nameEn?.trim() ||
-              category.nameFa?.trim() ||
-              category.id;
+            category.nameFa?.trim() ||
+            category.id;
     }
 
     const [isEditing, setIsEditing] = useState(false);
@@ -299,7 +301,7 @@ export default function DocumentPreviewPage({
                                 size={15}
                                 color={primaryForeground}
                             />
-                        
+
                             <Text
                                 style={[
                                     styles.compactButtonText,
@@ -523,48 +525,12 @@ export default function DocumentPreviewPage({
 
                 {!isEditing && (
                     <View style={styles.compactMetaRow}>
-                    <View
-                        style={[
-                            styles.statusChip,
-                            {
-                                backgroundColor: metadata.status.backgroundColor,
-                                borderColor: metadata.status.borderColor,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.metaLabel,
-                                {
-                                    color: metadata.status.foregroundColor,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {metadata.status.label}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.statusValue,
-                                {
-                                    color: metadata.status.foregroundColor,
-                                    textAlign,
-                                },
-                            ]}
-                        >
-                            {metadata.status.value}
-                        </Text>
-                    </View>
-
-                    {metadata.entries.map((entry) => (
                         <View
-                            key={entry.key}
                             style={[
-                                styles.metaChip,
+                                styles.statusChip,
                                 {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
+                                    backgroundColor: metadata.status.backgroundColor,
+                                    borderColor: metadata.status.borderColor,
                                 },
                             ]}
                         >
@@ -572,27 +538,63 @@ export default function DocumentPreviewPage({
                                 style={[
                                     styles.metaLabel,
                                     {
-                                        color: colors.text,
+                                        color: metadata.status.foregroundColor,
                                         textAlign,
                                     },
                                 ]}
                             >
-                                {entry.label}
+                                {metadata.status.label}
                             </Text>
 
                             <Text
                                 style={[
-                                    styles.metaValue,
+                                    styles.statusValue,
                                     {
-                                        color: colors.text,
+                                        color: metadata.status.foregroundColor,
                                         textAlign,
                                     },
                                 ]}
                             >
-                                {entry.value}
+                                {metadata.status.value}
                             </Text>
                         </View>
-                    ))}
+
+                        {metadata.entries.map((entry) => (
+                            <View
+                                key={entry.key}
+                                style={[
+                                    styles.metaChip,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.metaLabel,
+                                        {
+                                            color: colors.text,
+                                            textAlign,
+                                        },
+                                    ]}
+                                >
+                                    {entry.label}
+                                </Text>
+
+                                <Text
+                                    style={[
+                                        styles.metaValue,
+                                        {
+                                            color: colors.text,
+                                            textAlign,
+                                        },
+                                    ]}
+                                >
+                                    {entry.value}
+                                </Text>
+                            </View>
+                        ))}
                     </View>
                 )}
 
@@ -748,68 +750,35 @@ export default function DocumentPreviewPage({
                                         : "File type"}
                                 </span>
 
-                                <select
+                                <EdmsSelect
                                     value={draftCategoryId}
-                                    onChange={(event) => {
-                                        const selectedCategoryId =
-                                            String(event.target.value).trim();
+                                    options={fileCategoryOptions.map((category) => ({
+                                        value: category.id,
+                                        label: getCategoryLabel(category),
+                                    }))}
+                                    onChange={(value) => {
+                                        const selectedCategoryId = String(value).trim();
 
-                                        const selectedCategory =
-                                            fileCategoryOptions.find(
-                                                (category) =>
-                                                    category.id ===
-                                                    selectedCategoryId
-                                            );
-
-                                        setDraftCategoryId(
-                                            selectedCategoryId
+                                        const selectedCategory = fileCategoryOptions.find(
+                                            (category) => category.id === selectedCategoryId
                                         );
+
+                                        setDraftCategoryId(selectedCategoryId);
 
                                         setDraftFileTypeLabel(
                                             selectedCategory
-                                                ? getCategoryLabel(
-                                                    selectedCategory
-                                                )
+                                                ? getCategoryLabel(selectedCategory)
                                                 : ""
                                         );
                                     }}
-                                    aria-label={
+                                    ariaLabel={
                                         direction === "rtl"
                                             ? "نوع فایل"
                                             : "File type"
                                     }
-                                    style={{
-                                        ...styles.editInput,
-                                        minHeight: 32,
-                                        paddingInline: 8,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-                                        cursor: "pointer",
-                                        direction,
-                                    }}
-                                >
-                                    {!draftCategoryId && (
-                                        <option value="">
-                                            {direction === "rtl"
-                                                ? "انتخاب دسته‌بندی"
-                                                : "Select category"}
-                                        </option>
-                                    )}
-
-                                    {fileCategoryOptions.map(
-                                        (category) => (
-                                            <option
-                                                key={category.id}
-                                                value={category.id}
-                                            >
-                                                {getCategoryLabel(
-                                                    category
-                                                )}
-                                            </option>
-                                        )
-                                    )}
-                                </select>
+                                    height={32}
+                                    maxMenuHeight={240}
+                                />
                             </label>
                         </View>
 
@@ -830,10 +799,10 @@ export default function DocumentPreviewPage({
                                         borderColor: colors.primary,
                                     },
                                     !draftName.trim() &&
-                                        styles.disabledAction,
+                                    styles.disabledAction,
                                     pressed &&
-                                        Boolean(draftName.trim()) &&
-                                        styles.pressedButton,
+                                    Boolean(draftName.trim()) &&
+                                    styles.pressedButton,
                                 ]}
                             >
                                 <Feather

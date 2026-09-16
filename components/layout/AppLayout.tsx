@@ -93,6 +93,27 @@ export default function AppLayout() {
         setWorkspaceCategoryDefinitions,
     ] = useState<WorkspaceCategoryDefinition[]>([]);
 
+    useEffect(() => {
+        let isActive = true;
+
+        getWorkspaceCategoryDefinitions()
+            .then((definitions) => {
+                if (isActive) {
+                    setWorkspaceCategoryDefinitions(definitions);
+                }
+            })
+            .catch((error) => {
+                console.error(
+                    "Failed to load workspace category definitions:",
+                    error
+                );
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
     const [workspaceTotal, setWorkspaceTotal] = useState(0);
     const [workspaceOffset, setWorkspaceOffset] = useState(0);
     const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);

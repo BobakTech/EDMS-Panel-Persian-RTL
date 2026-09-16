@@ -123,8 +123,8 @@ export default function EdmsSelect({
             activeIndex >= 0
                 ? activeIndex + step
                 : step === 1
-                  ? 0
-                  : options.length - 1;
+                    ? 0
+                    : options.length - 1;
 
         const nextIndex = findEnabledIndex(startIndex, step);
 
@@ -236,9 +236,8 @@ export default function EdmsSelect({
                     gap: spacing.sm,
                     paddingInlineStart: spacing.md,
                     paddingInlineEnd: spacing.sm,
-                    border: `1px solid ${
-                        isOpen ? colors.primary : colors.border
-                    }`,
+                    border: `1px solid ${isOpen ? colors.primary : colors.border
+                        }`,
                     borderRadius: radius.md,
                     backgroundColor: colors.surface,
                     color: selectedOption
@@ -339,6 +338,11 @@ export default function EdmsSelect({
                                     setActiveIndex(index);
                                 }
                             }}
+                            onMouseLeave={() => {
+                                if (!option.disabled) {
+                                    setActiveIndex(-1);
+                                }
+                            }}
                             onClick={() => selectOption(option)}
                             style={{
                                 width: "100%",
@@ -352,7 +356,7 @@ export default function EdmsSelect({
                                 backgroundColor:
                                     isSelected || isActive
                                         ? semanticColors.selectedSurface
-                                        : "transparent",
+                                        : colors.surface,
                                 color: option.disabled
                                     ? semanticColors.muted
                                     : colors.text,
@@ -380,6 +384,11 @@ export default function EdmsSelect({
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                     whiteSpace: "nowrap",
+
+                                    // Explicit rather than inherited.
+                                    color: option.disabled
+                                        ? semanticColors.muted
+                                        : colors.text,
                                 }}
                             >
                                 {option.label}
