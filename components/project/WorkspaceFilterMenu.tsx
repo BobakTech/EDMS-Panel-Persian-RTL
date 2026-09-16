@@ -106,6 +106,12 @@ export function WorkspaceFilterMenu({
     const projectTableRef =
         useRef<HTMLDivElement>(null);
 
+    const panelRef =
+        useRef<HTMLDivElement>(null);
+
+    const backdropRef =
+        useRef<HTMLButtonElement>(null);
+
     const [isOpen, setIsOpen] =
         useState(false);
 
@@ -267,6 +273,45 @@ export function WorkspaceFilterMenu({
     const hasMoreProjects =
         renderedProjects.length <
         sortedProjects.length;
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        const panelElement = panelRef.current;
+        const backdropElement = backdropRef.current;
+
+        backdropElement?.animate(
+            [
+                { opacity: 0 },
+                { opacity: 1 },
+            ],
+            {
+                duration: 160,
+                easing: "ease-out",
+                fill: "both",
+            }
+        );
+
+        panelElement?.animate(
+            [
+                {
+                    opacity: 0,
+                    transform: "translateY(10px) scale(0.985)",
+                },
+                {
+                    opacity: 1,
+                    transform: "translateY(0) scale(1)",
+                },
+            ],
+            {
+                duration: 190,
+                easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
+                fill: "both",
+            }
+        );
+    }, [isOpen]);
 
     useEffect(() => {
         setRenderedProjectCount(
@@ -781,10 +826,11 @@ export function WorkspaceFilterMenu({
             <Modal
                 transparent
                 visible={isOpen}
-                animationType="fade"
+                animationType="none"
             >
                 <View style={styles.modal}>
                     <Pressable
+                        ref={backdropRef}
                         accessibilityRole="button"
                         accessibilityLabel={
                             t("closeFilters")
@@ -794,6 +840,7 @@ export function WorkspaceFilterMenu({
                     />
 
                     <View
+                        ref={panelRef}
                         style={[
                             styles.panel,
                             {
