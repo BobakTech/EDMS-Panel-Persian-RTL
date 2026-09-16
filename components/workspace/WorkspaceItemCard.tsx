@@ -3,6 +3,7 @@
  * Workspace Item Card
  * ----------------------------------------------------------------------------
  * Displays a folder or file in card and list layouts.
+ * Supports animated workspace multi-selection independently from item opening.
  * ============================================================================
  */
 
@@ -19,10 +20,12 @@ import {
 import { radius, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
+
 import type {
     WorkspaceItem,
     WorkspaceViewMode,
 } from "./workspace.types";
+
 import {
     getWorkspaceFileExtension,
     getWorkspaceItemLabel,
@@ -49,9 +52,20 @@ interface WorkspaceItemCardProps {
     item: WorkspaceItem;
     viewMode: WorkspaceViewMode;
     isCompact: boolean;
+
+    /**
+     * Indicates that the card is active because its preview or another
+     * single-item interaction is open.
+     */
     isSelected: boolean;
+
+    /**
+     * Indicates that the item belongs to the workspace multi-selection.
+     */
+    isMultiSelected: boolean;
+
     onPress: (itemId: string) => void;
-    onOpenActions?: (itemId: string) => void;
+    onToggleSelection: (itemId: string) => void;
 }
 
 /**
@@ -76,7 +90,10 @@ function getItemIconName(item: WorkspaceItem): FeatherIconName {
  *   report (draft) final.jpg      -> normal truncation
  *   report (draft) final (1).jpg  -> preserves "(1).jpg"
  */
-function getWorkspaceCardItemName(item: WorkspaceItem, maxLength = 26): string {
+function getWorkspaceCardItemName(
+    item: WorkspaceItem,
+    maxLength = 26
+): string {
     const itemName = item.name;
 
     if (itemName.length <= maxLength) {
@@ -84,38 +101,63 @@ function getWorkspaceCardItemName(item: WorkspaceItem, maxLength = 26): string {
     }
 
     if (item.type === "folder") {
-        return `${itemName.slice(0, Math.max(4, maxLength - 3))}...`;
+        return `${itemName.slice(
+            0,
+            Math.max(4, maxLength - 3)
+        )}...`;
     }
 
-    const duplicateMatch = itemName.match(/(\s*\(\d+\))(\.[^./\\]+)$/);
+    const duplicateMatch =
+        itemName.match(/(\s*\(\d+\))(\.[^./\\]+)$/);
 
     if (duplicateMatch) {
         const duplicateSuffix = duplicateMatch[1];
         const extension = duplicateMatch[2];
-        const preservedSuffix = `${duplicateSuffix}${extension}`;
-        const baseName = itemName.slice(0, itemName.length - preservedSuffix.length);
+        const preservedSuffix =
+            `${duplicateSuffix}${extension}`;
+
+        const baseName = itemName.slice(
+            0,
+            itemName.length - preservedSuffix.length
+        );
+
         const availableBaseLength = Math.max(
             4,
             maxLength - preservedSuffix.length - 3
         );
 
-        return `${baseName.slice(0, availableBaseLength)}...${preservedSuffix}`;
+        return `${baseName.slice(
+            0,
+            availableBaseLength
+        )}...${preservedSuffix}`;
     }
 
-    const extensionMatch = itemName.match(/(\.[^./\\]+)$/);
+    const extensionMatch =
+        itemName.match(/(\.[^./\\]+)$/);
 
     if (!extensionMatch) {
-        return `${itemName.slice(0, Math.max(4, maxLength - 3))}...`;
+        return `${itemName.slice(
+            0,
+            Math.max(4, maxLength - 3)
+        )}...`;
     }
 
     const extension = extensionMatch[1];
-    const baseName = itemName.slice(0, itemName.length - extension.length);
+
+    const baseName = itemName.slice(
+        0,
+        itemName.length - extension.length
+    );
+
     const availableBaseLength = Math.max(
         4,
         maxLength - extension.length - 3
     );
 
-    return `${baseName.slice(0, availableBaseLength)}...${extension}`;
+    return `${baseName.slice(
+        0,
+        availableBaseLength
+    )}...${extension}`;
 }
 
 /**
@@ -129,18 +171,34 @@ export default function WorkspaceItemCard({
     viewMode,
     isCompact,
     isSelected,
+    isMultiSelected,
     onPress,
-    onOpenActions,
+    onToggleSelection,
 }: WorkspaceItemCardProps) {
-    const { direction, language, t, theme } = useSettings();
-    const colors = theme.colors;
-    const { isRtl } = getDirectionalLayout(direction);
-    const [isHovered, setIsHovered] = useState(false);
-    const [isPressed, setIsPressed] = useState(false);
+    const { direction, language, t, theme } =
+        useSettings();
 
-    const isListMode = viewMode === "list";
-    const depthColor = `color-mix(in srgb, ${colors.primary} 28%, ${colors.border})`;
-    const ambientShadow = "rgba(0, 0, 0, 0.18)";
+    const colors = theme.colors;
+    const { isRtl } =
+        getDirectionalLayout(direction);
+
+    const [isHovered, setIsHovered] =
+        useState(false);
+
+    const [isPressed, setIsPressed] =
+        useState(false);
+
+    const isListMode =
+        viewMode === "list";
+
+    const isVisuallySelected =
+        isSelected || isMultiSelected;
+
+    const depthColor =
+        `color-mix(in srgb, ${colors.primary} 28%, ${colors.border})`;
+
+    const ambientShadow =
+        "rgba(0, 0, 0, 0.18)";
 
     const itemTypeLabel =
         item.type === "folder"
@@ -151,11 +209,17 @@ export default function WorkspaceItemCard({
             ).toUpperCase();
 
     const rawItemSizeLabel =
-        getWorkspaceItemUpdatedAtLabel(item, t, language);
+        getWorkspaceItemUpdatedAtLabel(
+            item,
+            t,
+            language
+        );
 
     const itemSizeLabel =
         item.type === "file" &&
-            /^\d+(?:[.,]\d+)?$/.test(rawItemSizeLabel.trim())
+        /^\d+(?:[.,]\d+)?$/.test(
+            rawItemSizeLabel.trim()
+        )
             ? `${rawItemSizeLabel} MB`
             : rawItemSizeLabel;
 
@@ -164,124 +228,264 @@ export default function WorkspaceItemCard({
             ? itemSizeLabel
             : `${itemTypeLabel} · ${itemSizeLabel}`;
 
-    const displayItemName = getWorkspaceCardItemName(item);
+    const displayItemName =
+        getWorkspaceCardItemName(item);
+
+    const selectionLabel =
+        isMultiSelected
+            ? direction === "rtl"
+                ? "لغو انتخاب"
+                : "Deselect"
+            : direction === "rtl"
+                ? "انتخاب"
+                : "Select";
+
+    const selectionAccessibilityLabel =
+        isMultiSelected
+            ? direction === "rtl"
+                ? `لغو انتخاب ${item.name}`
+                : `Deselect ${item.name}`
+            : direction === "rtl"
+                ? `انتخاب ${item.name}`
+                : `Select ${item.name}`;
 
     return (
         <View
-            onPointerEnter={() => setIsHovered(true)}
+            onPointerEnter={() =>
+                setIsHovered(true)
+            }
             onPointerLeave={() => {
                 setIsHovered(false);
                 setIsPressed(false);
             }}
-            onPointerDown={() => setIsPressed(true)}
-            onPointerUp={() => setIsPressed(false)}
-            onPointerCancel={() => setIsPressed(false)}
+            onPointerDown={() =>
+                setIsPressed(true)
+            }
+            onPointerUp={() =>
+                setIsPressed(false)
+            }
+            onPointerCancel={() =>
+                setIsPressed(false)
+            }
             style={[
                 styles.card,
-                isListMode ? styles.listCard : styles.gridCard,
-                !isListMode && isCompact && styles.compactGridCard,
+
+                isListMode
+                    ? styles.listCard
+                    : styles.gridCard,
+
+                !isListMode &&
+                    isCompact &&
+                    styles.compactGridCard,
+
                 {
-                    backgroundColor: isSelected
-                        ? `color-mix(in srgb, ${colors.primary} 8%, ${colors.surface})`
-                        : colors.surface,
+                    backgroundColor:
+                        isVisuallySelected
+                            ? `color-mix(in srgb, ${colors.primary} 8%, ${colors.surface})`
+                            : colors.surface,
 
-                    borderColor: isSelected
-                        ? colors.primary
-                        : `color-mix(in srgb, ${colors.primary} 38%, ${colors.border})`,
+                    borderColor:
+                        isVisuallySelected
+                            ? colors.primary
+                            : `color-mix(in srgb, ${colors.primary} 38%, ${colors.border})`,
 
-                    boxShadow: isSelected
-                        ? `inset 0 0 0 1px color-mix(in srgb, ${colors.primary} 34%, transparent), 0 3px 0 ${depthColor}, 0 8px 18px ${ambientShadow}`
-                        : isPressed
-                            ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 1px 0 ${depthColor}, 0 3px 7px ${ambientShadow}`
+                    boxShadow:
+                        isVisuallySelected
+                            ? `inset 0 0 0 1px color-mix(in srgb, ${colors.primary} 34%, transparent), 0 3px 0 ${depthColor}, 0 8px 18px ${ambientShadow}`
+                            : isPressed
+                                ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 1px 0 ${depthColor}, 0 3px 7px ${ambientShadow}`
+                                : isHovered
+                                    ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 5px 0 ${depthColor}, 0 12px 22px ${ambientShadow}`
+                                    : `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 3px 0 ${depthColor}, 0 7px 14px ${ambientShadow}`,
+
+                    transform:
+                        isPressed
+                            ? "translateY(2px)"
                             : isHovered
-                                ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 5px 0 ${depthColor}, 0 12px 22px ${ambientShadow}`
-                                : `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 3px 0 ${depthColor}, 0 7px 14px ${ambientShadow}`,
-
-                    transform: isPressed
-                        ? "translateY(2px)"
-                        : isHovered
-                            ? "translateY(-2px)"
-                            : "translateY(0)",
+                                ? "translateY(-2px)"
+                                : "translateY(0)",
                 },
-                isSelected && styles.selectedCard,
+
+                isVisuallySelected &&
+                    styles.selectedCard,
             ]}
         >
+            {/*
+             * ====================================================================
+             * Card Action Cluster
+             * --------------------------------------------------------------------
+             * Selection is intentionally independent from opening the item.
+             * Clicking this control must never open the preview/folder.
+             * ====================================================================
+             */}
+
             <View
                 style={[
                     styles.cardActionCluster,
-                    isListMode && styles.listCardActionCluster,
+
+                    isListMode &&
+                        styles.listCardActionCluster,
+
                     {
-                        left: isRtl ? spacing.sm : "auto",
-                        right: isRtl ? "auto" : spacing.sm,
+                        left: isRtl
+                            ? spacing.sm
+                            : "auto",
+
+                        right: isRtl
+                            ? "auto"
+                            : spacing.sm,
                     },
                 ]}
             >
                 {item.isPinned && (
-                    <Tooltip label={t("unpinItem")}>
+                    <Tooltip
+                        label={t("unpinItem")}
+                    >
                         <View
                             accessibilityRole="img"
-                            accessibilityLabel={t("unpinItem")}
+                            accessibilityLabel={
+                                t("unpinItem")
+                            }
                             style={[
                                 styles.pinnedIndicator,
                                 {
-                                    backgroundColor: `color-mix(in srgb, ${colors.primary} 16%, ${colors.surface})`,
-                                    borderColor: colors.primary,
+                                    backgroundColor:
+                                        `color-mix(in srgb, ${colors.primary} 16%, ${colors.surface})`,
+
+                                    borderColor:
+                                        colors.primary,
                                 },
                             ]}
                         >
                             <Feather
                                 name="pin"
                                 size={14}
-                                color={colors.primary}
+                                color={
+                                    colors.primary
+                                }
                             />
                         </View>
                     </Tooltip>
                 )}
 
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${t("showItemActions")} ${item.name}`}
-                    onPress={() => onOpenActions?.(item.id)}
-                    style={({ pressed }) => [
-                        styles.actionsButton,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                        pressed && styles.pressedButton,
-                    ]}
+                <Tooltip
+                    label={selectionLabel}
                 >
-                    <Feather
-                        name="more-horizontal"
-                        size={16}
-                        color={colors.text}
-                    />
-                </Pressable>
+                    <Pressable
+                        accessibilityRole="checkbox"
+                        accessibilityLabel={
+                            selectionAccessibilityLabel
+                        }
+                        accessibilityState={{
+                            checked:
+                                isMultiSelected,
+                        }}
+                        onPress={() =>
+                            onToggleSelection(
+                                item.id
+                            )
+                        }
+                        style={({ pressed }) => [
+                            styles.selectionButton,
+
+                            {
+                                backgroundColor:
+                                    isMultiSelected
+                                        ? colors.primary
+                                        : colors.background,
+
+                                borderColor:
+                                    isMultiSelected
+                                        ? colors.primary
+                                        : colors.border,
+
+                                transform:
+                                    pressed
+                                        ? "scale(0.9)"
+                                        : isMultiSelected
+                                            ? "scale(1.06)"
+                                            : "scale(1)",
+
+                                boxShadow:
+                                    isMultiSelected
+                                        ? `0 0 0 3px color-mix(in srgb, ${colors.primary} 14%, transparent)`
+                                        : "none",
+                            },
+                        ]}
+                    >
+                        <Feather
+                            name={
+                                isMultiSelected
+                                    ? "check"
+                                    : "square"
+                            }
+                            size={15}
+                            color={
+                                isMultiSelected
+                                    ? "#ffffff"
+                                    : colors.text
+                            }
+                        />
+                    </Pressable>
+                </Tooltip>
             </View>
+
+            {/*
+             * ====================================================================
+             * Card Content
+             * --------------------------------------------------------------------
+             * Opening remains independent from multi-selection.
+             * ====================================================================
+             */}
 
             <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`${t("openItem")} ${item.name}`}
-                onPress={() => onPress(item.id)}
+                accessibilityLabel={
+                    `${t("openItem")} ${item.name}`
+                }
+                onPress={() =>
+                    onPress(item.id)
+                }
                 style={[
                     styles.contentButton,
-                    isListMode && styles.listContentButton,
-                    isListMode && !isRtl && styles.ltrListContentButton,
-                    { direction },
+
+                    isListMode &&
+                        styles.listContentButton,
+
+                    isListMode &&
+                        !isRtl &&
+                        styles.ltrListContentButton,
+
+                    {
+                        direction,
+                    },
                 ]}
             >
                 <View
                     style={[
                         styles.iconMetaRow,
-                        isListMode && styles.listIconMetaRow,
-                        isListMode && !isRtl && styles.ltrListIconMetaRow,
+
+                        isListMode &&
+                            styles.listIconMetaRow,
+
+                        isListMode &&
+                            !isRtl &&
+                            styles.ltrListIconMetaRow,
                     ]}
                 >
-                    <View style={styles.itemIcon}>
+                    <View
+                        style={styles.itemIcon}
+                    >
                         <Feather
-                            name={getItemIconName(item)}
+                            name={
+                                getItemIconName(
+                                    item
+                                )
+                            }
                             size={24}
-                            color={colors.primary}
+                            color={
+                                colors.primary
+                            }
                         />
                     </View>
 
@@ -290,8 +494,11 @@ export default function WorkspaceItemCard({
                             style={[
                                 styles.typePill,
                                 {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
+                                    backgroundColor:
+                                        colors.background,
+
+                                    borderColor:
+                                        colors.border,
                                 },
                             ]}
                         >
@@ -299,12 +506,16 @@ export default function WorkspaceItemCard({
                                 style={[
                                     styles.typePillText,
                                     {
-                                        color: colors.primary,
+                                        color:
+                                            colors.primary,
                                     },
                                 ]}
                                 numberOfLines={1}
                             >
-                                {getWorkspaceItemLabel(item, t)}
+                                {getWorkspaceItemLabel(
+                                    item,
+                                    t
+                                )}
                             </Text>
                         </View>
                     )}
@@ -313,12 +524,18 @@ export default function WorkspaceItemCard({
                 <View
                     style={[
                         styles.textArea,
-                        isListMode && styles.listTextArea,
+
+                        isListMode &&
+                            styles.listTextArea,
+
                         {
                             direction,
-                            alignItems: isListMode && !isRtl
-                                ? "stretch"
-                                : "flex-start",
+
+                            alignItems:
+                                isListMode &&
+                                !isRtl
+                                    ? "stretch"
+                                    : "flex-start",
                         },
                     ]}
                 >
@@ -326,26 +543,47 @@ export default function WorkspaceItemCard({
                         title={item.name}
                         style={[
                             styles.name,
-                            isListMode && styles.listName,
+
+                            isListMode &&
+                                styles.listName,
+
                             {
-                                color: colors.text,
-                                textAlign: isRtl ? "right" : "left",
+                                color:
+                                    colors.text,
+
+                                textAlign:
+                                    isRtl
+                                        ? "right"
+                                        : "left",
                             },
                         ]}
                         numberOfLines={1}
                         dir="auto"
                     >
-                        {isListMode ? item.name : displayItemName}
+                        {isListMode
+                            ? item.name
+                            : displayItemName}
                     </Text>
 
                     <Text
                         style={[
                             styles.meta,
-                            isListMode && !isRtl && styles.ltrListMeta,
+
+                            isListMode &&
+                                !isRtl &&
+                                styles.ltrListMeta,
+
                             {
-                                color: colors.text,
-                                textAlign: isRtl ? "right" : "left",
-                                borderColor: colors.border,
+                                color:
+                                    colors.text,
+
+                                textAlign:
+                                    isRtl
+                                        ? "right"
+                                        : "left",
+
+                                borderColor:
+                                    colors.border,
                             },
                         ]}
                         numberOfLines={1}
@@ -372,8 +610,10 @@ const styles = StyleSheet.create({
         borderRadius: radius.lg,
 
         transition:
-            "transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease",
-        willChange: "transform, box-shadow",
+            "transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease",
+
+        willChange:
+            "transform, box-shadow, border-color, background-color",
     },
 
     gridCard: {
@@ -397,6 +637,12 @@ const styles = StyleSheet.create({
         borderWidth: 2,
     },
 
+    /**
+     * ============================================================================
+     * Selection / Pin Cluster
+     * ============================================================================
+     */
+
     cardActionCluster: {
         position: "absolute",
         top: spacing.sm,
@@ -412,7 +658,7 @@ const styles = StyleSheet.create({
         top: 19,
     },
 
-    actionsButton: {
+    selectionButton: {
         width: 30,
         height: 30,
 
@@ -421,6 +667,12 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.pill,
+
+        transition:
+            "transform 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 180ms ease",
+
+        willChange:
+            "transform, background-color, border-color, box-shadow",
     },
 
     pinnedIndicator: {
@@ -432,11 +684,20 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.pill,
+
+        transition:
+            "transform 150ms ease, background-color 150ms ease, border-color 150ms ease",
     },
 
     pressedButton: {
         opacity: 0.82,
     },
+
+    /**
+     * ============================================================================
+     * Card Content
+     * ============================================================================
+     */
 
     contentButton: {
         width: "100%",
@@ -519,7 +780,9 @@ const styles = StyleSheet.create({
 
     typePillText: {
         fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
+        fontWeight:
+            typography.fontWeight.semibold,
+
         textAlign: "center",
     },
 
@@ -551,14 +814,20 @@ const styles = StyleSheet.create({
 
     name: {
         minWidth: 0,
-        fontSize: typography.fontSize.md,
-        fontWeight: typography.fontWeight.bold,
+
+        fontSize:
+            typography.fontSize.md,
+
+        fontWeight:
+            typography.fontWeight.bold,
     },
 
     listName: {
         width: "100%",
         minWidth: 0,
+
         fontWeight: 500,
+
         whiteSpace: "nowrap",
         overflow: "hidden",
         textOverflow: "ellipsis",
@@ -569,8 +838,12 @@ const styles = StyleSheet.create({
 
         marginTop: "auto",
 
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
+        fontSize:
+            typography.fontSize.xs,
+
+        fontWeight:
+            typography.fontWeight.semibold,
+
         textAlign: "right",
 
         opacity: 0.56,

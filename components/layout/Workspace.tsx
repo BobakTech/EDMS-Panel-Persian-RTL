@@ -292,6 +292,15 @@ export default function Workspace({
     const [currentPage, setCurrentPage] = useState(1);
 
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+    /**
+     * Workspace multi-selection is independent from preview/details selection.
+     * Pagination only changes rendering; selected ids remain selected across pages.
+     */
+    const [multiSelectedItemIds, setMultiSelectedItemIds] = useState<string[]>([]);
+    const [isBulkDeletePending, setIsBulkDeletePending] = useState(false);
+    const [isBulkMovePending, setIsBulkMovePending] = useState(false);
+    const [isBulkPermanentDeletePending, setIsBulkPermanentDeletePending] = useState(false);
     const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
 
     /**
@@ -376,6 +385,24 @@ export default function Workspace({
      * Opens folders normally and opens files in the document preview panel.
      * ============================================================================
      */
+
+    function handleToggleWorkspaceItemSelection(itemId: string) {
+        setSelectedItemIdsSafe(itemId);
+        setPreviewItemId(null);
+        setSelectedItemId(null);
+    }
+
+    function setSelectedItemIdsSafe(itemId: string) {
+        setMultiSelectedItemIds((currentIds) =>
+            currentIds.includes(itemId)
+                ? currentIds.filter((id) => id !== itemId)
+                : [...currentIds, itemId]
+        );
+    }
+
+    function handleClearWorkspaceSelection() {
+        setMultiSelectedItemIds([]);
+    }
 
     function handlePressWorkspaceItem(itemId: string) {
         const pressedItem = visibleWorkspaceItems.find(
@@ -516,6 +543,7 @@ export default function Workspace({
     function handleCancelMoveWorkspaceItem() {
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
+        setIsBulkMovePending(false);
     }
 
     function handleSaveMoveWorkspaceItem() {
@@ -532,11 +560,20 @@ export default function Workspace({
                 ? null
                 : selectedDestinationFolderId;
 
-        onMoveItem(pendingMoveWorkspaceItem.id, destinationFolderId);
-        showUndoToast(pendingMoveWorkspaceItem, t("itemMoved"));
+        if (isBulkMovePending) {
+            selectedWorkspaceItems.forEach((item) =>
+                onMoveItem(item.id, destinationFolderId)
+            );
+            setMultiSelectedItemIds([]);
+        } else {
+            onMoveItem(pendingMoveWorkspaceItem.id, destinationFolderId);
+            showUndoToast(pendingMoveWorkspaceItem, t("itemMoved"));
+        }
+
         setSelectedItemId(null);
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
+        setIsBulkMovePending(false);
     }
 
     function handleRestoreArchivedWorkspaceItem(itemId: string) {
@@ -597,9 +634,17 @@ export default function Workspace({
 
     function handleCancelPermanentDeleteWorkspaceItem() {
         setPendingPermanentDeleteItemId(null);
+        setIsBulkPermanentDeletePending(false);
     }
 
     function handleConfirmPermanentDeleteWorkspaceItem() {
+        if (isBulkPermanentDeletePending) {
+            selectedWorkspaceItems.forEach((item) => onDeleteItem(item.id));
+            setMultiSelectedItemIds([]);
+            setIsBulkPermanentDeletePending(false);
+            return;
+        }
+
         if (!pendingPermanentDeleteWorkspaceItem) {
             return;
         }
@@ -611,6 +656,7 @@ export default function Workspace({
 
     function handleCancelDeleteWorkspaceItem() {
         setPendingDeleteItemId(null);
+        setIsBulkDeletePending(false);
     }
 
     function showUndoToast(item: WorkspaceItem, message: string) {
@@ -644,6 +690,13 @@ export default function Workspace({
     }
 
     function handleArchivePendingWorkspaceItem() {
+        if (isBulkDeletePending) {
+            selectedWorkspaceItems.forEach((item) => onArchiveItem(item.id));
+            setMultiSelectedItemIds([]);
+            setIsBulkDeletePending(false);
+            return;
+        }
+
         if (!pendingDeleteWorkspaceItem) {
             return;
         }
@@ -654,6 +707,13 @@ export default function Workspace({
     }
 
     function handleMovePendingWorkspaceItemToTrash() {
+        if (isBulkDeletePending) {
+            selectedWorkspaceItems.forEach((item) => onMoveItemToTrash(item.id));
+            setMultiSelectedItemIds([]);
+            setIsBulkDeletePending(false);
+            return;
+        }
+
         if (!pendingDeleteWorkspaceItem) {
             return;
         }
@@ -695,6 +755,73 @@ export default function Workspace({
             Number(Boolean(secondItem.isPinned)) - Number(Boolean(firstItem.isPinned))
     );
 
+    const selectedWorkspaceItems = visibleWorkspaceItems.filter((item) =>
+        multiSelectedItemIds.includes(item.id)
+    );
+
+    const selectedWorkspaceItemCount = selectedWorkspaceItems.length;
+
+    const allSelectedWorkspaceItemsPinned =
+        selectedWorkspaceItemCount > 0 &&
+        selectedWorkspaceItems.every((item) => Boolean(item.isPinned));
+
+    function handleBulkTogglePinnedWorkspaceItems() {
+        const shouldPin = !allSelectedWorkspaceItemsPinned;
+
+        selectedWorkspaceItems.forEach((item) => {
+            if (Boolean(item.isPinned) !== shouldPin) {
+                onTogglePinnedItem(item.id);
+            }
+        });
+    }
+
+    function handleRequestBulkDeleteWorkspaceItems() {
+        if (selectedWorkspaceItemCount === 0) {
+            return;
+        }
+
+        setIsBulkDeletePending(true);
+    }
+
+    function handleRequestBulkMoveWorkspaceItems() {
+        if (selectedWorkspaceItemCount === 0) {
+            return;
+        }
+
+        const firstSelectedItem = selectedWorkspaceItems[0];
+
+        setPendingMoveItemId(firstSelectedItem.id);
+        setSelectedDestinationFolderId(
+            firstSelectedItem.parentFolderId ?? MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+        );
+        setIsBulkMovePending(true);
+    }
+
+    function handleBulkRestoreWorkspaceItems() {
+        selectedWorkspaceItems.forEach((item) => {
+            onRestoreItem({
+                ...item,
+                status: "active",
+                updatedAt: new Date().toISOString(),
+            });
+        });
+
+        setMultiSelectedItemIds([]);
+    }
+
+    function handleBulkMoveWorkspaceItemsToTrash() {
+        selectedWorkspaceItems.forEach((item) => onMoveItemToTrash(item.id));
+        setMultiSelectedItemIds([]);
+    }
+
+    function handleRequestBulkPermanentDeleteWorkspaceItems() {
+        if (selectedWorkspaceItemCount === 0) {
+            return;
+        }
+
+        setIsBulkPermanentDeletePending(true);
+    }
+
     const totalWorkspaceItems = visibleWorkspaceItems.length;
 
     const totalWorkspacePages = Math.max(
@@ -719,6 +846,40 @@ export default function Workspace({
         paginationStartIndex,
         paginationEndIndex
     );
+
+    const allPageWorkspaceItemsSelected =
+        paginatedWorkspaceItems.length > 0 &&
+        paginatedWorkspaceItems.every((item) =>
+            multiSelectedItemIds.includes(item.id)
+        );
+
+    function handleSelectAllPageWorkspaceItems() {
+        setMultiSelectedItemIds((currentIds) => {
+            const nextIds = new Set(currentIds);
+            paginatedWorkspaceItems.forEach((item) => nextIds.add(item.id));
+            return Array.from(nextIds);
+        });
+        setSelectedItemId(null);
+        setPreviewItemId(null);
+    }
+
+    function handleDeselectAllPageWorkspaceItems() {
+        const pageItemIds = new Set(paginatedWorkspaceItems.map((item) => item.id));
+        setMultiSelectedItemIds((currentIds) => currentIds.filter((itemId) => !pageItemIds.has(itemId)));
+    }
+
+    function handleInvertPageWorkspaceSelection() {
+        setMultiSelectedItemIds((currentIds) => {
+            const nextIds = new Set(currentIds);
+            paginatedWorkspaceItems.forEach((item) => {
+                if (nextIds.has(item.id)) nextIds.delete(item.id);
+                else nextIds.add(item.id);
+            });
+            return Array.from(nextIds);
+        });
+        setSelectedItemId(null);
+        setPreviewItemId(null);
+    }
 
     const paginationWindowSize = 5;
 
@@ -749,6 +910,26 @@ export default function Workspace({
         pageType,
         itemsPerPage,
     ]);
+
+    useEffect(() => {
+        setMultiSelectedItemIds([]);
+        setIsBulkDeletePending(false);
+        setIsBulkMovePending(false);
+        setIsBulkPermanentDeletePending(false);
+    }, [
+        activeWorkspaceCategory,
+        currentFolderId,
+        normalizedSearchQuery,
+        pageType,
+    ]);
+
+    useEffect(() => {
+        setMultiSelectedItemIds((currentIds) =>
+            currentIds.filter((itemId) =>
+                visibleWorkspaceItems.some((item) => item.id === itemId)
+            )
+        );
+    }, [workspaceItems, pageType, currentFolderId, activeWorkspaceCategory, normalizedSearchQuery]);
 
     const selectedWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === selectedItemId
@@ -1496,6 +1677,343 @@ export default function Workspace({
                     </div>
                 </WorkspaceHeader>
 
+                {selectedWorkspaceItemCount > 0 && (
+                    <View
+                        style={[
+                            styles.selectionToolbar,
+                            {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.primary,
+                            },
+                        ]}
+                    >
+                        <View style={styles.selectionToolbarSummary}>
+                            <View
+                                style={[
+                                    styles.selectionCountBadge,
+                                    {
+                                        backgroundColor: colors.primary,
+                                    },
+                                ]}
+                            >
+                                <Text style={styles.selectionCountBadgeText}>
+                                    {selectedWorkspaceItemCount}
+                                </Text>
+                            </View>
+
+                            <Text
+                                style={[
+                                    styles.selectionToolbarText,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {direction === "rtl"
+                                    ? `${selectedWorkspaceItemCount} مورد انتخاب شده`
+                                    : `${selectedWorkspaceItemCount} selected`}
+                            </Text>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={
+                                    allPageWorkspaceItemsSelected
+                                        ? t("deselectItems")
+                                        : t("selectItems")
+                                }
+                                onPress={
+                                    allPageWorkspaceItemsSelected
+                                        ? handleDeselectAllPageWorkspaceItems
+                                        : handleSelectAllPageWorkspaceItems
+                                }
+                                style={({ pressed }) => [
+                                    styles.selectionTextButton,
+                                    { borderColor: colors.border, backgroundColor: colors.background },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather name={allPageWorkspaceItemsSelected ? "x-square" : "check-square"} size={14} color={colors.primary} />
+                                <Text style={[styles.selectionTextButtonLabel, { color: colors.primary }]}>
+                                    {allPageWorkspaceItemsSelected
+                                        ? t("deselectItems")
+                                        : t("selectItems")}
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={direction === "rtl" ? "معکوس کردن انتخاب این صفحه" : "Invert selection on this page"}
+                                onPress={handleInvertPageWorkspaceSelection}
+                                style={({ pressed }) => [
+                                    styles.selectionTextButton,
+                                    { borderColor: colors.border, backgroundColor: colors.background },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather name="repeat" size={14} color={colors.primary} />
+                                <Text style={[styles.selectionTextButtonLabel, { color: colors.primary }]}>
+                                    {direction === "rtl" ? "معکوس" : "Invert"}
+                                </Text>
+                            </Pressable>
+                        </View>
+
+                        <View style={styles.selectionToolbarActions}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={
+                                    allSelectedWorkspaceItemsPinned
+                                        ? t("unpinItem")
+                                        : t("pinItem")
+                                }
+                                onPress={handleBulkTogglePinnedWorkspaceItems}
+                                style={({ pressed }) => [
+                                    styles.selectionActionButton,
+                                    {
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.background,
+                                    },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather
+                                    name="pin"
+                                    size={16}
+                                    color={colors.primary}
+                                />
+                                <Text
+                                    style={[
+                                        styles.selectionActionLabel,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    {allSelectedWorkspaceItemsPinned
+                                        ? t("unpinItem")
+                                        : t("pinItem")}
+                                </Text>
+                            </Pressable>
+
+                            {pageType === "workspace" && (
+                                <>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("moveItem")}
+                                        onPress={handleRequestBulkMoveWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="folder"
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {t("moveItem")}
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("deleteOrArchiveItem")}
+                                        onPress={handleRequestBulkDeleteWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: "#D97706",
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="archive"
+                                            size={16}
+                                            color="#D97706"
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: "#D97706",
+                                                },
+                                            ]}
+                                        >
+                                            {t("deleteOrArchive")}
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            )}
+
+                            {pageType === "archive" && (
+                                <>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("restoreFromArchive")}
+                                        onPress={handleBulkRestoreWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="rotate-ccw"
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {t("restore")}
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("moveArchivedToTrash")}
+                                        onPress={handleBulkMoveWorkspaceItemsToTrash}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: "#DC2626",
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="trash-2"
+                                            size={16}
+                                            color="#DC2626"
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: "#DC2626",
+                                                },
+                                            ]}
+                                        >
+                                            {t("moveToTrash")}
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            )}
+
+                            {pageType === "trash" && (
+                                <>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("restoreFromTrash")}
+                                        onPress={handleBulkRestoreWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="rotate-ccw"
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {t("restore")}
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("permanentlyDeleteItem")}
+                                        onPress={handleRequestBulkPermanentDeleteWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: "#DC2626",
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="trash-2"
+                                            size={16}
+                                            color="#DC2626"
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: "#DC2626",
+                                                },
+                                            ]}
+                                        >
+                                            {t("permanentlyDeleteItem")}
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            )}
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={
+                                    direction === "rtl"
+                                        ? "لغو انتخاب"
+                                        : "Clear selection"
+                                }
+                                onPress={handleClearWorkspaceSelection}
+                                style={({ pressed }) => [
+                                    styles.selectionIconButton,
+                                    {
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.background,
+                                    },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather
+                                    name="x"
+                                    size={17}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </View>
+                    </View>
+                )}
+
                 <ScrollView
                     style={styles.workspaceBody}
                     contentContainerStyle={styles.workspaceBodyContent}
@@ -1618,11 +2136,14 @@ export default function Workspace({
                                                                         item.id ||
                                                                         isPreviewOpen
                                                                     }
+                                                                    isMultiSelected={
+                                                                        multiSelectedItemIds.includes(item.id)
+                                                                    }
                                                                     onPress={
                                                                         handlePressWorkspaceItem
                                                                     }
-                                                                    onOpenActions={
-                                                                        handleOpenWorkspaceItemActions
+                                                                    onToggleSelection={
+                                                                        handleToggleWorkspaceItemSelection
                                                                     }
                                                                 />
                                                             );
@@ -1707,11 +2228,14 @@ export default function Workspace({
                                                         isSelected ||
                                                         isPreviewOpen
                                                     }
+                                                    isMultiSelected={
+                                                        multiSelectedItemIds.includes(item.id)
+                                                    }
                                                     onPress={
                                                         handlePressWorkspaceItem
                                                     }
-                                                    onOpenActions={
-                                                        handleOpenWorkspaceItemActions
+                                                    onToggleSelection={
+                                                        handleToggleWorkspaceItemSelection
                                                     }
                                                 />
 
@@ -1859,7 +2383,7 @@ export default function Workspace({
             <WorkspaceDeleteDialog
                 visible={
                     pageType === "workspace" &&
-                    pendingDeleteItemId !== null
+                    (pendingDeleteItemId !== null || isBulkDeletePending)
                 }
                 onMoveToTrash={
                     handleMovePendingWorkspaceItemToTrash
@@ -1906,7 +2430,7 @@ export default function Workspace({
             <WorkspacePermanentDeleteDialog
                 visible={
                     pageType === "trash" &&
-                    pendingPermanentDeleteItemId !== null
+                    (pendingPermanentDeleteItemId !== null || isBulkPermanentDeletePending)
                 }
                 onConfirm={
                     handleConfirmPermanentDeleteWorkspaceItem
@@ -2072,6 +2596,122 @@ const styles = StyleSheet.create({
         width: "100%",
         maxWidth: "100%",
         flexBasis: "100%",
+    },
+
+    selectionToolbar: {
+        position: "sticky",
+        top: spacing.sm,
+        zIndex: 30,
+
+        width: "100%",
+
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+
+        borderWidth: 1,
+        borderRadius: radius.lg,
+
+        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.14)",
+
+        animation:
+            "edms-workspace-panel-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+
+        backdropFilter: "blur(10px)",
+    },
+
+    selectionToolbarSummary: {
+        minWidth: 0,
+        flexDirection: "row",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: spacing.sm,
+    },
+
+    selectionToolbarActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        flexWrap: "wrap",
+        gap: spacing.xs,
+    },
+
+    selectionCountBadge: {
+        minWidth: 28,
+        height: 28,
+        paddingHorizontal: spacing.xs,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: radius.pill,
+        transition: "transform 150ms ease",
+    },
+
+    selectionCountBadgeText: {
+        color: "#ffffff",
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.bold,
+    },
+
+    selectionToolbarText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    selectionTextButton: {
+        minHeight: 32,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+        transition: "transform 140ms ease, opacity 140ms ease",
+    },
+
+    selectionTextButtonLabel: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    selectionActionButton: {
+        minHeight: 34,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+        transition:
+            "transform 140ms ease, opacity 140ms ease, background-color 140ms ease, border-color 140ms ease",
+    },
+
+    selectionActionLabel: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+        whiteSpace: "nowrap",
+    },
+
+    selectionIconButton: {
+        width: 34,
+        height: 34,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderRadius: radius.pill,
+        transition: "transform 140ms ease, opacity 140ms ease",
+    },
+
+    pressedSelectionAction: {
+        opacity: 0.78,
+        transform: "scale(0.96)",
     },
 
     undoToast: {
