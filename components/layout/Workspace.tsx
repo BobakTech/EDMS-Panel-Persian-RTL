@@ -303,9 +303,6 @@ export default function Workspace({
     const [pendingMoveItemId, setPendingMoveItemId] = useState<string | null>(null);
     const [selectedDestinationFolderId, setSelectedDestinationFolderId] =
         useState<string | null>(null);
-    const [moveSearchQuery, setMoveSearchQuery] = useState("");
-    const [isMoveDestinationComboOpen, setIsMoveDestinationComboOpen] =
-        useState(false);
 
     const [pendingPermanentDeleteItemId, setPendingPermanentDeleteItemId] =
         useState<string | null>(null);
@@ -512,15 +509,11 @@ export default function Workspace({
         setSelectedDestinationFolderId(
             itemToMove?.parentFolderId ?? MOVE_OUTSIDE_FOLDER_DESTINATION_ID
         );
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
     }
 
     function handleCancelMoveWorkspaceItem() {
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
     }
 
     function handleSaveMoveWorkspaceItem() {
@@ -542,8 +535,6 @@ export default function Workspace({
         setSelectedItemId(null);
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
     }
 
     function handleRestoreArchivedWorkspaceItem(itemId: string) {
@@ -801,19 +792,7 @@ export default function Workspace({
 
     const currentMoveParentFolderId = pendingMoveWorkspaceItem?.parentFolderId ?? null;
 
-    const normalizedMoveSearchQuery = moveSearchQuery.trim().toLowerCase();
-
-    const isOutsideFolderDestinationVisible =
-        !normalizedMoveSearchQuery ||
-        t("outsideFolder").toLowerCase().includes(
-            normalizedMoveSearchQuery
-        );
-
-    const filteredDestinationFolders = normalizedMoveSearchQuery
-        ? destinationFolders.filter((folder) =>
-            folder.name.toLowerCase().includes(normalizedMoveSearchQuery)
-        )
-        : destinationFolders;
+    const isOutsideFolderDestinationVisible = true;
 
     function getDestinationFolderId(destinationId: string) {
         return destinationId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID
@@ -829,37 +808,8 @@ export default function Workspace({
         selectedDestinationFolderId !== null &&
         !isMoveDestinationDisabled(selectedDestinationFolderId);
 
-    function getSelectedDestinationLabel() {
-        if (selectedDestinationFolderId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID) {
-            return t("outsideFolder");
-        }
-
-        const selectedFolder = destinationFolders.find(
-            (folder) => folder.id === selectedDestinationFolderId
-        );
-
-        return selectedFolder?.name ?? t("selectDestination");
-    }
-
-    function handleFocusMoveDestination() {
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(true);
-    }
-
-    function handleChangeMoveDestination(query: string) {
-        setMoveSearchQuery(query);
-        setSelectedDestinationFolderId(null);
-        setIsMoveDestinationComboOpen(true);
-    }
-
-    function handleToggleMoveDestination() {
-        setIsMoveDestinationComboOpen((currentValue) => !currentValue);
-    }
-
     function handleSelectMoveDestination(destinationId: string) {
         setSelectedDestinationFolderId(destinationId);
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
     }
 
     function handleScrollWorkspaceToTop() {
@@ -1980,13 +1930,8 @@ export default function Workspace({
                     pageType === "workspace" &&
                     pendingMoveItemId !== null
                 }
-                value={
-                    isMoveDestinationComboOpen
-                        ? moveSearchQuery
-                        : getSelectedDestinationLabel()
-                }
-                isOpen={isMoveDestinationComboOpen}
-                destinationFolders={filteredDestinationFolders}
+                selectedDestinationId={selectedDestinationFolderId}
+                destinationFolders={destinationFolders}
                 outsideFolderDestinationId={
                     MOVE_OUTSIDE_FOLDER_DESTINATION_ID
                 }
@@ -1996,14 +1941,6 @@ export default function Workspace({
                 canSave={canSaveMoveWorkspaceItem}
                 isDestinationDisabled={
                     isMoveDestinationDisabled
-                }
-                onFocus={handleFocusMoveDestination}
-                onChange={handleChangeMoveDestination}
-                onToggle={handleToggleMoveDestination}
-                onSelectOutsideFolder={() =>
-                    handleSelectMoveDestination(
-                        MOVE_OUTSIDE_FOLDER_DESTINATION_ID
-                    )
                 }
                 onSelectDestination={
                     handleSelectMoveDestination

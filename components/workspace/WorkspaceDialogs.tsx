@@ -6,6 +6,7 @@ import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import type { WorkspaceItem } from "./workspace.types";
 import Tooltip from "../common/Tooltip";
+import EdmsSelect from "../common/EdmsSelect";
 
 interface WorkspaceDialogFrameProps {
     visible: boolean;
@@ -205,17 +206,12 @@ export function WorkspaceRenameDialog({
 
 interface WorkspaceMoveDialogProps {
     visible: boolean;
-    value: string;
-    isOpen: boolean;
+    selectedDestinationId: string | null;
     destinationFolders: WorkspaceItem[];
     outsideFolderDestinationId: string;
     isOutsideFolderVisible: boolean;
     canSave: boolean;
     isDestinationDisabled: (destinationId: string) => boolean;
-    onFocus: () => void;
-    onChange: (query: string) => void;
-    onToggle: () => void;
-    onSelectOutsideFolder: () => void;
     onSelectDestination: (destinationId: string) => void;
     onSave: () => void;
     onCancel: () => void;
@@ -223,24 +219,19 @@ interface WorkspaceMoveDialogProps {
 
 export function WorkspaceMoveDialog({
     visible,
-    value,
-    isOpen,
+    selectedDestinationId,
     destinationFolders,
     outsideFolderDestinationId,
     isOutsideFolderVisible,
     canSave,
     isDestinationDisabled,
-    onFocus,
-    onChange,
-    onToggle,
-    onSelectOutsideFolder,
     onSelectDestination,
     onSave,
     onCancel,
 }: WorkspaceMoveDialogProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
-    const { isRtl, textAlign } = getDirectionalLayout(direction);
+    const { textAlign } = getDirectionalLayout(direction);
 
     return (
         <WorkspaceDialogFrame
@@ -249,231 +240,46 @@ export function WorkspaceMoveDialog({
             description={t("moveItemDescription")}
             onClose={onCancel}
         >
-            <View style={styles.destinationCombo}>
-                <View
-                    style={[
-                        styles.destinationComboControl,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                >
-                    <TextInput
-                        value={value}
-                        onFocus={() => {
-                            onFocus();
-                            if (!isOpen) onToggle();
-                        }}
-                        onChangeText={onChange}
-                        placeholder={`${t("selectDestination")}...`}
-                        placeholderTextColor={colors.text}
-                        style={[
-                            styles.destinationComboInput,
-                            {
-                                color: colors.text,
-                                backgroundColor: "transparent",
-                                textAlign,
-                                direction,
-                            },
-                        ]}
-                    />
+            <EdmsSelect
+                value={selectedDestinationId ?? ""}
+                onChange={(event) => onSelectDestination(event.target.value)}
+                ariaLabel={t("selectDestination")}
+                style={{ marginBottom: spacing.lg }}
+            >
+                <option value="" disabled>
+                    {t("selectDestination")}
+                </option>
 
-                    <Tooltip
-                        label={isOpen ? t("closeDestinationList") : t("openDestinationList")}
-                        wrapperStyle={[
-                            styles.destinationComboIconWrapper,
-                            isRtl ? { left: 6 } : { right: 6 },
-                        ]}
+                {isOutsideFolderVisible && (
+                    <option
+                        value={outsideFolderDestinationId}
+                        disabled={isDestinationDisabled(outsideFolderDestinationId)}
                     >
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                                isOpen
-                                    ? t("closeDestinationList")
-                                    : t("openDestinationList")
-                            }
-                            accessibilityState={{ expanded: isOpen }}
-                            onPress={onToggle}
-                            style={({ pressed }) => [
-                                styles.destinationComboIcon,
-                                {
-                                    backgroundColor: `color-mix(in srgb, ${colors.text} 7%, transparent)`,
-                                },
-                                pressed && styles.destinationComboIconPressed,
-                            ]}
-                        >
-                            <Feather
-                                name={isOpen ? "chevron-up" : "chevron-down"}
-                                size={18}
-                                color={colors.text}
-                            />
-                        </Pressable>
-                    </Tooltip>
-                </View>
-
-                {isOpen && (
-                    <View
-                        style={[
-                            styles.destinationDropdown,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
-                            },
-                        ]}
-                    >
-                        {isOutsideFolderVisible && (
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("moveOutsideFolder")}
-                                disabled={isDestinationDisabled(outsideFolderDestinationId)}
-                                onPress={onSelectOutsideFolder}
-                                style={[
-                                    styles.destinationOption,
-                                    isDestinationDisabled(outsideFolderDestinationId) &&
-                                    styles.destinationOptionCurrentLocation,
-                                    {
-                                        backgroundColor: isDestinationDisabled(
-                                            outsideFolderDestinationId
-                                        )
-                                            ? colors.background
-                                            : colors.surface,
-                                    },
-                                ]}
-                            >
-                                <View style={styles.destinationOptionContent}>
-                                    <Text
-                                        style={[
-                                            styles.destinationOptionText,
-                                            { color: colors.text, textAlign },
-                                        ]}
-                                        numberOfLines={1}
-                                    >
-                                        {t("outsideFolder")}
-                                    </Text>
-
-                                    {isDestinationDisabled(outsideFolderDestinationId) && (
-                                        <View style={styles.currentLocationIndicator}>
-                                            <Feather
-                                                name="folder"
-                                                size={13}
-                                                color={colors.primary}
-                                            />
-
-                                            <Text
-                                                style={[
-                                                    styles.currentLocationText,
-                                                    { color: colors.primary },
-                                                ]}
-                                            >
-                                                {t("currentLocation")}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </Pressable>
-                        )}
-
-                        {destinationFolders.map((folder) => {
-                            const isCurrentDestination = isDestinationDisabled(folder.id);
-
-                            return (
-                                <Pressable
-                                    key={folder.id}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`${t("selectFolder")} ${folder.name}`}
-                                    disabled={isCurrentDestination}
-                                    onPress={() => onSelectDestination(folder.id)}
-                                    style={[
-                                        styles.destinationOption,
-                                        isCurrentDestination &&
-                                        styles.destinationOptionCurrentLocation,
-                                        {
-                                            backgroundColor: isCurrentDestination
-                                                ? colors.background
-                                                : colors.surface,
-                                        },
-                                    ]}
-                                >
-                                    <View style={styles.destinationOptionContent}>
-                                        <Text
-                                            style={[
-                                                styles.destinationOptionText,
-                                                { color: colors.text, textAlign },
-                                            ]}
-                                            numberOfLines={1}
-                                            dir="auto"
-                                        >
-                                            {folder.name}
-                                        </Text>
-
-                                        {isCurrentDestination && (
-                                            <View style={styles.currentLocationIndicator}>
-                                                <Feather
-                                                    name="folder"
-                                                    size={13}
-                                                    color={colors.primary}
-                                                />
-
-                                                <Text
-                                                    style={[
-                                                        styles.currentLocationText,
-                                                        { color: colors.primary },
-                                                    ]}
-                                                >
-                                                    {t("currentLocation")}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                </Pressable>
-                            );
-                        })}
-
-                        {!isOutsideFolderVisible &&
-                            destinationFolders.length === 0 && (
-                                <Text
-                                    style={[
-                                        styles.destinationEmptyText,
-                                        { color: colors.text, textAlign },
-                                    ]}
-                                >
-                                    {t("noDestinationFound")}
-                                </Text>
-                            )}
-                    </View>
+                        {t("outsideFolder")}
+                        {isDestinationDisabled(outsideFolderDestinationId)
+                            ? ` — ${t("currentLocation")}`
+                            : ""}
+                    </option>
                 )}
-            </View>
+
+                {destinationFolders.map((folder) => (
+                    <option
+                        key={folder.id}
+                        value={folder.id}
+                        disabled={isDestinationDisabled(folder.id)}
+                    >
+                        {folder.name}
+                        {isDestinationDisabled(folder.id)
+                            ? ` — ${t("currentLocation")}`
+                            : ""}
+                    </option>
+                ))}
+            </EdmsSelect>
 
             <View style={styles.modalActions}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={t("saveMove")}
-                    disabled={!canSave}
-                    onPress={onSave}
-                    style={[
-                        styles.modalPrimaryButton,
-                        {
-                            backgroundColor: canSave
-                                ? colors.primary
-                                : colors.border,
-                            opacity: canSave ? 1 : 0.76,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.modalPrimaryButtonText,
-                            { color: colors.surface },
-                        ]}
-                    >
-                        {t("moveItem")}
-                    </Text>
-                </Pressable>
-
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t("cancelMove")}
+                    accessibilityLabel={t("cancel")}
                     onPress={onCancel}
                     style={styles.modalTextButton}
                 >
@@ -484,6 +290,29 @@ export function WorkspaceMoveDialog({
                         ]}
                     >
                         {t("cancel")}
+                    </Text>
+                </Pressable>
+
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t("moveItem")}
+                    disabled={!canSave}
+                    onPress={onSave}
+                    style={[
+                        styles.modalPrimaryButton,
+                        {
+                            backgroundColor: colors.primary,
+                            opacity: canSave ? 1 : 0.45,
+                        },
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.modalPrimaryButtonText,
+                            { color: colors.surface },
+                        ]}
+                    >
+                        {t("moveItem")}
                     </Text>
                 </Pressable>
             </View>
@@ -641,107 +470,6 @@ const styles = StyleSheet.create({
         fontWeight: typography.fontWeight.medium,
         textAlign: "start",
         outline: "none",
-    },
-
-    destinationCombo: {
-        position: "relative",
-        marginBottom: spacing.lg,
-    },
-
-    destinationComboControl: {
-        position: "relative",
-        width: "100%",
-        minHeight: 38,
-        borderWidth: 1,
-        borderRadius: radius.md,
-        overflow: "visible",
-    },
-
-    destinationComboInput: {
-        width: "100%",
-        height: 36,
-        minHeight: 36,
-        paddingHorizontal: 40,
-        paddingVertical: 6,
-        borderWidth: 0,
-        borderRadius: radius.md,
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "start",
-        outline: "none",
-        boxShadow: "none",
-        appearance: "none",
-        WebkitAppearance: "none",
-    },
-
-    destinationComboIconWrapper: {
-        position: "absolute",
-        top: 4,
-        zIndex: 3,
-    },
-
-    destinationComboIcon: {
-        width: 28,
-        height: 28,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: radius.sm,
-        cursor: "pointer",
-        opacity: 0.82,
-    },
-
-    destinationComboIconPressed: {
-        opacity: 1,
-    },
-
-    destinationDropdown: {
-        marginTop: spacing.xs,
-        maxHeight: 220,
-        borderWidth: 1,
-        borderRadius: radius.md,
-        overflowY: "auto",
-        overflowX: "hidden",
-    },
-
-    destinationOption: {
-        minHeight: 36,
-        paddingHorizontal: spacing.md,
-        paddingVertical: 7,
-        justifyContent: "center",
-    },
-
-    destinationOptionCurrentLocation: {
-        opacity: 0.86,
-    },
-
-    destinationOptionContent: {
-        width: "100%",
-        minWidth: 0,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: spacing.sm,
-    },
-
-    destinationOptionText: {
-        flex: 1,
-        minWidth: 0,
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "start",
-    },
-
-    currentLocationIndicator: {
-        flexDirection: "row",
-        alignItems: "center",
-        flexShrink: 0,
-        gap: 5,
-    },
-
-    currentLocationText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight: typography.fontWeight.semibold,
-        whiteSpace: "nowrap",
     },
 
     destinationEmptyText: {
