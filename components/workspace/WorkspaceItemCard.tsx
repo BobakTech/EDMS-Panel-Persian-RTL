@@ -605,6 +605,8 @@ export default function WorkspaceItemCard({
 const styles = StyleSheet.create({
     card: {
         position: "relative",
+        minWidth: 0,
+        overflow: "hidden",
 
         borderWidth: 1.5,
         borderRadius: radius.lg,
@@ -701,6 +703,7 @@ const styles = StyleSheet.create({
 
     contentButton: {
         width: "100%",
+        minWidth: 0,
         height: "100%",
 
         paddingHorizontal: spacing.md,
@@ -813,7 +816,12 @@ const styles = StyleSheet.create({
     },
 
     name: {
+        width: "100%",
+        maxWidth: "100%",
         minWidth: 0,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
 
         fontSize:
             typography.fontSize.md,
@@ -835,6 +843,10 @@ const styles = StyleSheet.create({
 
     meta: {
         width: "100%",
+        minWidth: 0,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
 
         marginTop: "auto",
 

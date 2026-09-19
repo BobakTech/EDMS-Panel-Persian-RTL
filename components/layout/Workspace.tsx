@@ -28,7 +28,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View,
 } from "../../web/ui";
 
@@ -244,8 +243,30 @@ export default function Workspace({
     const colors = theme.colors;
     const { textAlign } = getDirectionalLayout(direction);
 
-    const { width } = useWindowDimensions();
+    // The shell and Workspace must react to the same live browser viewport.
+    const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+    const [contentWidth, setContentWidth] = useState<number | null>(null);
 
+    useEffect(() => {
+        const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+        window.addEventListener("resize", updateViewportWidth);
+        updateViewportWidth();
+        return () => window.removeEventListener("resize", updateViewportWidth);
+    }, []);
+
+    // Measure the real card container, including changes caused by sidebar layout.
+    useEffect(() => {
+        const element = document.querySelector<HTMLElement>(".edms-workspace-content");
+        if (!element) return;
+
+        const updateContentWidth = () => setContentWidth(element.clientWidth);
+        const observer = new ResizeObserver(updateContentWidth);
+        observer.observe(element);
+        updateContentWidth();
+        return () => observer.disconnect();
+    }, []);
+
+    const width = Math.min(viewportWidth, contentWidth ?? viewportWidth);
     const isPhoneWorkspace = width < 430;
     const isCompactWorkspace = width < 920;
 
@@ -820,7 +841,7 @@ export default function Workspace({
         setPreviewItemId(null);
     }
 
-    const paginationWindowSize = 5;
+    const paginationWindowSize = isPhoneWorkspace ? 3 : 5;
 
     const paginationWindowStart = Math.max(
         1,
@@ -990,6 +1011,7 @@ export default function Workspace({
             ]}
         >
             <View
+                className="edms-workspace-content"
                 style={[
                     styles.content,
                     {
@@ -1188,7 +1210,8 @@ export default function Workspace({
                                 ? "wrap"
                                 : "nowrap",
 
-                            gap: 12,
+                            minWidth: 0,
+                            gap: isPhoneWorkspace ? 8 : 12,
 
                             paddingBlock: 10,
                             paddingInline: isPhoneWorkspace ? 0 : 2,
@@ -1203,6 +1226,7 @@ export default function Workspace({
                                 alignItems: "center",
                                 gap: 10,
                                 flexShrink: 0,
+                                ...(isPhoneWorkspace ? { width: "100%", justifyContent: "flex-end" } : {}),
                             }}
                         >
                             <WorkspaceViewControls
@@ -1220,7 +1244,8 @@ export default function Workspace({
                                 flexWrap: isPhoneWorkspace ? "wrap" : "nowrap",
                                 gap: 10,
                                 minWidth: 0,
-                                flex: 1,
+                                width: isPhoneWorkspace ? "100%" : undefined,
+                                flex: isPhoneWorkspace ? "0 0 100%" : 1,
                             }}
                         >
                             {/* File count + page size */}
@@ -1233,8 +1258,9 @@ export default function Workspace({
                                     ...(isPhoneWorkspace
                                         ? {
                                             position: "relative",
+                                            minWidth: 0,
                                             width: "100%",
-                                            justifyContent: "center",
+                                            justifyContent: "space-between",
                                             order: 2,
                                         }
                                         : {
@@ -1325,9 +1351,11 @@ export default function Workspace({
                                         gap: 4,
                                         direction,
                                         flexShrink: 0,
+                                        maxWidth: "100%",
                                         ...(isPhoneWorkspace
                                             ? {
                                                 width: "100%",
+                                                overflowX: "auto",
                                                 order: 1,
                                             }
                                             : {}),
@@ -1343,7 +1371,7 @@ export default function Workspace({
                                         disabled={safeCurrentPage <= 1}
                                         onClick={() => setCurrentPage(1)}
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
                                             display: "inline-flex",
                                             alignItems: "center",
@@ -1380,7 +1408,7 @@ export default function Workspace({
                                             )
                                         }
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
                                             display: "inline-flex",
                                             alignItems: "center",
@@ -1420,7 +1448,7 @@ export default function Workspace({
                                                     setCurrentPage(pageNumber)
                                                 }
                                                 style={{
-                                                    minWidth: 32,
+                                                    minWidth: isPhoneWorkspace ? 28 : 32,
                                                     height: 32,
                                                     paddingInline: 8,
                                                     display: "inline-flex",
@@ -1475,7 +1503,7 @@ export default function Workspace({
                                             )
                                         }
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
                                             display: "inline-flex",
                                             alignItems: "center",
@@ -1512,7 +1540,7 @@ export default function Workspace({
                                             setCurrentPage(totalWorkspacePages)
                                         }
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
                                             display: "inline-flex",
                                             alignItems: "center",
@@ -1544,13 +1572,14 @@ export default function Workspace({
                     <View
                         style={[
                             styles.selectionToolbar,
+                            isPhoneWorkspace && styles.phoneSelectionToolbar,
                             {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.primary,
                             },
                         ]}
                     >
-                        <View style={styles.selectionToolbarSummary}>
+                        <View style={[styles.selectionToolbarSummary, isPhoneWorkspace && styles.phoneSelectionToolbarRow]}>
                             <View
                                 style={[
                                     styles.selectionCountBadge,
@@ -1621,7 +1650,7 @@ export default function Workspace({
                             </Pressable>
                         </View>
 
-                        <View style={styles.selectionToolbarActions}>
+                        <View style={[styles.selectionToolbarActions, isPhoneWorkspace && styles.phoneSelectionToolbarRow]}>
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel={
@@ -2417,6 +2446,17 @@ const styles = StyleSheet.create({
             "edms-workspace-panel-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1)",
 
         backdropFilter: "blur(10px)",
+    },
+
+    phoneSelectionToolbar: {
+        paddingHorizontal: spacing.sm,
+        alignItems: "stretch",
+    },
+
+    phoneSelectionToolbarRow: {
+        width: "100%",
+        minWidth: 0,
+        justifyContent: "flex-start",
     },
 
     selectionToolbarSummary: {

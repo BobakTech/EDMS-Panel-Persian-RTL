@@ -12,7 +12,6 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    useWindowDimensions,
     View,
 } from "../../web/ui";
 
@@ -80,7 +79,34 @@ export default function AppLayout() {
     const colors = theme.colors;
     const { isRtl } = getDirectionalLayout(direction);
 
-    const { width } = useWindowDimensions();
+    /**
+ * Keep the application shell synchronized with the visible viewport.
+ * Also handles browser device-emulation and visual viewport changes.
+ */
+    const getViewportWidth = () => {
+        const layoutWidth = document.documentElement.clientWidth || window.innerWidth;
+        const visualWidth = window.visualViewport?.width ?? layoutWidth;
+
+        return Math.min(layoutWidth, visualWidth);
+    };
+
+    const [width, setWidth] = useState(getViewportWidth);
+
+    useEffect(() => {
+        const updateViewportWidth = () => {
+            setWidth(getViewportWidth());
+        };
+
+        window.addEventListener("resize", updateViewportWidth);
+        window.visualViewport?.addEventListener("resize", updateViewportWidth);
+
+        updateViewportWidth();
+
+        return () => {
+            window.removeEventListener("resize", updateViewportWidth);
+            window.visualViewport?.removeEventListener("resize", updateViewportWidth);
+        };
+    }, []);
 
     /** Mobile breakpoints use CSS viewport width. */
     const isMobileShell = width < 760;
