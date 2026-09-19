@@ -14,8 +14,8 @@ export interface ProjectFilterOption {
 }
 
 export interface WorkspaceFilters {
-    projectId: string | null;
-    fileType: string | null;
+    projectIds: string[];
+    fileTypes: string[];
 }
 
 export interface ProjectApiItem {

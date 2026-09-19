@@ -213,15 +213,21 @@ export default function AppLayout() {
 
     const filteredWorkspaceItems = workspaceItems.filter((item) => {
         const matchesProject =
-            !workspaceFilters.projectId || item.projectId === workspaceFilters.projectId;
+            workspaceFilters.projectIds.length === 0 ||
+            (item.projectId !== undefined && workspaceFilters.projectIds.includes(item.projectId));
+
         const matchesFileType =
-            !workspaceFilters.fileType ||
+            workspaceFilters.fileTypes.length === 0 ||
             item.type === "folder" ||
-            item.extension?.toLowerCase() === workspaceFilters.fileType.toLowerCase();
+            workspaceFilters.fileTypes.some(
+                (fileType) => item.extension?.toLowerCase() === fileType.toLowerCase()
+            );
+
         return matchesProject && matchesFileType;
     });
+
     const activeProjectId =
-        workspaceFilters.projectId ??
+        workspaceFilters.projectIds.length === 1 ? workspaceFilters.projectIds[0] :
         workspaceItems.find((item) => item.id === currentFolderId)?.projectId;
     const projectConnectionProps = {
         isProjectInfoLoading,

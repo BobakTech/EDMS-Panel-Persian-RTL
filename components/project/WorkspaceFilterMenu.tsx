@@ -124,6 +124,8 @@ export function WorkspaceFilterMenu({
     const [fileTypeSearch, setFileTypeSearch] =
         useState("");
 
+    const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+
     const [
         projectColumnWidths,
         setProjectColumnWidths,
@@ -147,12 +149,12 @@ export function WorkspaceFilterMenu({
     ] = useState(PROJECT_RENDER_CHUNK);
 
     const activeFilterCount =
-        Number(Boolean(value.projectId)) +
-        Number(Boolean(value.fileType));
+        value.projectIds.length +
+        value.fileTypes.length;
 
     const draftFilterCount =
-        Number(Boolean(draft.projectId)) +
-        Number(Boolean(draft.fileType));
+        draft.projectIds.length +
+        draft.fileTypes.length;
 
     const hasFilters =
         activeFilterCount > 0;
@@ -355,18 +357,28 @@ export function WorkspaceFilterMenu({
         fileTypes,
     ]);
 
-    const selectedProject = useMemo(
-        () =>
-            projects.find(
-                (project) =>
-                    project.id ===
-                    draft.projectId
-            ) ?? null,
-        [
-            draft.projectId,
-            projects,
-        ]
-    );
+    const selectedProjects = useMemo(() => {
+        const selectedIds = new Set(draft.projectIds);
+        return projects.filter((project) => selectedIds.has(project.id));
+    }, [draft.projectIds, projects]);
+
+    function toggleProject(projectId: string) {
+        setDraft((current) => ({
+            ...current,
+            projectIds: current.projectIds.includes(projectId)
+                ? current.projectIds.filter((id) => id !== projectId)
+                : [...current.projectIds, projectId],
+        }));
+    }
+
+    function toggleFileType(fileType: string) {
+        setDraft((current) => ({
+            ...current,
+            fileTypes: current.fileTypes.includes(fileType)
+                ? current.fileTypes.filter((type) => type !== fileType)
+                : [...current.fileTypes, fileType],
+        }));
+    }
 
     /**
      * ============================================================================
@@ -378,6 +390,7 @@ export function WorkspaceFilterMenu({
         setDraft(value);
         setProjectSearch("");
         setFileTypeSearch("");
+        setIsProjectDropdownOpen(false);
         setRenderedProjectCount(
             PROJECT_RENDER_CHUNK
         );
@@ -388,6 +401,7 @@ export function WorkspaceFilterMenu({
         setDraft(value);
         setProjectSearch("");
         setFileTypeSearch("");
+        setIsProjectDropdownOpen(false);
         setIsOpen(false);
     }
 
@@ -398,6 +412,7 @@ export function WorkspaceFilterMenu({
 
         setProjectSearch("");
         setFileTypeSearch("");
+        setIsProjectDropdownOpen(false);
 
         onReset();
 
@@ -406,6 +421,7 @@ export function WorkspaceFilterMenu({
 
     function applyFilters() {
         onApply(draft);
+        setIsProjectDropdownOpen(false);
         setIsOpen(false);
     }
 
@@ -960,126 +976,38 @@ export function WorkspaceFilterMenu({
                             </Pressable>
                         </View>
 
-                        {(selectedProject ||
-                            draft.fileType) && (
-                                <View
-                                    style={
-                                        styles.selectionSummary
-                                    }
-                                >
-                                    {selectedProject && (
-                                        <View
-                                            style={[
-                                                styles.summaryChip,
-                                                {
-                                                    backgroundColor:
-                                                        `color-mix(in srgb, ${colors.primary} 10%, ${colors.background})`,
-
-                                                    borderColor:
-                                                        colors.primary,
-                                                },
-                                            ]}
-                                        >
-                                            <Text
-                                                numberOfLines={1}
-                                                style={[
-                                                    styles.summaryChipText,
-                                                    {
-                                                        color:
-                                                            colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                {
-                                                    selectedProject.projectName
-                                                }
-                                            </Text>
-
-                                            <Pressable
-                                                accessibilityRole="button"
-                                                accessibilityLabel={
-                                                    t("reset")
-                                                }
-                                                onPress={() =>
-                                                    setDraft(
-                                                        (current) => ({
-                                                            ...current,
-                                                            projectId:
-                                                                null,
-                                                        })
-                                                    )
-                                                }
-                                                style={
-                                                    styles.summaryChipClear
-                                                }
-                                            >
-                                                <Feather
-                                                    name="x"
-                                                    size={13}
-                                                    color={
-                                                        colors.primary
-                                                    }
-                                                />
-                                            </Pressable>
-                                        </View>
-                                    )}
-
-                                    {draft.fileType && (
-                                        <View
-                                            style={[
-                                                styles.summaryChip,
-                                                {
-                                                    backgroundColor:
-                                                        `color-mix(in srgb, ${colors.primary} 10%, ${colors.background})`,
-
-                                                    borderColor:
-                                                        colors.primary,
-                                                },
-                                            ]}
-                                        >
-                                            <Text
-                                                numberOfLines={1}
-                                                style={[
-                                                    styles.summaryChipText,
-                                                    {
-                                                        color:
-                                                            colors.text,
-                                                    },
-                                                ]}
-                                            >
-                                                {draft.fileType.toUpperCase()}
-                                            </Text>
-
-                                            <Pressable
-                                                accessibilityRole="button"
-                                                accessibilityLabel={
-                                                    t("reset")
-                                                }
-                                                onPress={() =>
-                                                    setDraft(
-                                                        (current) => ({
-                                                            ...current,
-                                                            fileType:
-                                                                null,
-                                                        })
-                                                    )
-                                                }
-                                                style={
-                                                    styles.summaryChipClear
-                                                }
-                                            >
-                                                <Feather
-                                                    name="x"
-                                                    size={13}
-                                                    color={
-                                                        colors.primary
-                                                    }
-                                                />
-                                            </Pressable>
-                                        </View>
-                                    )}
-                                </View>
-                            )}
+                        {(selectedProjects.length > 0 || draft.fileTypes.length > 0) && (
+                            <View style={styles.selectionSummary}>
+                                {selectedProjects.map((project) => (
+                                    <View key={project.id} style={[styles.summaryChip, {
+                                        backgroundColor: `color-mix(in srgb, ${colors.primary} 10%, ${colors.background})`,
+                                        borderColor: colors.primary,
+                                    }]}>
+                                        <Text numberOfLines={1} style={[styles.summaryChipText, { color: colors.text }]}>
+                                            {project.projectName}
+                                        </Text>
+                                        <Pressable accessibilityRole="button" accessibilityLabel={t("reset")}
+                                            onPress={() => toggleProject(project.id)} style={styles.summaryChipClear}>
+                                            <Feather name="x" size={13} color={colors.primary} />
+                                        </Pressable>
+                                    </View>
+                                ))}
+                                {draft.fileTypes.map((fileType) => (
+                                    <View key={fileType} style={[styles.summaryChip, {
+                                        backgroundColor: `color-mix(in srgb, ${colors.primary} 10%, ${colors.background})`,
+                                        borderColor: colors.primary,
+                                    }]}>
+                                        <Text numberOfLines={1} style={[styles.summaryChipText, { color: colors.text }]}>
+                                            {fileType.toUpperCase()}
+                                        </Text>
+                                        <Pressable accessibilityRole="button" accessibilityLabel={t("reset")}
+                                            onPress={() => toggleFileType(fileType)} style={styles.summaryChipClear}>
+                                            <Feather name="x" size={13} color={colors.primary} />
+                                        </Pressable>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
 
                         <View
                             style={[
@@ -1125,7 +1053,7 @@ export function WorkspaceFilterMenu({
                                     </Text>
                                 </View>
 
-                                {draft.projectId && (
+                                {draft.projectIds.length > 0 && (
                                     <Pressable
                                         accessibilityRole="button"
                                         accessibilityLabel={
@@ -1135,8 +1063,7 @@ export function WorkspaceFilterMenu({
                                             setDraft(
                                                 (current) => ({
                                                     ...current,
-                                                    projectId:
-                                                        null,
+                                                    projectIds: [],
                                                 })
                                             )
                                         }
@@ -1163,7 +1090,20 @@ export function WorkspaceFilterMenu({
                                 )}
                             </View>
 
-                            {searchField(
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("projectFilter")}
+                                accessibilityState={{ expanded: isProjectDropdownOpen }}
+                                onPress={() => setIsProjectDropdownOpen((current) => !current)}
+                                style={[styles.projectSelector, { borderColor: colors.border, backgroundColor: colors.background }]}
+                            >
+                                <Text numberOfLines={1} style={[styles.projectSelectorText, { color: colors.text }]}>
+                                    {selectedProjects.length === 0 ? t("projectFilter") : selectedProjects.length === 1 ? selectedProjects[0].projectName : (isRtl ? `${selectedProjects.length} پروژه انتخاب شده` : `${selectedProjects.length} projects selected`)}
+                                </Text>
+                                <Feather name={isProjectDropdownOpen ? "chevron-up" : "chevron-down"} size={16} color={colors.text} />
+                            </Pressable>
+
+                            {isProjectDropdownOpen && searchField(
                                 projectSearch,
                                 setProjectSearch,
                                 t(
@@ -1171,7 +1111,7 @@ export function WorkspaceFilterMenu({
                                 )
                             )}
 
-                            <View
+                            {isProjectDropdownOpen && <View
                                 ref={
                                     projectTableRef
                                 }
@@ -1376,8 +1316,7 @@ export function WorkspaceFilterMenu({
                                         index
                                     ) => {
                                         const isSelected =
-                                            draft.projectId ===
-                                            project.id;
+                                            draft.projectIds.includes(project.id);
 
                                         const projectCells: Array<{
                                             key: ProjectColumnKey;
@@ -1424,19 +1363,7 @@ export function WorkspaceFilterMenu({
                                                     selected:
                                                         isSelected,
                                                 }}
-                                                onPress={() =>
-                                                    setDraft(
-                                                        (
-                                                            current
-                                                        ) => ({
-                                                            ...current,
-                                                            projectId:
-                                                                isSelected
-                                                                    ? null
-                                                                    : project.id,
-                                                        })
-                                                    )
-                                                }
+                                                onPress={() => toggleProject(project.id)}
                                                 style={({
                                                     pressed,
                                                 }) => [
@@ -1470,43 +1397,15 @@ export function WorkspaceFilterMenu({
                                                         },
                                                     ]}
                                                 >
-                                                    {isSelected ? (
-                                                        <View
-                                                            style={[
-                                                                styles.selectedMark,
-                                                                {
-                                                                    backgroundColor:
-                                                                        colors.primary,
-                                                                },
-                                                            ]}
-                                                        >
-                                                            <Feather
-                                                                name="check"
-                                                                size={
-                                                                    12
-                                                                }
-                                                                color={
-                                                                    colors.surface
-                                                                }
-                                                            />
-                                                        </View>
-                                                    ) : (
-                                                        <Text
-                                                            style={[
-                                                                styles.rowNumber,
-                                                                {
-                                                                    color:
-                                                                        colors.text,
-                                                                },
-                                                            ]}
-                                                        >
-                                                            {
-                                                                originalRow
-                                                            }
-                                                        </Text>
-                                                    )}
+                                                    <Text style={[styles.rowNumber, { color: colors.text }]}>{index + 1}</Text>
+                                                    <View style={[styles.selectedMark, {
+                                                        backgroundColor: isSelected ? colors.primary : "transparent",
+                                                        borderColor: isSelected ? colors.primary : colors.border,
+                                                        borderWidth: 1,
+                                                    }]}>
+                                                        {isSelected && <Feather name="check" size={12} color={colors.surface} />}
+                                                    </View>
                                                 </View>
-
                                                 {projectCells.map(
                                                     (
                                                         cell,
@@ -1611,7 +1510,7 @@ export function WorkspaceFilterMenu({
                                             )}
                                         </Text>
                                     )}
-                            </View>
+                            </View>}
                         </View>
 
                         <View
@@ -1659,7 +1558,7 @@ export function WorkspaceFilterMenu({
                                     </Text>
                                 </View>
 
-                                {draft.fileType && (
+                                {draft.fileTypes.length > 0 && (
                                     <Pressable
                                         accessibilityRole="button"
                                         accessibilityLabel={
@@ -1669,8 +1568,7 @@ export function WorkspaceFilterMenu({
                                             setDraft(
                                                 (current) => ({
                                                     ...current,
-                                                    fileType:
-                                                        null,
+                                                    fileTypes: [],
                                                 })
                                             )
                                         }
@@ -1713,8 +1611,7 @@ export function WorkspaceFilterMenu({
                                 {visibleFileTypes.map(
                                     (fileType) => {
                                         const isSelected =
-                                            draft.fileType ===
-                                            fileType;
+                                            draft.fileTypes.includes(fileType);
 
                                         return (
                                             <Pressable
@@ -1726,19 +1623,7 @@ export function WorkspaceFilterMenu({
                                                     selected:
                                                         isSelected,
                                                 }}
-                                                onPress={() =>
-                                                    setDraft(
-                                                        (
-                                                            current
-                                                        ) => ({
-                                                            ...current,
-                                                            fileType:
-                                                                isSelected
-                                                                    ? null
-                                                                    : fileType,
-                                                        })
-                                                    )
-                                                }
+                                                onPress={() => toggleFileType(fileType)}
                                                 style={({
                                                     pressed,
                                                 }) => [
@@ -1949,14 +1834,14 @@ const styles = StyleSheet.create({
      * Compact by default while remaining user-resizable.
      */
     panel: {
-        width: "min(760px, 92vw)",
-        height: "min(620px, 82vh)",
+        width: "min(760px, calc(100vw - 24px))",
+        height: "auto",
 
-        minWidth: 560,
-        minHeight: 420,
+        minWidth: 0,
+        minHeight: 0,
 
         maxWidth: "96vw",
-        maxHeight: "92vh",
+        maxHeight: "calc(100dvh - 24px)",
 
         padding: spacing.md,
 
@@ -1965,8 +1850,9 @@ const styles = StyleSheet.create({
 
         gap: spacing.sm,
 
-        overflow: "hidden",
-        resize: "both",
+        overflowY: "auto",
+        overflowX: "hidden",
+        resize: "none",
 
         display: "flex",
         flexDirection: "column",
@@ -2052,6 +1938,8 @@ const styles = StyleSheet.create({
     selectionSummary: {
         flexDirection: "row",
         flexWrap: "wrap",
+        maxHeight: 76,
+        overflowY: "auto",
 
         gap: spacing.xs,
     },
@@ -2147,9 +2035,28 @@ const styles = StyleSheet.create({
     },
 
     projectSection: {
-        flex: 1,
-        minHeight: 190,
+        flexShrink: 1,
+        minHeight: 0,
+        minWidth: 0,
         overflow: "hidden",
+    },
+
+    projectSelector: {
+        minHeight: 38,
+        minWidth: 0,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+        gap: spacing.sm,
+    },
+
+    projectSelectorText: {
+        flex: 1,
+        minWidth: 0,
+        fontSize: typography.fontSize.sm,
     },
 
     searchBox: {
@@ -2187,8 +2094,9 @@ const styles = StyleSheet.create({
     table: {
         width: "100%",
 
-        minHeight: 120,
-        flex: 1,
+        minHeight: 100,
+        height: "min(270px, 35vh)",
+        flexShrink: 1,
 
         borderWidth: 1,
         borderRadius: radius.md,
@@ -2287,14 +2195,16 @@ const styles = StyleSheet.create({
     rowNumberColumn: {
         flex: 0,
 
-        width: 64,
-        minWidth: 64,
-        maxWidth: 64,
+        width: 76,
+        minWidth: 76,
+        maxWidth: 76,
     },
 
     rowCell: {
         alignItems: "center",
         justifyContent: "center",
+        flexDirection: "row",
+        gap: 5,
     },
 
     rowNumber: {

@@ -668,8 +668,12 @@ export default function Toolbar({
                     },
                 ]}
             >
-                {filterMenu(true)}
-                {searchField(true)}
+                <View style={styles.mobileSearchFilterRow}>
+                    <View style={styles.mobileSearchField}>
+                        {searchField(true)}
+                    </View>
+                    {filterMenu(true)}
+                </View>
 
                 {canCreateWorkspaceItems && (
                     <View style={styles.mobileMenuActionsArea}>
@@ -1153,6 +1157,19 @@ const styles = StyleSheet.create({
         gap: spacing.md,
 
         boxShadow: "none",
+    },
+
+    mobileSearchFilterRow: {
+        width: "100%",
+        minWidth: 0,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+
+    mobileSearchField: {
+        flex: 1,
+        minWidth: 0,
     },
 
     mobileMenuButton: {
