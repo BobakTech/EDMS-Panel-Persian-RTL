@@ -63,6 +63,7 @@ interface ToolbarProps {
     onCreateFolder: (folderName: string) => void;
     onCreateFile: (file: WorkspacePickedFile) => void;
     canCreateWorkspaceItems: boolean;
+    isWorkspaceLoading?: boolean;
     variant?: ToolbarVariant;
     isProjectInfoLoading?: boolean;
     projectInfoError?: string | null;
@@ -102,6 +103,7 @@ export default function Toolbar({
     onCreateFolder,
     onCreateFile,
     canCreateWorkspaceItems,
+    isWorkspaceLoading = false,
     variant = "desktop",
     isProjectInfoLoading = false,
     projectInfoError = null,
@@ -138,7 +140,7 @@ export default function Toolbar({
         <ToolbarSearchField
             value={searchQuery}
             mobile={isMobile}
-            onChange={onChangeSearchQuery}
+            onChange={(query) => { if (!isWorkspaceLoading) onChangeSearchQuery(query); }}
         />
     );
     const filterMenu = (compact = false) => (
@@ -147,8 +149,8 @@ export default function Toolbar({
             projects={projects}
             fileTypes={fileTypes}
             value={filters}
-            onApply={onApplyFilters}
-            onReset={onResetFilters}
+            onApply={(nextFilters) => { if (!isWorkspaceLoading) onApplyFilters(nextFilters); }}
+            onReset={() => { if (!isWorkspaceLoading) onResetFilters(); }}
         />
     );
 
@@ -179,6 +181,7 @@ export default function Toolbar({
     }, [activeAction]);
 
     function handleCreateFolder() {
+        if (isWorkspaceLoading) return;
         onCreateFolder(newFolderName);
         setNewFolderName("");
     }
@@ -190,7 +193,7 @@ export default function Toolbar({
     }
 
     async function handlePickFile() {
-        if (isPreparingUpload) {
+        if (isPreparingUpload || isWorkspaceLoading) {
             return;
         }
 
@@ -222,6 +225,8 @@ export default function Toolbar({
         setUploadProgress(90);
 
         await wait(200);
+
+        if (isWorkspaceLoading) { resetUploadProgress(); return; }
 
         onCreateFile({
             name: selectedFile.name,
@@ -462,7 +467,6 @@ export default function Toolbar({
                             </Text>
 
                             <View
-                                title={connection.label}
                                 accessibilityLabel={connection.label}
                                 style={[
                                     styles.mobileProjectStatusDot,
@@ -669,8 +673,12 @@ export default function Toolbar({
                     },
                 ]}
             >
-                {filterMenu(true)}
-                {searchField(true)}
+                <View style={styles.mobileSearchFilterRow}>
+                    <View style={styles.mobileSearchField}>
+                        <View style={{ flex: 1, minWidth: 0, ...(isWorkspaceLoading ? { pointerEvents: "none", opacity: 0.55 } : {}) }}>{searchField(true)}</View>
+                    </View>
+                    <View style={isWorkspaceLoading ? { pointerEvents: "none", opacity: 0.55 } : undefined}>{filterMenu(true)}</View>
+                </View>
 
                 {canCreateWorkspaceItems && (
                     <View style={styles.mobileMenuActionsArea}>
@@ -679,13 +687,13 @@ export default function Toolbar({
                                 accessibilityRole="button"
                                 accessibilityLabel={t("uploadFile")}
                                 onPress={handlePickFile}
-                                disabled={isPreparingUpload}
+                                disabled={isPreparingUpload || isWorkspaceLoading}
                                 style={({ pressed }) => [
                                     styles.actionSegmentButton,
                                     styles.mobileMenuActionButton,
-                                    isPreparingUpload && styles.disabledActionButton,
+                                    (isPreparingUpload || isWorkspaceLoading) && styles.disabledActionButton,
                                     pressed &&
-                                    !isPreparingUpload &&
+                                    !isPreparingUpload && !isWorkspaceLoading &&
                                     styles.pressedActionButton,
                                     {
                                         backgroundColor: colors.primary,
@@ -714,6 +722,7 @@ export default function Toolbar({
                                 accessibilityRole="button"
                                 accessibilityLabel={t("createNewFolder")}
                                 onPress={onPressCreateFolder}
+                                disabled={isWorkspaceLoading}
                                 style={({ pressed }) => [
                                     styles.actionSegmentButton,
                                     styles.mobileMenuActionButton,
@@ -721,7 +730,7 @@ export default function Toolbar({
                                         backgroundColor: colors.background,
                                         borderColor: colors.border,
                                     },
-                                    pressed && styles.pressedActionButton,
+                                    pressed && !isWorkspaceLoading && styles.pressedActionButton,
                                 ]}
                             >
                                 <Feather
@@ -826,12 +835,12 @@ export default function Toolbar({
                             accessibilityRole="button"
                             accessibilityLabel={t("uploadFile")}
                             onPress={handlePickFile}
-                            disabled={isPreparingUpload}
+                            disabled={isPreparingUpload || isWorkspaceLoading}
                             style={({ pressed }) => [
                                 styles.actionSegmentButton,
                                 styles.primaryActionSegmentButton,
-                                isPreparingUpload && styles.disabledActionButton,
-                                pressed && !isPreparingUpload && styles.pressedActionButton,
+                                (isPreparingUpload || isWorkspaceLoading) && styles.disabledActionButton,
+                                pressed && !isPreparingUpload && !isWorkspaceLoading && styles.pressedActionButton,
                                 {
                                     backgroundColor: colors.primary,
                                 },
@@ -867,6 +876,7 @@ export default function Toolbar({
                             accessibilityRole="button"
                             accessibilityLabel={t("createNewFolder")}
                             onPress={onPressCreateFolder}
+                            disabled={isWorkspaceLoading}
                             style={({ pressed }) => [
                                 styles.actionSegmentButton,
                                 pressed && styles.pressedActionButton,
@@ -896,7 +906,10 @@ export default function Toolbar({
             )}
 
             {filterMenu()}
-            {searchField()}
+
+            <View style={styles.desktopSearchField}>
+                {searchField()}
+            </View>
         </View>
     );
 }
@@ -1156,6 +1169,19 @@ const styles = StyleSheet.create({
         boxShadow: "none",
     },
 
+    mobileSearchFilterRow: {
+        width: "100%",
+        minWidth: 0,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+
+    mobileSearchField: {
+        flex: 1,
+        minWidth: 0,
+    },
+
     mobileMenuButton: {
         width: 38,
         height: 38,
@@ -1334,4 +1360,8 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
     },
 
+    desktopSearchField: {
+        flex: 1,
+        minWidth: 220,
+    },
 });

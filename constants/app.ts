@@ -11,3 +11,5 @@ export const APP_NAME = "EDMS";
 export const DEFAULT_LANGUAGE = "fa";
 
 export const DEFAULT_THEME = "dark" as const;
+
+export const DEFAULT_START_PAGE = "dashboard" as const;

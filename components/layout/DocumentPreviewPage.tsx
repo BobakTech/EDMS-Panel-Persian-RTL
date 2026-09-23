@@ -7,7 +7,7 @@
  * ============================================================================
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Feather } from "../../web/icons";
 import {
@@ -28,7 +28,9 @@ import {
 } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
+import Tooltip from "../common/Tooltip";
 import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
+import WorkspaceMetadataDialog from "../preview/WorkspaceMetadataDialog";
 import { getPreviewMetadataPresentation } from "../preview/preview.metadata";
 
 import type {
@@ -37,6 +39,7 @@ import type {
     WorkspaceItemUpdate,
 } from "../workspace";
 
+
 interface DocumentPreviewPageProps {
     item: WorkspaceItem;
     categoryDefinitions: WorkspaceCategoryDefinition[];
@@ -44,25 +47,6 @@ interface DocumentPreviewPageProps {
     onPrevious?: () => void;
     onNext?: () => void;
     onUpdateItem?: (itemId: string, updates: WorkspaceItemUpdate) => void;
-}
-
-function splitFileName(fileName: string) {
-    const lastDotIndex = fileName.lastIndexOf(".");
-
-    if (
-        lastDotIndex <= 0 ||
-        lastDotIndex === fileName.length - 1
-    ) {
-        return {
-            baseName: fileName,
-            extension: "",
-        };
-    }
-
-    return {
-        baseName: fileName.slice(0, lastDotIndex),
-        extension: fileName.slice(lastDotIndex),
-    };
 }
 
 export default function DocumentPreviewPage({
@@ -102,123 +86,9 @@ export default function DocumentPreviewPage({
         language,
     );
 
-    /**
-     * File Type options come from the File Categories API definitions.
-     * Keep the file's currently assigned category available and selected even
-     * if that category is temporarily missing from the returned definitions.
-     */
-    const assignedCategoryId = String(item.categoryId ?? "").trim();
-
-    const fileCategoryOptions = [
-        ...categoryDefinitions
-            .map((category) => ({
-                ...category,
-                id: String(category.id ?? "").trim(),
-            }))
-            .filter((category) => category.id),
-    ];
-
-    if (
-        assignedCategoryId &&
-        !fileCategoryOptions.some(
-            (category) => category.id === assignedCategoryId
-        )
-    ) {
-        fileCategoryOptions.unshift({
-            id: assignedCategoryId,
-            nameFa: item.fileTypeLabel?.trim() || assignedCategoryId,
-            nameEn: item.fileTypeLabel?.trim() || assignedCategoryId,
-            order: -1,
-        });
-    }
-
-    function getCategoryLabel(category: WorkspaceCategoryDefinition) {
-        return direction === "rtl"
-            ? category.nameFa?.trim() ||
-            category.nameEn?.trim() ||
-            category.id
-            : category.nameEn?.trim() ||
-            category.nameFa?.trim() ||
-            category.id;
-    }
-
-    const [isEditing, setIsEditing] = useState(false);
-    const [draftName, setDraftName] = useState(
-        splitFileName(item.name).baseName
-    );
-    const [draftVersion, setDraftVersion] = useState(item.fileVersion ?? "");
-    const [draftDate, setDraftDate] = useState(item.fileDate ?? "");
-    const [draftTime, setDraftTime] = useState(item.fileTime ?? "");
-    const [draftFileTypeLabel, setDraftFileTypeLabel] = useState(
-        item.fileTypeLabel ?? ""
-    );
-    const [draftCategoryId, setDraftCategoryId] = useState(
-        String(item.categoryId ?? "").trim()
-    );
-
-    useEffect(() => {
-        setIsEditing(false);
-        setDraftName(splitFileName(item.name).baseName);
-        setDraftVersion(item.fileVersion ?? "");
-        setDraftDate(item.fileDate ?? "");
-        setDraftTime(item.fileTime ?? "");
-        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(String(item.categoryId ?? "").trim());
-    }, [
-        item.id,
-        item.name,
-        item.fileVersion,
-        item.fileDate,
-        item.fileTime,
-        item.fileTypeLabel,
-        item.categoryId,
-    ]);
-
-    function handleStartEdit() {
-        setDraftName(splitFileName(item.name).baseName);
-        setDraftVersion(item.fileVersion ?? "");
-        setDraftDate(item.fileDate ?? "");
-        setDraftTime(item.fileTime ?? "");
-        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(String(item.categoryId ?? "").trim());
-        setIsEditing(true);
-    }
-
-    function handleCancelEdit() {
-        setDraftName(splitFileName(item.name).baseName);
-        setDraftVersion(item.fileVersion ?? "");
-        setDraftDate(item.fileDate ?? "");
-        setDraftTime(item.fileTime ?? "");
-        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(String(item.categoryId ?? "").trim());
-        setIsEditing(false);
-    }
-
-    function handleSaveEdit() {
-        if (!onUpdateItem) {
-            return;
-        }
-
-        const trimmedBaseName = draftName.trim();
-
-        if (!trimmedBaseName) {
-            return;
-        }
-
-        const { extension } = splitFileName(item.name);
-        const updatedName = `${trimmedBaseName}${extension}`;
-
-        onUpdateItem(item.id, {
-            name: updatedName,
-            fileVersion: draftVersion.trim(),
-            fileDate: draftDate.trim(),
-            fileTime: draftTime.trim(),
-            fileTypeLabel: draftFileTypeLabel.trim(),
-            categoryId: draftCategoryId || undefined,
-        });
-
-        setIsEditing(false);
-    }
+    const [isInformationOpen, setIsInformationOpen] = useState(false);
+    const [informationMode, setInformationMode] = useState<"view" | "edit">("view");
+    function openInformation(mode: "view" | "edit") { setInformationMode(mode); setIsInformationOpen(true); }
 
     function handleOpenOriginal() {
         if (!item.localUri) {
@@ -279,37 +149,38 @@ export default function DocumentPreviewPage({
                         isPhonePreview && styles.phoneTopMainRow,
                     ]}
                 >
-                    <Pressable
-                        title={t("backToWorkspace")}
-                        accessibilityRole="button"
-                        accessibilityLabel={t("backToWorkspace")}
-                        onPress={onBack}
-                        style={({ pressed }) => [
-                            styles.compactButton,
-                            {
-                                backgroundColor: colors.primary,
-                                borderColor: colors.primary,
-                            },
-                            pressed && styles.pressedButton,
-                        ]}
-                    >
-                        <Feather
-                            name={backIcon}
-                            size={15}
-                            color={primaryForeground}
-                        />
-
-                        <Text
-                            style={[
-                                styles.compactButtonText,
+                    <Tooltip label={t("backToWorkspace")}>
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={t("backToWorkspace")}
+                            onPress={onBack}
+                            style={({ pressed }) => [
+                                styles.compactButton,
                                 {
-                                    color: primaryForeground,
+                                    backgroundColor: colors.primary,
+                                    borderColor: colors.primary,
                                 },
+                                pressed && styles.pressedButton,
                             ]}
                         >
-                            {t("back")}
-                        </Text>
-                    </Pressable>
+                            <Feather
+                                name={backIcon}
+                                size={15}
+                                color={primaryForeground}
+                            />
+
+                            <Text
+                                style={[
+                                    styles.compactButtonText,
+                                    {
+                                        color: primaryForeground,
+                                    },
+                                ]}
+                            >
+                                {t("back")}
+                            </Text>
+                        </Pressable>
+                    </Tooltip>
 
                     <View style={styles.headerText}>
                         <Text
@@ -324,61 +195,7 @@ export default function DocumentPreviewPage({
                             {t("fullPreview")}
                         </Text>
 
-                        {isEditing ? (
-                            <View
-                                style={{
-                                    width: "100%",
-                                    minWidth: 0,
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 4,
-                                    direction: "ltr",
-                                }}
-                            >
-                                <input
-                                    value={draftName}
-                                    onChange={(event) =>
-                                        setDraftName(event.target.value)
-                                    }
-                                    dir="ltr"
-                                    aria-label={
-                                        direction === "rtl"
-                                            ? "نام فایل"
-                                            : "File name"
-                                    }
-                                    style={{
-                                        flex: 1,
-                                        width: "100%",
-                                        minWidth: 0,
-                                        minHeight: 34,
-                                        paddingInline: 10,
-                                        paddingBlock: 6,
-                                        border: `1px solid ${colors.border}`,
-                                        borderRadius: radius.md,
-                                        backgroundColor: colors.background,
-                                        color: colors.text,
-                                        fontSize: typography.fontSize.sm,
-                                        fontWeight: typography.fontWeight.medium,
-                                        outline: "none",
-                                    }}
-                                />
-
-                                {splitFileName(item.name).extension && (
-                                    <Text
-                                        dir="ltr"
-                                        style={{
-                                            color: colors.text,
-                                            fontSize: typography.fontSize.sm,
-                                            fontWeight: typography.fontWeight.medium,
-                                            flexShrink: 0,
-                                        }}
-                                    >
-                                        {splitFileName(item.name).extension}
-                                    </Text>
-                                )}
-                            </View>
-                        ) : (
-                            <Text
+                        <Text
                                 dir="ltr"
                                 style={[
                                     styles.title,
@@ -390,136 +207,137 @@ export default function DocumentPreviewPage({
                             >
                                 {item.name}
                             </Text>
-                        )}
                     </View>
 
                     <View style={styles.compactActions}>
-                        {onUpdateItem && !isEditing && (
+                        {onUpdateItem && (
+                            <Tooltip label={direction === "rtl" ? "ویرایش اطلاعات سند" : "Edit document details"}>
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={
+                                        direction === "rtl"
+                                            ? "ویرایش اطلاعات سند"
+                                            : "Edit document details"
+                                    }
+                                    onPress={() => openInformation("edit")}
+                                    style={({ pressed }) => [
+                                        styles.iconActionButton,
+                                        {
+                                            backgroundColor: colors.background,
+                                            borderColor: colors.border,
+                                        },
+                                        pressed && styles.pressedButton,
+                                    ]}
+                                >
+                                    <Feather
+                                        name="edit-3"
+                                        size={15}
+                                        color={colors.primary}
+                                    />
+                                </Pressable>
+                            </Tooltip>
+                        )}
+                        <Tooltip label={t("openOriginal")}>
                             <Pressable
-                                title={
-                                    direction === "rtl"
-                                        ? "ویرایش اطلاعات سند"
-                                        : "Edit document details"
-                                }
                                 accessibilityRole="button"
-                                accessibilityLabel={
-                                    direction === "rtl"
-                                        ? "ویرایش اطلاعات سند"
-                                        : "Edit document details"
-                                }
-                                onPress={handleStartEdit}
+                                accessibilityLabel={t("openOriginal")}
+                                disabled={!canAccessOriginal}
+                                onPress={handleOpenOriginal}
                                 style={({ pressed }) => [
                                     styles.iconActionButton,
                                     {
                                         backgroundColor: colors.background,
                                         borderColor: colors.border,
                                     },
-                                    pressed && styles.pressedButton,
+                                    !canAccessOriginal && styles.disabledAction,
+                                    pressed && canAccessOriginal && styles.pressedButton,
                                 ]}
                             >
                                 <Feather
-                                    name="edit-3"
+                                    name="external-link"
                                     size={15}
-                                    color={colors.primary}
+                                    color={colors.text}
                                 />
                             </Pressable>
-                        )}
-                        <Pressable
-                            title={t("openOriginal")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("openOriginal")}
-                            disabled={!canAccessOriginal}
-                            onPress={handleOpenOriginal}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !canAccessOriginal && styles.disabledAction,
-                                pressed && canAccessOriginal && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name="external-link"
-                                size={15}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        </Tooltip>
 
-                        <Pressable
-                            title={t("downloadOriginal")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("downloadOriginal")}
-                            disabled={!canAccessOriginal}
-                            onPress={handleDownloadOriginal}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !canAccessOriginal && styles.disabledAction,
-                                pressed && canAccessOriginal && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name="download"
-                                size={15}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        <Tooltip label={t("downloadOriginal")}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("downloadOriginal")}
+                                disabled={!canAccessOriginal}
+                                onPress={handleDownloadOriginal}
+                                style={({ pressed }) => [
+                                    styles.iconActionButton,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    !canAccessOriginal && styles.disabledAction,
+                                    pressed && canAccessOriginal && styles.pressedButton,
+                                ]}
+                            >
+                                <Feather
+                                    name="download"
+                                    size={15}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </Tooltip>
 
-                        <Pressable
-                            title={t("previousFile")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("previousFile")}
-                            disabled={!onPrevious}
-                            onPress={onPrevious}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !onPrevious && styles.disabledAction,
-                                pressed && Boolean(onPrevious) && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name={previousIcon}
-                                size={16}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        <Tooltip label={t("previousFile")}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("previousFile")}
+                                disabled={!onPrevious}
+                                onPress={onPrevious}
+                                style={({ pressed }) => [
+                                    styles.iconActionButton,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    !onPrevious && styles.disabledAction,
+                                    pressed && Boolean(onPrevious) && styles.pressedButton,
+                                ]}
+                            >
+                                <Feather
+                                    name={previousIcon}
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </Tooltip>
 
-                        <Pressable
-                            title={t("nextFile")}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("nextFile")}
-                            disabled={!onNext}
-                            onPress={onNext}
-                            style={({ pressed }) => [
-                                styles.iconActionButton,
-                                {
-                                    backgroundColor: colors.background,
-                                    borderColor: colors.border,
-                                },
-                                !onNext && styles.disabledAction,
-                                pressed && Boolean(onNext) && styles.pressedButton,
-                            ]}
-                        >
-                            <Feather
-                                name={nextIcon}
-                                size={16}
-                                color={colors.text}
-                            />
-                        </Pressable>
+                        <Tooltip label={t("nextFile")}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("nextFile")}
+                                disabled={!onNext}
+                                onPress={onNext}
+                                style={({ pressed }) => [
+                                    styles.iconActionButton,
+                                    {
+                                        backgroundColor: colors.background,
+                                        borderColor: colors.border,
+                                    },
+                                    !onNext && styles.disabledAction,
+                                    pressed && Boolean(onNext) && styles.pressedButton,
+                                ]}
+                            >
+                                <Feather
+                                    name={nextIcon}
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </Tooltip>
+                        
+
                     </View>
                 </View>
 
-                {!isEditing && (
-                    <View style={styles.compactMetaRow}>
+                <View style={styles.compactMetaRow}>
                         <View
                             style={[
                                 styles.statusChip,
@@ -590,296 +408,34 @@ export default function DocumentPreviewPage({
                                 </Text>
                             </View>
                         ))}
-                    </View>
-                )}
-
-                {isEditing && (
-                    <View
-                        style={[
-                            styles.editPanel,
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={direction === "rtl" ? "جزئیات بیشتر سند" : "More document details"}
+                        onPress={() => openInformation("view")}
+                        style={({ pressed }) => [
                             {
-                                backgroundColor: colors.background,
-                                borderColor: colors.border,
+                                alignSelf: "center",
+                                flexShrink: 0,
+                                paddingHorizontal: spacing.sm,
+                                paddingVertical: spacing.xs,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: spacing.xs,
+                                opacity: pressed ? 0.7 : 1,
                             },
                         ]}
                     >
-                        <View style={styles.editGrid}>
-                            <label
-                                style={{
-                                    minWidth: 0,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: spacing.xs,
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        color: colors.text,
-                                        fontSize: typography.fontSize.xs,
-                                        fontWeight:
-                                            typography.fontWeight.semibold,
-                                        opacity: 0.72,
-                                    }}
-                                >
-                                    {direction === "rtl"
-                                        ? "نسخه"
-                                        : "Version"}
-                                </span>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={draftVersion}
-                                    onChange={(event) =>
-                                        setDraftVersion(event.target.value)
-                                    }
-                                    onBlur={() => {
-                                        const value = Number(draftVersion);
-
-                                        if (Number.isFinite(value)) {
-                                            setDraftVersion(value.toFixed(2));
-                                        }
-                                    }}
-                                    dir="ltr"
-                                    style={{
-                                        ...styles.editInput,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-                                    }}
-                                />
-                            </label>
-
-                            <label
-                                style={{
-                                    minWidth: 0,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: spacing.xs,
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        color: colors.text,
-                                        fontSize: typography.fontSize.xs,
-                                        fontWeight:
-                                            typography.fontWeight.semibold,
-                                        opacity: 0.72,
-                                    }}
-                                >
-                                    {direction === "rtl" ? "تاریخ" : "Date"}
-                                </span>
-
-                                <input
-                                    value={draftDate}
-                                    onChange={(event) =>
-                                        setDraftDate(event.target.value)
-                                    }
-                                    dir="auto"
-                                    style={{
-                                        ...styles.editInput,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-                                    }}
-                                />
-                            </label>
-
-                            <label
-                                style={{
-                                    minWidth: 0,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: spacing.xs,
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        color: colors.text,
-                                        fontSize: typography.fontSize.xs,
-                                        fontWeight:
-                                            typography.fontWeight.semibold,
-                                        opacity: 0.72,
-                                    }}
-                                >
-                                    {direction === "rtl" ? "زمان" : "Time"}
-                                </span>
-
-                                <input
-                                    type="time"
-                                    step="1"
-                                    value={draftTime}
-                                    onChange={(event) =>
-                                        setDraftTime(event.target.value)
-                                    }
-                                    dir="ltr"
-                                    style={{
-                                        ...styles.editInput,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-                                    }}
-                                />
-                            </label>
-
-                            <label
-                                style={{
-                                    minWidth: 0,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: spacing.xs,
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        color: colors.text,
-                                        fontSize: typography.fontSize.xs,
-                                        fontWeight:
-                                            typography.fontWeight.semibold,
-                                        opacity: 0.72,
-                                    }}
-                                >
-                                    {direction === "rtl"
-                                        ? "نوع فایل"
-                                        : "File type"}
-                                </span>
-
-                                <select
-                                    value={draftCategoryId}
-                                    onChange={(event) => {
-                                        const selectedCategoryId =
-                                            String(event.target.value).trim();
-
-                                        const selectedCategory =
-                                            fileCategoryOptions.find(
-                                                (category) =>
-                                                    category.id ===
-                                                    selectedCategoryId
-                                            );
-
-                                        setDraftCategoryId(
-                                            selectedCategoryId
-                                        );
-
-                                        setDraftFileTypeLabel(
-                                            selectedCategory
-                                                ? getCategoryLabel(
-                                                    selectedCategory
-                                                )
-                                                : ""
-                                        );
-                                    }}
-                                    aria-label={
-                                        direction === "rtl"
-                                            ? "نوع فایل"
-                                            : "File type"
-                                    }
-                                    style={{
-                                        ...styles.editInput,
-                                        minHeight: 32,
-                                        paddingInline: 8,
-                                        borderColor: colors.border,
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-                                        cursor: "pointer",
-                                        direction,
-                                    }}
-                                >
-                                    {!draftCategoryId && (
-                                        <option value="">
-                                            {direction === "rtl"
-                                                ? "انتخاب دسته‌بندی"
-                                                : "Select category"}
-                                        </option>
-                                    )}
-
-                                    {fileCategoryOptions.map(
-                                        (category) => (
-                                            <option
-                                                key={category.id}
-                                                value={category.id}
-                                            >
-                                                {getCategoryLabel(
-                                                    category
-                                                )}
-                                            </option>
-                                        )
-                                    )}
-                                </select>
-                            </label>
-                        </View>
-
-                        <View style={styles.editActions}>
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={
-                                    direction === "rtl"
-                                        ? "ذخیره تغییرات"
-                                        : "Save changes"
-                                }
-                                disabled={!draftName.trim()}
-                                onPress={handleSaveEdit}
-                                style={({ pressed }) => [
-                                    styles.saveButton,
-                                    {
-                                        backgroundColor: colors.primary,
-                                        borderColor: colors.primary,
-                                    },
-                                    !draftName.trim() &&
-                                    styles.disabledAction,
-                                    pressed &&
-                                    Boolean(draftName.trim()) &&
-                                    styles.pressedButton,
-                                ]}
-                            >
-                                <Feather
-                                    name="check"
-                                    size={14}
-                                    color="#ffffff"
-                                />
-
-                                <Text style={styles.saveButtonText}>
-                                    {direction === "rtl"
-                                        ? "ذخیره"
-                                        : "Save"}
-                                </Text>
-                            </Pressable>
-
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={
-                                    direction === "rtl"
-                                        ? "انصراف از ویرایش"
-                                        : "Cancel editing"
-                                }
-                                onPress={handleCancelEdit}
-                                style={({ pressed }) => [
-                                    styles.cancelButton,
-                                    {
-                                        backgroundColor: colors.surface,
-                                        borderColor: colors.border,
-                                    },
-                                    pressed && styles.pressedButton,
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.cancelButtonText,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    {direction === "rtl"
-                                        ? "انصراف"
-                                        : "Cancel"}
-                                </Text>
-                            </Pressable>
-                        </View>
+                        <Feather name="info" size={14} color={colors.primary} />
+                        <Text style={{ color: colors.primary, fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, textDecorationLine: "underline" }}>
+                            {direction === "rtl" ? "جزئیات بیشتر..." : "More Details..."}
+                        </Text>
+                    </Pressable>
                     </View>
-                )}
+
+
             </View>
+
+            <WorkspaceMetadataDialog item={item} visible={isInformationOpen} initialMode={informationMode} categoryDefinitions={categoryDefinitions} onUpdateItem={onUpdateItem} onClose={() => setIsInformationOpen(false)} />
 
             <View
                 style={[

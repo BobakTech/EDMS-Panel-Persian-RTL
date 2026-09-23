@@ -7,7 +7,7 @@
  * ============================================================================
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Feather } from "../../web/icons";
 import {
@@ -21,6 +21,7 @@ import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import WorkspacePreviewRenderer from "../preview/WorkspacePreviewRenderer";
+import WorkspaceMetadataDialog from "../preview/WorkspaceMetadataDialog";
 import {
     getPreviewRendererKind,
     hasRenderableWorkspacePreview,
@@ -34,6 +35,7 @@ import type {
     WorkspaceItem,
     WorkspaceItemUpdate,
 } from "./workspace.types";
+
 
 type FeatherIconName = keyof typeof Feather.glyphMap;
 
@@ -106,25 +108,6 @@ function getPreviewRendererInfo(
     };
 }
 
-function splitFileName(fileName: string) {
-    const lastDotIndex = fileName.lastIndexOf(".");
-
-    if (
-        lastDotIndex <= 0 ||
-        lastDotIndex === fileName.length - 1
-    ) {
-        return {
-            baseName: fileName,
-            extension: "",
-        };
-    }
-
-    return {
-        baseName: fileName.slice(0, lastDotIndex),
-        extension: fileName.slice(lastDotIndex),
-    };
-}
-
 export default function WorkspaceDocumentPreviewPanel({
     item,
     categoryDefinitions,
@@ -145,123 +128,9 @@ export default function WorkspaceDocumentPreviewPanel({
         language,
     );
 
-    /**
-     * File Type options come from the File Categories API definitions.
-     * Keep the file's currently assigned category available and selected even
-     * if that category is temporarily missing from the returned definitions.
-     */
-    const assignedCategoryId = String(item.categoryId ?? "").trim();
-
-    const fileCategoryOptions = [
-        ...categoryDefinitions
-            .map((category) => ({
-                ...category,
-                id: String(category.id ?? "").trim(),
-            }))
-            .filter((category) => category.id),
-    ];
-
-    if (
-        assignedCategoryId &&
-        !fileCategoryOptions.some(
-            (category) => category.id === assignedCategoryId
-        )
-    ) {
-        fileCategoryOptions.unshift({
-            id: assignedCategoryId,
-            nameFa: item.fileTypeLabel?.trim() || assignedCategoryId,
-            nameEn: item.fileTypeLabel?.trim() || assignedCategoryId,
-            order: -1,
-        });
-    }
-
-    function getCategoryLabel(category: WorkspaceCategoryDefinition) {
-        return direction === "rtl"
-            ? category.nameFa?.trim() ||
-            category.nameEn?.trim() ||
-            category.id
-            : category.nameEn?.trim() ||
-            category.nameFa?.trim() ||
-            category.id;
-    }
-
-    const [isEditing, setIsEditing] = useState(false);
-    const [draftName, setDraftName] = useState(
-        splitFileName(item.name).baseName
-    );
-    const [draftVersion, setDraftVersion] = useState(item.fileVersion ?? "");
-    const [draftDate, setDraftDate] = useState(item.fileDate ?? "");
-    const [draftTime, setDraftTime] = useState(item.fileTime ?? "");
-    const [draftFileTypeLabel, setDraftFileTypeLabel] = useState(
-        item.fileTypeLabel ?? ""
-    );
-    const [draftCategoryId, setDraftCategoryId] = useState(
-        String(item.categoryId ?? "").trim()
-    );
-
-    useEffect(() => {
-        setIsEditing(false);
-        setDraftName(splitFileName(item.name).baseName);
-        setDraftVersion(item.fileVersion ?? "");
-        setDraftDate(item.fileDate ?? "");
-        setDraftTime(item.fileTime ?? "");
-        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(String(item.categoryId ?? "").trim());
-    }, [
-        item.id,
-        item.name,
-        item.fileVersion,
-        item.fileDate,
-        item.fileTime,
-        item.fileTypeLabel,
-        item.categoryId,
-    ]);
-
-    function handleStartEdit() {
-        setDraftName(splitFileName(item.name).baseName);
-        setDraftVersion(item.fileVersion ?? "");
-        setDraftDate(item.fileDate ?? "");
-        setDraftTime(item.fileTime ?? "");
-        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(String(item.categoryId ?? "").trim());
-        setIsEditing(true);
-    }
-
-    function handleCancelEdit() {
-        setDraftName(splitFileName(item.name).baseName);
-        setDraftVersion(item.fileVersion ?? "");
-        setDraftDate(item.fileDate ?? "");
-        setDraftTime(item.fileTime ?? "");
-        setDraftFileTypeLabel(item.fileTypeLabel ?? "");
-        setDraftCategoryId(String(item.categoryId ?? "").trim());
-        setIsEditing(false);
-    }
-
-    function handleSaveEdit() {
-        if (!onUpdateItem) {
-            return;
-        }
-
-        const trimmedBaseName = draftName.trim();
-
-        if (!trimmedBaseName) {
-            return;
-        }
-
-        const { extension } = splitFileName(item.name);
-        const updatedName = `${trimmedBaseName}${extension}`;
-
-        onUpdateItem(item.id, {
-            name: updatedName,
-            fileVersion: draftVersion.trim(),
-            fileDate: draftDate.trim(),
-            fileTime: draftTime.trim(),
-            fileTypeLabel: draftFileTypeLabel.trim(),
-            categoryId: draftCategoryId || undefined,
-        });
-
-        setIsEditing(false);
-    }
+    const [isInformationOpen, setIsInformationOpen] = useState(false);
+    const [informationMode, setInformationMode] = useState<"view" | "edit">("view");
+    function openInformation(mode: "view" | "edit") { setInformationMode(mode); setIsInformationOpen(true); }
 
     return (
         <View
@@ -318,7 +187,9 @@ export default function WorkspaceDocumentPreviewPanel({
                     </Text>
                 </Pressable>
 
-                {onUpdateItem && !isEditing && (
+                
+
+                {onUpdateItem && (
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={
@@ -326,7 +197,7 @@ export default function WorkspaceDocumentPreviewPanel({
                                 ? "ویرایش اطلاعات سند"
                                 : "Edit document details"
                         }
-                        onPress={handleStartEdit}
+                        onPress={() => openInformation("edit")}
                         style={[
                             styles.editButton,
                             {
@@ -368,61 +239,7 @@ export default function WorkspaceDocumentPreviewPanel({
                         {t("documentPreview")}
                     </Text>
 
-                    {isEditing ? (
-                        <View
-                            style={{
-                                width: "100%",
-                                minWidth: 0,
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 4,
-                                direction: "ltr",
-                            }}
-                        >
-                            <input
-                                value={draftName}
-                                onChange={(event) =>
-                                    setDraftName(event.target.value)
-                                }
-                                dir="ltr"
-                                aria-label={
-                                    direction === "rtl"
-                                        ? "نام فایل"
-                                        : "File name"
-                                }
-                                style={{
-                                    flex: 1,
-                                    width: "100%",
-                                    minWidth: 0,
-                                    minHeight: 34,
-                                    paddingInline: 10,
-                                    paddingBlock: 6,
-                                    border: `1px solid ${colors.border}`,
-                                    borderRadius: radius.md,
-                                    backgroundColor: colors.background,
-                                    color: colors.text,
-                                    fontSize: typography.fontSize.sm,
-                                    fontWeight: typography.fontWeight.medium,
-                                    outline: "none",
-                                }}
-                            />
-
-                            {splitFileName(item.name).extension && (
-                                <Text
-                                    dir="ltr"
-                                    style={{
-                                        color: colors.text,
-                                        fontSize: typography.fontSize.sm,
-                                        fontWeight: typography.fontWeight.medium,
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    {splitFileName(item.name).extension}
-                                </Text>
-                            )}
-                        </View>
-                    ) : (
-                        <Text
+                    <Text
                             dir="ltr"
                             style={[
                                 styles.title,
@@ -434,12 +251,10 @@ export default function WorkspaceDocumentPreviewPanel({
                         >
                             {item.name}
                         </Text>
-                    )}
                 </View>
             </View>
 
-            {!isEditing && (
-                <View style={styles.metaRow}>
+            <View style={styles.metaRow}>
                     <View
                         style={[
                             styles.statusChip,
@@ -510,278 +325,32 @@ export default function WorkspaceDocumentPreviewPanel({
                             </Text>
                         </View>
                     ))}
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={direction === "rtl" ? "جزئیات بیشتر سند" : "More document details"}
+                        onPress={() => openInformation("view")}
+                        style={({ pressed }) => [
+                            {
+                                alignSelf: "center",
+                                flexShrink: 0,
+                                paddingHorizontal: spacing.sm,
+                                paddingVertical: spacing.xs,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: spacing.xs,
+                                opacity: pressed ? 0.7 : 1,
+                            },
+                        ]}
+                    >
+                        <Feather name="info" size={14} color={colors.primary} />
+                        <Text style={{ color: colors.primary, fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold, textDecorationLine: "underline" }}>
+                            {direction === "rtl" ? "جزئیات بیشتر..." : "More Details..."}
+                        </Text>
+                    </Pressable>
                 </View>
-            )}
 
-            {isEditing && (
-                <View
-                    style={[
-                        styles.editPanel,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                >
-                    <View style={styles.editGrid}>
-                        <label
-                            style={{
-                                minWidth: 0,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: spacing.xs,
-                            }}
-                        >
-                            <span
-                                style={{
-                                    color: colors.text,
-                                    fontSize: typography.fontSize.xs,
-                                    fontWeight: typography.fontWeight.semibold,
-                                    opacity: 0.72,
-                                }}
-                            >
-                                {direction === "rtl" ? "نسخه" : "Version"}
-                            </span>
 
-                            <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={draftVersion}
-                                onChange={(event) =>
-                                    setDraftVersion(event.target.value)
-                                }
-                                onBlur={() => {
-                                    const value = Number(draftVersion);
-
-                                    if (Number.isFinite(value)) {
-                                        setDraftVersion(value.toFixed(2));
-                                    }
-                                }}
-                                dir="ltr"
-                                style={{
-                                    ...styles.editInput,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.surface,
-                                    color: colors.text,
-                                }}
-                            />
-                        </label>
-
-                        <label
-                            style={{
-                                minWidth: 0,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: spacing.xs,
-                            }}
-                        >
-                            <span
-                                style={{
-                                    color: colors.text,
-                                    fontSize: typography.fontSize.xs,
-                                    fontWeight: typography.fontWeight.semibold,
-                                    opacity: 0.72,
-                                }}
-                            >
-                                {direction === "rtl" ? "تاریخ" : "Date"}
-                            </span>
-
-                            <input
-                                value={draftDate}
-                                onChange={(event) =>
-                                    setDraftDate(event.target.value)
-                                }
-                                dir="auto"
-                                style={{
-                                    ...styles.editInput,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.surface,
-                                    color: colors.text,
-                                }}
-                            />
-                        </label>
-
-                        <label
-                            style={{
-                                minWidth: 0,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: spacing.xs,
-                            }}
-                        >
-                            <span
-                                style={{
-                                    color: colors.text,
-                                    fontSize: typography.fontSize.xs,
-                                    fontWeight: typography.fontWeight.semibold,
-                                    opacity: 0.72,
-                                }}
-                            >
-                                {direction === "rtl" ? "زمان" : "Time"}
-                            </span>
-
-                            <input
-                                type="time"
-                                step="1"
-                                value={draftTime}
-                                onChange={(event) =>
-                                    setDraftTime(event.target.value)
-                                }
-                                dir="ltr"
-                                style={{
-                                    ...styles.editInput,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.surface,
-                                    color: colors.text,
-                                }}
-                            />
-                        </label>
-
-                        <label
-                            style={{
-                                minWidth: 0,
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: spacing.xs,
-                            }}
-                        >
-                            <span
-                                style={{
-                                    color: colors.text,
-                                    fontSize: typography.fontSize.xs,
-                                    fontWeight: typography.fontWeight.semibold,
-                                    opacity: 0.72,
-                                }}
-                            >
-                                {direction === "rtl" ? "نوع فایل" : "File type"}
-                            </span>
-
-                            <select
-                                value={draftCategoryId}
-                                onChange={(event) => {
-                                    const selectedCategoryId =
-                                        String(event.target.value).trim();
-
-                                    const selectedCategory =
-                                        fileCategoryOptions.find(
-                                            (category) =>
-                                                category.id ===
-                                                selectedCategoryId
-                                        );
-
-                                    setDraftCategoryId(
-                                        selectedCategoryId
-                                    );
-
-                                    setDraftFileTypeLabel(
-                                        selectedCategory
-                                            ? getCategoryLabel(
-                                                selectedCategory
-                                            )
-                                            : ""
-                                    );
-                                }}
-                                aria-label={
-                                    direction === "rtl"
-                                        ? "نوع فایل"
-                                        : "File type"
-                                }
-                                style={{
-                                    ...styles.editInput,
-                                    minHeight: 32,
-                                    paddingInline: 8,
-                                    borderColor: colors.border,
-                                    backgroundColor: colors.surface,
-                                    color: colors.text,
-                                    cursor: "pointer",
-                                    direction,
-                                }}
-                            >
-                                {!draftCategoryId && (
-                                    <option value="">
-                                        {direction === "rtl"
-                                            ? "انتخاب دسته‌بندی"
-                                            : "Select category"}
-                                    </option>
-                                )}
-
-                                {fileCategoryOptions.map(
-                                    (category) => (
-                                        <option
-                                            key={category.id}
-                                            value={category.id}
-                                        >
-                                            {getCategoryLabel(
-                                                category
-                                            )}
-                                        </option>
-                                    )
-                                )}
-                            </select>
-                        </label>
-                    </View>
-
-                    <View style={styles.editActions}>
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                                direction === "rtl"
-                                    ? "ذخیره تغییرات"
-                                    : "Save changes"
-                            }
-                            disabled={!draftName.trim()}
-                            onPress={handleSaveEdit}
-                            style={({ pressed }) => [
-                                styles.saveButton,
-                                {
-                                    backgroundColor: colors.primary,
-                                    borderColor: colors.primary,
-                                },
-                                !draftName.trim() && styles.disabledButton,
-                                pressed &&
-                                Boolean(draftName.trim()) &&
-                                styles.pressedButton,
-                            ]}
-                        >
-                            <Feather name="check" size={14} color="#ffffff" />
-
-                            <Text style={styles.saveButtonText}>
-                                {direction === "rtl" ? "ذخیره" : "Save"}
-                            </Text>
-                        </Pressable>
-
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                                direction === "rtl"
-                                    ? "انصراف از ویرایش"
-                                    : "Cancel editing"
-                            }
-                            onPress={handleCancelEdit}
-                            style={({ pressed }) => [
-                                styles.cancelButton,
-                                {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.border,
-                                },
-                                pressed && styles.pressedButton,
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.cancelButtonText,
-                                    {
-                                        color: colors.text,
-                                    },
-                                ]}
-                            >
-                                {direction === "rtl" ? "انصراف" : "Cancel"}
-                            </Text>
-                        </Pressable>
-                    </View>
-                </View>
-            )}
+            <WorkspaceMetadataDialog item={item} visible={isInformationOpen} initialMode={informationMode} categoryDefinitions={categoryDefinitions} onUpdateItem={onUpdateItem} onClose={() => setIsInformationOpen(false)} />
 
             <View
                 style={[

@@ -19,6 +19,7 @@ import { getDirectionalLayout } from "../../settings/direction";
 import type { TranslationKey } from "../../locales";
 
 import type { WorkspaceItem } from "../workspace";
+import PageLoadingIndicator from "../common/PageLoadingIndicator";
 import { getWorkspaceItemStatusLabel } from "../workspace/workspace.helpers";
 
 /**
@@ -29,6 +30,7 @@ import { getWorkspaceItemStatusLabel } from "../workspace/workspace.helpers";
 
 interface DashboardProps {
     workspaceItems: WorkspaceItem[];
+    isLoading?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ function getDashboardItemTypeLabel(item: WorkspaceItem, t: Translate) {
 
 export default function Dashboard({
     workspaceItems,
+    isLoading = false,
 }: DashboardProps) {
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
@@ -131,6 +134,33 @@ export default function Dashboard({
                     },
                 ]}
             >
+                {isLoading && <PageLoadingIndicator label={direction === "rtl" ? "در حال بارگذاری داشبورد..." : "Loading dashboard..."} />}
+                {isLoading ? (
+                    <View aria-hidden={true} style={{ gap: spacing.xl, opacity: 0.65 }}>
+                        <View style={{ width: "38%", height: 24, borderRadius: radius.md, backgroundColor: colors.border }} />
+                        <View style={{ width: "60%", height: 12, borderRadius: radius.md, backgroundColor: colors.border }} />
+                        <View style={[styles.summaryGrid, { flexDirection: isRtl ? "row-reverse" : "row" }]}>
+                            {Array.from({ length: 4 }, (_, index) => (
+                                <View key={index} style={[styles.summaryCard, { backgroundColor: colors.background, borderColor: colors.border, minHeight: 145, gap: spacing.md }]}>
+                                    <View style={{ width: "55%", height: 12, borderRadius: radius.md, backgroundColor: colors.border }} />
+                                    <View style={{ width: "35%", height: 34, borderRadius: radius.md, backgroundColor: colors.border }} />
+                                    <View style={{ width: "75%", height: 10, borderRadius: radius.md, backgroundColor: colors.border }} />
+                                </View>
+                            ))}
+                        </View>
+                        <View style={[styles.activityCard, { backgroundColor: colors.background, borderColor: colors.border, gap: spacing.md }]}>
+                            <View style={{ width: "30%", height: 18, borderRadius: radius.md, backgroundColor: colors.border }} />
+                            <View style={styles.activityGrid}>
+                                {Array.from({ length: 4 }, (_, index) => (
+                                    <View key={index} style={{ width: recentActivityItemWidth, minHeight: 112, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, gap: spacing.md }}>
+                                        <View style={{ width: "85%", height: 12, borderRadius: radius.md, backgroundColor: colors.border }} />
+                                        <View style={{ width: "55%", height: 10, borderRadius: radius.md, backgroundColor: colors.border }} />
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    </View>
+                ) : (<>
                 <View style={[styles.header, { direction }]}>
                     <Text
                         style={[
@@ -284,6 +314,7 @@ export default function Dashboard({
                         ))}
                     </View>
                 </View>
+                </>)}
             </View>
         </View>
     );
@@ -303,6 +334,7 @@ const styles = StyleSheet.create({
     },
 
     content: {
+        position: "relative",
         flex: 1,
         minWidth: 0,
         minHeight: 0,

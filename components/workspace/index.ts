@@ -48,8 +48,6 @@ export {
     updateWorkspaceItem,
 } from "./workspace.operations";
 
-export { default as WorkspaceItemDetailsPanel } from "./WorkspaceItemDetailsPanel";
-
 /**
  * ============================================================================
  * Document Preview Export

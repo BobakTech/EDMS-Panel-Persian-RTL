@@ -28,7 +28,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View,
 } from "../../web/ui";
 
@@ -36,6 +35,9 @@ import { radius, shadows, spacing, typography } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import type { TranslationKey } from "../../locales";
+
+import EdmsSelect from "../common/EdmsSelect";
+import PageLoadingIndicator from "../common/PageLoadingIndicator";
 
 /**
  * ============================================================================
@@ -50,7 +52,6 @@ import {
     WorkspaceDocumentPreviewPanel,
     WorkspaceHeader,
     WorkspaceItemCard,
-    WorkspaceItemDetailsPanel,
     WorkspaceViewControls,
 } from "../workspace";
 import {
@@ -88,11 +89,6 @@ import type {
  * Types
  * ============================================================================
  */
-
-interface WorkspaceUndoToast {
-    item: WorkspaceItem;
-    message: string;
-}
 
 interface WorkspacePageContent {
     breadcrumbLabel: string;
@@ -188,6 +184,8 @@ interface WorkspaceProps {
     pageType: WorkspacePageType;
     currentFolderId: string | null;
     workspaceItems: WorkspaceItem[];
+    isLoadingWorkspaceItems: boolean;
+    workspaceErrorMessage: string | null;
     searchQuery: string;
     onChangeFolder: (folderId: string | null) => void;
     onPressCreateFolder: () => void;
@@ -203,6 +201,19 @@ interface WorkspaceProps {
     onOpenDashboard: () => void;
     onDropFiles: (files: DroppedWorkspaceFile[]) => void;
     onOpenPreviewPage: (item: WorkspaceItem) => void;
+
+    /**
+     * Displays an application-level notification with an optional reversible action.
+     * The caller owns the notification lifecycle and dismisses it after execution.
+     */
+    onShowToast: (notification: {
+        type: "success" | "error" | "info";
+        message: string;
+        duration?: number;
+        actionLabel?: string;
+        onAction?: () => void;
+    }) => void;
+
     workspaceCategories: WorkspaceCategory[];
     workspaceCategoryDefinitions: WorkspaceCategoryDefinition[];
     activeWorkspaceCategory: string;
@@ -219,6 +230,8 @@ export default function Workspace({
     pageType,
     currentFolderId,
     workspaceItems,
+    isLoadingWorkspaceItems,
+    workspaceErrorMessage,
     searchQuery,
     onChangeFolder,
     onPressCreateFolder,
@@ -234,6 +247,7 @@ export default function Workspace({
     onOpenDashboard,
     onDropFiles,
     onOpenPreviewPage,
+    onShowToast,
     workspaceCategories,
     workspaceCategoryDefinitions,
     activeWorkspaceCategory,
@@ -243,8 +257,30 @@ export default function Workspace({
     const colors = theme.colors;
     const { textAlign } = getDirectionalLayout(direction);
 
-    const { width } = useWindowDimensions();
+    // The shell and Workspace must react to the same live browser viewport.
+    const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+    const [contentWidth, setContentWidth] = useState<number | null>(null);
 
+    useEffect(() => {
+        const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+        window.addEventListener("resize", updateViewportWidth);
+        updateViewportWidth();
+        return () => window.removeEventListener("resize", updateViewportWidth);
+    }, []);
+
+    // Measure the real card container, including changes caused by sidebar layout.
+    useEffect(() => {
+        const element = document.querySelector<HTMLElement>(".edms-workspace-content");
+        if (!element) return;
+
+        const updateContentWidth = () => setContentWidth(element.clientWidth);
+        const observer = new ResizeObserver(updateContentWidth);
+        observer.observe(element);
+        updateContentWidth();
+        return () => observer.disconnect();
+    }, []);
+
+    const width = Math.min(viewportWidth, contentWidth ?? viewportWidth);
     const isPhoneWorkspace = width < 430;
     const isCompactWorkspace = width < 920;
 
@@ -289,7 +325,14 @@ export default function Workspace({
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [currentPage, setCurrentPage] = useState(1);
 
-    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+    /**
+     * Workspace multi-selection is independent from preview/details selection.
+     * Pagination only changes rendering; selected ids remain selected across pages.
+     */
+    const [multiSelectedItemIds, setMultiSelectedItemIds] = useState<string[]>([]);
+    const [isBulkDeletePending, setIsBulkDeletePending] = useState(false);
+    const [isBulkMovePending, setIsBulkMovePending] = useState(false);
+    const [isBulkPermanentDeletePending, setIsBulkPermanentDeletePending] = useState(false);
     const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
 
     /**
@@ -303,39 +346,9 @@ export default function Workspace({
     const [pendingMoveItemId, setPendingMoveItemId] = useState<string | null>(null);
     const [selectedDestinationFolderId, setSelectedDestinationFolderId] =
         useState<string | null>(null);
-    const [moveSearchQuery, setMoveSearchQuery] = useState("");
-    const [isMoveDestinationComboOpen, setIsMoveDestinationComboOpen] =
-        useState(false);
 
     const [pendingPermanentDeleteItemId, setPendingPermanentDeleteItemId] =
         useState<string | null>(null);
-
-    const [undoToast, setUndoToast] = useState<WorkspaceUndoToast | null>(null);
-    const undoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    useEffect(() => {
-        if (!selectedItemId) {
-            return;
-        }
-
-        const selectedItemStillVisible = workspaceItems.some(
-            (item) =>
-                item.id === selectedItemId &&
-                isWorkspaceItemVisibleOnPage(item, pageType)
-        );
-
-        if (!selectedItemStillVisible) {
-            setSelectedItemId(null);
-        }
-    }, [pageType, selectedItemId, workspaceItems]);
-
-    useEffect(() => {
-        return () => {
-            if (undoToastTimerRef.current) {
-                clearTimeout(undoToastTimerRef.current);
-            }
-        };
-    }, []);
 
     /**
      * ============================================================================
@@ -354,7 +367,7 @@ export default function Workspace({
             return;
         }
 
-        if (!currentFolderId) {
+        if (!currentFolderId || isLoadingWorkspaceItems || workspaceErrorMessage) {
             return;
         }
 
@@ -368,7 +381,7 @@ export default function Workspace({
         if (!currentFolderStillExists) {
             onChangeFolder(null);
         }
-    }, [currentFolderId, onChangeFolder, pageType, workspaceItems]);
+    }, [currentFolderId, onChangeFolder, pageType, workspaceItems, isLoadingWorkspaceItems, workspaceErrorMessage]);
 
     /**
      * ============================================================================
@@ -378,6 +391,23 @@ export default function Workspace({
      * ============================================================================
      */
 
+    function handleToggleWorkspaceItemSelection(itemId: string) {
+        setSelectedItemIdsSafe(itemId);
+        setPreviewItemId(null);
+    }
+
+    function setSelectedItemIdsSafe(itemId: string) {
+        setMultiSelectedItemIds((currentIds) =>
+            currentIds.includes(itemId)
+                ? currentIds.filter((id) => id !== itemId)
+                : [...currentIds, itemId]
+        );
+    }
+
+    function handleClearWorkspaceSelection() {
+        setMultiSelectedItemIds([]);
+    }
+
     function handlePressWorkspaceItem(itemId: string) {
         const pressedItem = visibleWorkspaceItems.find(
             (item) => item.id === itemId
@@ -385,14 +415,12 @@ export default function Workspace({
 
         if (pageType === "workspace" && pressedItem?.type === "folder") {
             onChangeFolder(pressedItem.id);
-            setSelectedItemId(null);
             setPreviewItemId(null);
 
             return;
         }
 
         if (pressedItem?.type === "file") {
-            setSelectedItemId(null);
 
             setPreviewItemId((currentPreviewItemId) =>
                 currentPreviewItemId === itemId ? null : itemId
@@ -403,28 +431,8 @@ export default function Workspace({
 
         setPreviewItemId(null);
 
-        setSelectedItemId((currentItemId) =>
-            currentItemId === itemId
-                ? null
-                : itemId
-        );
     }
 
-    /**
-     * ============================================================================
-     * Toggle Workspace Item Actions
-     * ----------------------------------------------------------------------------
-     * Opens item details/actions and closes the document preview panel.
-     * ============================================================================
-     */
-
-    function handleOpenWorkspaceItemActions(itemId: string) {
-        setPreviewItemId(null);
-
-        setSelectedItemId((currentSelectedItemId) =>
-            currentSelectedItemId === itemId ? null : itemId
-        );
-    }
 
     function handlePressEmptyStateCreateFolder() {
         onPressCreateFolder();
@@ -450,18 +458,6 @@ export default function Workspace({
 
         onChangeFolder(currentWorkspaceFolder.parentFolderId ?? null);
     }
-
-    function handleCloseWorkspaceItemDetails() {
-        setSelectedItemId(null);
-    }
-
-    /**
-     * ============================================================================
-     * Close Document Preview
-     * ----------------------------------------------------------------------------
-     * Closes the selected file preview panel.
-     * ============================================================================
-     */
 
     function handleCloseDocumentPreview() {
         setPreviewItemId(null);
@@ -500,7 +496,10 @@ export default function Workspace({
             return;
         }
 
-        onRenameItem(pendingRenameWorkspaceItem.id, trimmedRenameItemName);
+        // Preserve the original name so Rename can be reversed independently.
+        const originalItem = { ...pendingRenameWorkspaceItem };
+        onRenameItem(originalItem.id, trimmedRenameItemName);
+        showUndoToast(originalItem, direction === "rtl" ? "نام مورد تغییر کرد" : "Item renamed");
         setPendingRenameItemId(null);
         setRenameItemName("");
     }
@@ -512,15 +511,12 @@ export default function Workspace({
         setSelectedDestinationFolderId(
             itemToMove?.parentFolderId ?? MOVE_OUTSIDE_FOLDER_DESTINATION_ID
         );
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
     }
 
     function handleCancelMoveWorkspaceItem() {
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
+        setIsBulkMovePending(false);
     }
 
     function handleSaveMoveWorkspaceItem() {
@@ -537,13 +533,20 @@ export default function Workspace({
                 ? null
                 : selectedDestinationFolderId;
 
-        onMoveItem(pendingMoveWorkspaceItem.id, destinationFolderId);
-        showUndoToast(pendingMoveWorkspaceItem, t("itemMoved"));
-        setSelectedItemId(null);
+        if (isBulkMovePending) {
+            // One Undo restores the original folder of every moved item.
+            const itemsToMove = [...selectedWorkspaceItems];
+            itemsToMove.forEach((item) => onMoveItem(item.id, destinationFolderId));
+            showBulkUndoToast(itemsToMove, t("itemMoved"));
+            setMultiSelectedItemIds([]);
+        } else {
+            onMoveItem(pendingMoveWorkspaceItem.id, destinationFolderId);
+            showUndoToast(pendingMoveWorkspaceItem, t("itemMoved"));
+        }
+
         setPendingMoveItemId(null);
         setSelectedDestinationFolderId(null);
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
+        setIsBulkMovePending(false);
     }
 
     function handleRestoreArchivedWorkspaceItem(itemId: string) {
@@ -562,7 +565,6 @@ export default function Workspace({
         });
 
         showUndoToast(archivedItem, t("itemRestoredToWorkspace"));
-        setSelectedItemId(null);
     }
 
     function handleMoveArchivedWorkspaceItemToTrash(itemId: string) {
@@ -576,7 +578,6 @@ export default function Workspace({
 
         onMoveItemToTrash(archivedItem.id);
         showUndoToast(archivedItem, t("itemMovedToTrash"));
-        setSelectedItemId(null);
     }
 
     function handleRestoreTrashedWorkspaceItem(itemId: string) {
@@ -595,7 +596,6 @@ export default function Workspace({
         });
 
         showUndoToast(trashedItem, t("itemRestoredFromTrash"));
-        setSelectedItemId(null);
     }
 
     function handleRequestPermanentDeleteWorkspaceItem(itemId: string) {
@@ -604,56 +604,101 @@ export default function Workspace({
 
     function handleCancelPermanentDeleteWorkspaceItem() {
         setPendingPermanentDeleteItemId(null);
+        setIsBulkPermanentDeletePending(false);
     }
 
     function handleConfirmPermanentDeleteWorkspaceItem() {
+        if (isBulkPermanentDeletePending) {
+            const itemsToDelete = [...selectedWorkspaceItems];
+            itemsToDelete.forEach((item) => onDeleteItem(item.id));
+            if (itemsToDelete.length > 0) onShowToast({ type: "success", message: direction === "rtl" ? "موارد انتخاب‌شده برای همیشه حذف شدند" : "Selected items permanently deleted" });
+            setMultiSelectedItemIds([]);
+            setIsBulkPermanentDeletePending(false);
+            return;
+        }
+
         if (!pendingPermanentDeleteWorkspaceItem) {
             return;
         }
 
         onDeleteItem(pendingPermanentDeleteWorkspaceItem.id);
-        setSelectedItemId(null);
+        // Permanent deletion is irreversible: intentionally omit Undo.
+        onShowToast({ type: "success", message: direction === "rtl" ? "مورد برای همیشه حذف شد" : "Item permanently deleted" });
         setPendingPermanentDeleteItemId(null);
     }
 
     function handleCancelDeleteWorkspaceItem() {
         setPendingDeleteItemId(null);
+        setIsBulkDeletePending(false);
     }
 
+    /**
+     * Publishes a reversible workspace action through the shared notification stack.
+     *
+     * Each callback captures the item's state before the operation. This allows
+     * multiple Undo notifications to remain independent of one another.
+     * AppLayout restores the captured status, parent folder, and metadata.
+     */
     function showUndoToast(item: WorkspaceItem, message: string) {
-        if (undoToastTimerRef.current) {
-            clearTimeout(undoToastTimerRef.current);
-        }
+        const originalItem = { ...item };
 
-        setUndoToast({
-            item,
+        console.log("[EDMS Undo] Publishing toast:", {
+            itemId: originalItem.id,
             message,
         });
 
-        undoToastTimerRef.current = setTimeout(() => {
-            setUndoToast(null);
-            undoToastTimerRef.current = null;
-        }, 5000);
+        onShowToast({
+            type: "success",
+            message,
+            duration: 5000,
+            actionLabel: t("undo"),
+            onAction: () => onRestoreItem(originalItem),
+        });
     }
 
-    function handleUndoWorkspaceAction() {
-        if (!undoToast) {
-            return;
-        }
+    /**
+     * Publishes one Undo notification for a bulk workspace operation.
+     *
+     * Captures each selected item's state before the operation so Undo can restore
+     * all affected items, including their original status, folder, and metadata.
+     * Each notification retains its own snapshot independently.
+     */
+    function showBulkUndoToast(items: WorkspaceItem[], message: string) {
+        if (items.length === 0) return;
 
-        if (undoToastTimerRef.current) {
-            clearTimeout(undoToastTimerRef.current);
-            undoToastTimerRef.current = null;
-        }
+        const originalItems = items.map((item) => ({ ...item }));
 
-        onRestoreItem(undoToast.item);
-        setUndoToast(null);
+        onShowToast({
+            type: "success",
+            message,
+            duration: 5000,
+            actionLabel: t("undo"),
+            onAction: () => {
+                originalItems.forEach((item) => onRestoreItem(item));
+            },
+        });
     }
 
+    /**
+     * Archives selected workspace items or a single pending item.
+     *
+     * Bulk archive publishes one Undo notification containing snapshots of all
+     * selected items. Single-item archive retains its existing Undo behavior.
+     */
     function handleArchivePendingWorkspaceItem() {
-        if (!pendingDeleteWorkspaceItem) {
+        if (isBulkDeletePending) {
+            const itemsToArchive = [...selectedWorkspaceItems];
+
+            itemsToArchive.forEach((item) => onArchiveItem(item.id));
+
+            showBulkUndoToast(itemsToArchive, t("itemArchived"));
+
+            setMultiSelectedItemIds([]);
+            setIsBulkDeletePending(false);
             return;
         }
+
+        if (!pendingDeleteWorkspaceItem) return;
 
         onArchiveItem(pendingDeleteWorkspaceItem.id);
         showUndoToast(pendingDeleteWorkspaceItem, t("itemArchived"));
@@ -661,13 +706,26 @@ export default function Workspace({
     }
 
     function handleMovePendingWorkspaceItemToTrash() {
+        if (isBulkDeletePending) {
+            // Capture the selected items before changing their status.
+            const itemsToTrash = [...selectedWorkspaceItems];
+
+            itemsToTrash.forEach((item) => onMoveItemToTrash(item.id));
+
+            // One notification restores the entire selection.
+            showBulkUndoToast(itemsToTrash, t("itemMovedToTrash"));
+
+            setMultiSelectedItemIds([]);
+            setIsBulkDeletePending(false);
+            return;
+        }
+
         if (!pendingDeleteWorkspaceItem) {
             return;
         }
 
         onMoveItemToTrash(pendingDeleteWorkspaceItem.id);
         showUndoToast(pendingDeleteWorkspaceItem, t("itemMovedToTrash"));
-        setSelectedItemId(null);
         setPendingDeleteItemId(null);
     }
 
@@ -702,6 +760,75 @@ export default function Workspace({
             Number(Boolean(secondItem.isPinned)) - Number(Boolean(firstItem.isPinned))
     );
 
+    const selectedWorkspaceItems = visibleWorkspaceItems.filter((item) =>
+        multiSelectedItemIds.includes(item.id)
+    );
+
+    const selectedWorkspaceItemCount = selectedWorkspaceItems.length;
+
+    const allSelectedWorkspaceItemsPinned =
+        selectedWorkspaceItemCount > 0 &&
+        selectedWorkspaceItems.every((item) => Boolean(item.isPinned));
+
+    function handleBulkTogglePinnedWorkspaceItems() {
+        const shouldPin = !allSelectedWorkspaceItemsPinned;
+        const itemsToChange = selectedWorkspaceItems.filter((item) => Boolean(item.isPinned) !== shouldPin);
+        if (itemsToChange.length === 0) return;
+
+        itemsToChange.forEach((item) => onTogglePinnedItem(item.id));
+        // Only changed items are captured; already-pinned items remain untouched by Undo.
+        showBulkUndoToast(itemsToChange, shouldPin ? t("pinItem") : t("unpinItem"));
+    }
+
+    function handleRequestBulkDeleteWorkspaceItems() {
+        if (selectedWorkspaceItemCount === 0) {
+            return;
+        }
+
+        setIsBulkDeletePending(true);
+    }
+
+    function handleRequestBulkMoveWorkspaceItems() {
+        if (selectedWorkspaceItemCount === 0) {
+            return;
+        }
+
+        const firstSelectedItem = selectedWorkspaceItems[0];
+
+        setPendingMoveItemId(firstSelectedItem.id);
+        setSelectedDestinationFolderId(
+            firstSelectedItem.parentFolderId ?? MOVE_OUTSIDE_FOLDER_DESTINATION_ID
+        );
+        setIsBulkMovePending(true);
+    }
+
+    function handleBulkRestoreWorkspaceItems() {
+        const itemsToRestore = [...selectedWorkspaceItems];
+        if (itemsToRestore.length === 0) return;
+
+        const restoredAt = new Date().toISOString();
+        itemsToRestore.forEach((item) => onRestoreItem({ ...item, status: "active", updatedAt: restoredAt }));
+        showBulkUndoToast(itemsToRestore, pageType === "archive" ? t("itemRestoredToWorkspace") : t("itemRestoredFromTrash"));
+        setMultiSelectedItemIds([]);
+    }
+
+    function handleBulkMoveWorkspaceItemsToTrash() {
+        const itemsToTrash = [...selectedWorkspaceItems];
+        if (itemsToTrash.length === 0) return;
+
+        itemsToTrash.forEach((item) => onMoveItemToTrash(item.id));
+        showBulkUndoToast(itemsToTrash, t("itemMovedToTrash"));
+        setMultiSelectedItemIds([]);
+    }
+
+    function handleRequestBulkPermanentDeleteWorkspaceItems() {
+        if (selectedWorkspaceItemCount === 0) {
+            return;
+        }
+
+        setIsBulkPermanentDeletePending(true);
+    }
+
     const totalWorkspaceItems = visibleWorkspaceItems.length;
 
     const totalWorkspacePages = Math.max(
@@ -727,7 +854,39 @@ export default function Workspace({
         paginationEndIndex
     );
 
-    const paginationWindowSize = 5;
+    const allPageWorkspaceItemsSelected =
+        paginatedWorkspaceItems.length > 0 &&
+        paginatedWorkspaceItems.every((item) =>
+            multiSelectedItemIds.includes(item.id)
+        );
+
+    function handleSelectAllPageWorkspaceItems() {
+        setMultiSelectedItemIds((currentIds) => {
+            const nextIds = new Set(currentIds);
+            paginatedWorkspaceItems.forEach((item) => nextIds.add(item.id));
+            return Array.from(nextIds);
+        });
+        setPreviewItemId(null);
+    }
+
+    function handleDeselectAllPageWorkspaceItems() {
+        const pageItemIds = new Set(paginatedWorkspaceItems.map((item) => item.id));
+        setMultiSelectedItemIds((currentIds) => currentIds.filter((itemId) => !pageItemIds.has(itemId)));
+    }
+
+    function handleInvertPageWorkspaceSelection() {
+        setMultiSelectedItemIds((currentIds) => {
+            const nextIds = new Set(currentIds);
+            paginatedWorkspaceItems.forEach((item) => {
+                if (nextIds.has(item.id)) nextIds.delete(item.id);
+                else nextIds.add(item.id);
+            });
+            return Array.from(nextIds);
+        });
+        setPreviewItemId(null);
+    }
+
+    const paginationWindowSize = isPhoneWorkspace ? 3 : 5;
 
     const paginationWindowStart = Math.max(
         1,
@@ -757,24 +916,27 @@ export default function Workspace({
         itemsPerPage,
     ]);
 
-    const selectedWorkspaceItem = visibleWorkspaceItems.find(
-        (item) => item.id === selectedItemId
-    );
+    useEffect(() => {
+        setMultiSelectedItemIds([]);
+        setIsBulkDeletePending(false);
+        setIsBulkMovePending(false);
+        setIsBulkPermanentDeletePending(false);
+    }, [
+        activeWorkspaceCategory,
+        currentFolderId,
+        normalizedSearchQuery,
+        pageType,
+    ]);
 
-    const detailsPinAction =
-        selectedWorkspaceItem
-            ? {
-                label: selectedWorkspaceItem.isPinned
-                    ? t("unpinItem")
-                    : t("pinItem"),
-                icon: "pin",
-                accessibilityLabel: selectedWorkspaceItem.isPinned
-                    ? t("unpinItem")
-                    : t("pinItem"),
-                isActive: Boolean(selectedWorkspaceItem.isPinned),
-                onPress: onTogglePinnedItem,
-            }
-            : undefined;
+    useEffect(() => {
+        setMultiSelectedItemIds((currentIds) =>
+            currentIds.filter((itemId) =>
+                visibleWorkspaceItems.some((item) => item.id === itemId)
+            )
+        );
+    }, [workspaceItems, pageType, currentFolderId, activeWorkspaceCategory, normalizedSearchQuery]);
+
+
 
     const pendingDeleteWorkspaceItem = visibleWorkspaceItems.find(
         (item) => item.id === pendingDeleteItemId
@@ -801,19 +963,7 @@ export default function Workspace({
 
     const currentMoveParentFolderId = pendingMoveWorkspaceItem?.parentFolderId ?? null;
 
-    const normalizedMoveSearchQuery = moveSearchQuery.trim().toLowerCase();
-
-    const isOutsideFolderDestinationVisible =
-        !normalizedMoveSearchQuery ||
-        t("outsideFolder").toLowerCase().includes(
-            normalizedMoveSearchQuery
-        );
-
-    const filteredDestinationFolders = normalizedMoveSearchQuery
-        ? destinationFolders.filter((folder) =>
-            folder.name.toLowerCase().includes(normalizedMoveSearchQuery)
-        )
-        : destinationFolders;
+    const isOutsideFolderDestinationVisible = true;
 
     function getDestinationFolderId(destinationId: string) {
         return destinationId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID
@@ -829,37 +979,8 @@ export default function Workspace({
         selectedDestinationFolderId !== null &&
         !isMoveDestinationDisabled(selectedDestinationFolderId);
 
-    function getSelectedDestinationLabel() {
-        if (selectedDestinationFolderId === MOVE_OUTSIDE_FOLDER_DESTINATION_ID) {
-            return t("outsideFolder");
-        }
-
-        const selectedFolder = destinationFolders.find(
-            (folder) => folder.id === selectedDestinationFolderId
-        );
-
-        return selectedFolder?.name ?? t("selectDestination");
-    }
-
-    function handleFocusMoveDestination() {
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(true);
-    }
-
-    function handleChangeMoveDestination(query: string) {
-        setMoveSearchQuery(query);
-        setSelectedDestinationFolderId(null);
-        setIsMoveDestinationComboOpen(true);
-    }
-
-    function handleToggleMoveDestination() {
-        setIsMoveDestinationComboOpen((currentValue) => !currentValue);
-    }
-
     function handleSelectMoveDestination(destinationId: string) {
         setSelectedDestinationFolderId(destinationId);
-        setMoveSearchQuery("");
-        setIsMoveDestinationComboOpen(false);
     }
 
     function handleScrollWorkspaceToTop() {
@@ -868,9 +989,6 @@ export default function Workspace({
             behavior: "smooth",
         });
     }
-
-    const isLoadingWorkspaceItems = false;
-    const workspaceErrorMessage: string | null = null;
 
     const hasWorkspaceItems = visibleWorkspaceItems.length > 0;
     const hasWorkspaceItemsError = workspaceErrorMessage !== null;
@@ -891,64 +1009,6 @@ export default function Workspace({
     const shouldShowEmptyStateActions =
         pageType === "workspace" && !normalizedSearchQuery;
 
-    const detailsPrimaryAction =
-        pageType === "archive"
-            ? {
-                label: t("restore"),
-                icon: "↩",
-                accessibilityLabel: t("restoreFromArchive"),
-                onPress: handleRestoreArchivedWorkspaceItem,
-            }
-            : pageType === "trash"
-                ? {
-                    label: t("restore"),
-                    icon: "↩",
-                    accessibilityLabel: t("restoreFromTrash"),
-                    onPress: handleRestoreTrashedWorkspaceItem,
-                }
-                : {
-                    label: t("deleteOrArchive"),
-                    icon: "⚠",
-                    accessibilityLabel: t("deleteOrArchiveItem"),
-                    tone: "warning" as const,
-                    onPress: handleRequestDeleteWorkspaceItem,
-                };
-
-    const detailsSecondaryAction =
-        pageType === "archive"
-            ? {
-                label: t("moveToTrash"),
-                icon: "🗑",
-                accessibilityLabel: t("moveArchivedToTrash"),
-                tone: "danger" as const,
-                onPress: handleMoveArchivedWorkspaceItemToTrash,
-            }
-            : pageType === "workspace"
-                ? {
-                    label: t("renameItem"),
-                    icon: "✎",
-                    accessibilityLabel: t("renameItem"),
-                    onPress: handleRequestRenameWorkspaceItem,
-                }
-                : pageType === "trash"
-                    ? {
-                        label: t("permanentlyDeleteItem"),
-                        icon: "🗑",
-                        accessibilityLabel: t("permanentlyDeleteItem"),
-                        tone: "danger" as const,
-                        onPress: handleRequestPermanentDeleteWorkspaceItem,
-                    }
-                    : undefined;
-
-    const detailsTertiaryAction =
-        pageType === "workspace"
-            ? {
-                label: t("moveItem"),
-                icon: "⇄",
-                accessibilityLabel: t("moveItem"),
-                onPress: handleRequestMoveWorkspaceItem,
-            }
-            : undefined;
 
     /**
      * ============================================================================
@@ -993,6 +1053,7 @@ export default function Workspace({
             ]}
         >
             <View
+                className="edms-workspace-content"
                 style={[
                     styles.content,
                     {
@@ -1085,8 +1146,8 @@ export default function Workspace({
                                             key={category.id}
                                             type="button"
                                             aria-pressed={isActiveCategory}
+                                            disabled={isLoadingWorkspaceItems || hasWorkspaceItemsError}
                                             onClick={() => {
-                                                setSelectedItemId(null);
                                                 setPreviewItemId(null);
                                                 setActiveWorkspaceCategory(
                                                     category.id
@@ -1192,7 +1253,8 @@ export default function Workspace({
                                 ? "wrap"
                                 : "nowrap",
 
-                            gap: 12,
+                            minWidth: 0,
+                            gap: isPhoneWorkspace ? 8 : 12,
 
                             paddingBlock: 10,
                             paddingInline: isPhoneWorkspace ? 0 : 2,
@@ -1207,6 +1269,7 @@ export default function Workspace({
                                 alignItems: "center",
                                 gap: 10,
                                 flexShrink: 0,
+                                ...(isPhoneWorkspace ? { width: "100%", justifyContent: "flex-end" } : {}),
                             }}
                         >
                             <WorkspaceViewControls
@@ -1217,121 +1280,128 @@ export default function Workspace({
 
                         <div
                             style={{
+                                position: "relative",
                                 display: "flex",
                                 alignItems: "center",
-
-                                justifyContent: isPhoneWorkspace
-                                    ? "space-between"
-                                    : "flex-end",
-
-                                flexWrap: "wrap",
+                                justifyContent: "center",
+                                flexWrap: isPhoneWorkspace ? "wrap" : "nowrap",
                                 gap: 10,
                                 minWidth: 0,
-                                flex: 1,
+                                width: isPhoneWorkspace ? "100%" : undefined,
+                                flex: isPhoneWorkspace ? "0 0 100%" : 1,
                             }}
                         >
+                            {/* File count + page size */}
                             <div
                                 style={{
-                                    display: "inline-flex",
+                                    display: "flex",
                                     alignItems: "center",
-                                    gap: 6,
-                                    whiteSpace: "nowrap",
-
-                                    fontSize: 12,
-                                    color: colors.text,
-                                    opacity: 0.78,
+                                    gap: 10,
+                                    flexWrap: "wrap",
+                                    ...(isPhoneWorkspace
+                                        ? {
+                                            position: "relative",
+                                            minWidth: 0,
+                                            width: "100%",
+                                            justifyContent: "space-between",
+                                            order: 2,
+                                        }
+                                        : {
+                                            position: "absolute",
+                                            [direction === "rtl" ? "left" : "right"]: 0,
+                                        }),
                                 }}
                             >
-                                <span>
-                                    {totalWorkspaceItems === 0
-                                        ? "0"
-                                        : `${paginationStartIndex + 1}–${paginationEndIndex}`}
-                                </span>
-
-                                <span>/</span>
-
-                                <strong
+                                <div
                                     style={{
-                                        fontWeight: 700,
-                                        opacity: 1,
-                                    }}
-                                >
-                                    {totalWorkspaceItems}
-                                </strong>
-                            </div>
-
-                            <div
-                                style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 7,
-                                    whiteSpace: "nowrap",
-                                }}
-                            >
-                                <span
-                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        whiteSpace: "nowrap",
                                         fontSize: 12,
                                         color: colors.text,
-                                        opacity: 0.72,
+                                        opacity: 0.78,
                                     }}
                                 >
-                                    {direction === "rtl"
-                                        ? "تعداد نمایش"
-                                        : "Items per page"}
-                                </span>
+                                    <span>
+                                        {totalWorkspaceItems === 0
+                                            ? "0"
+                                            : `${paginationStartIndex + 1}–${paginationEndIndex}`}
+                                    </span>
 
-                                <select
-                                    value={itemsPerPage}
-                                    onChange={(event) =>
-                                        setItemsPerPage(
-                                            Number(event.target.value)
-                                        )
-                                    }
-                                    aria-label={
-                                        direction === "rtl"
-                                            ? "تعداد آیتم در هر صفحه"
-                                            : "Items per page"
-                                    }
+                                    <span>/</span>
+
+                                    <strong
+                                        style={{
+                                            fontWeight: 700,
+                                            opacity: 1,
+                                        }}
+                                    >
+                                        {totalWorkspaceItems}
+                                    </strong>
+                                </div>
+
+                                <div
                                     style={{
-                                        height: 34,
-                                        minWidth: 68,
-                                        paddingInline: 10,
-
-                                        border: `1px solid ${colors.border}`,
-                                        borderRadius: 8,
-
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-
-                                        fontSize: 12,
-                                        fontWeight: 600,
-
-                                        cursor: "pointer",
-                                        direction,
-                                        outline: "none",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 7,
+                                        whiteSpace: "nowrap",
                                     }}
                                 >
-                                    {WORKSPACE_PAGE_SIZE_OPTIONS.map(
-                                        (pageSize) => (
-                                            <option
-                                                key={pageSize}
-                                                value={pageSize}
-                                            >
-                                                {pageSize}
-                                            </option>
-                                        )
-                                    )}
-                                </select>
+                                    <span
+                                        style={{
+                                            fontSize: 12,
+                                            color: colors.text,
+                                            opacity: 0.72,
+                                        }}
+                                    >
+                                        {direction === "rtl"
+                                            ? "تعداد نمایش"
+                                            : "Items per page"}
+                                    </span>
+
+                                    <EdmsSelect
+                                        value={itemsPerPage}
+                                        options={WORKSPACE_PAGE_SIZE_OPTIONS.map((pageSize) => ({
+                                            value: pageSize,
+                                            label: String(pageSize),
+                                        }))}
+                                        onChange={(value) => {
+                                            setItemsPerPage(Number(value));
+                                            setCurrentPage(1);
+                                        }}
+                                        ariaLabel={
+                                            direction === "rtl"
+                                                ? "تعداد آیتم در هر صفحه"
+                                                : "Items per page"
+                                        }
+                                        width={82}
+                                        minWidth={82}
+                                        height={36}
+                                        maxMenuHeight={180}
+                                    />
+                                </div>
                             </div>
 
-                            {totalWorkspacePages > 1 && (
+                            {/* Pagination */}
+                            {!isLoadingWorkspaceItems && !hasWorkspaceItemsError && totalWorkspacePages > 1 && (
                                 <div
                                     style={{
                                         display: "flex",
                                         alignItems: "center",
+                                        justifyContent: "center",
                                         gap: 4,
                                         direction,
                                         flexShrink: 0,
+                                        maxWidth: "100%",
+                                        ...(isPhoneWorkspace
+                                            ? {
+                                                width: "100%",
+                                                overflowX: "auto",
+                                                order: 1,
+                                            }
+                                            : {}),
                                     }}
                                 >
                                     <button
@@ -1344,26 +1414,20 @@ export default function Workspace({
                                         disabled={safeCurrentPage <= 1}
                                         onClick={() => setCurrentPage(1)}
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
                                                 safeCurrentPage <= 1
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
                                                 safeCurrentPage <= 1
                                                     ? 0.35
@@ -1387,26 +1451,20 @@ export default function Workspace({
                                             )
                                         }
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
                                                 safeCurrentPage <= 1
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
                                                 safeCurrentPage <= 1
                                                     ? 0.35
@@ -1416,77 +1474,58 @@ export default function Workspace({
                                         ‹
                                     </button>
 
-                                    {paginationPageNumbers.map(
-                                        (pageNumber) => {
-                                            const isActivePage =
-                                                pageNumber ===
-                                                safeCurrentPage;
+                                    {paginationPageNumbers.map((pageNumber) => {
+                                        const isActivePage =
+                                            pageNumber === safeCurrentPage;
 
-                                            return (
-                                                <button
-                                                    key={pageNumber}
-                                                    type="button"
-                                                    aria-current={
+                                        return (
+                                            <button
+                                                key={pageNumber}
+                                                type="button"
+                                                aria-current={
+                                                    isActivePage
+                                                        ? "page"
+                                                        : undefined
+                                                }
+                                                onClick={() =>
+                                                    setCurrentPage(pageNumber)
+                                                }
+                                                style={{
+                                                    minWidth: isPhoneWorkspace ? 28 : 32,
+                                                    height: 32,
+                                                    paddingInline: 8,
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    border: `1px solid ${isActivePage
+                                                        ? colors.primary
+                                                        : colors.border
+                                                        }`,
+                                                    borderRadius: 8,
+                                                    backgroundColor:
                                                         isActivePage
-                                                            ? "page"
-                                                            : undefined
-                                                    }
-                                                    onClick={() =>
-                                                        setCurrentPage(
-                                                            pageNumber
-                                                        )
-                                                    }
-                                                    style={{
-                                                        minWidth: 32,
-                                                        height: 32,
-                                                        paddingInline: 8,
-
-                                                        display:
-                                                            "inline-flex",
-
-                                                        alignItems:
-                                                            "center",
-
-                                                        justifyContent:
-                                                            "center",
-
-                                                        border: `1px solid ${isActivePage
                                                             ? colors.primary
-                                                            : colors.border
-                                                            }`,
-
-                                                        borderRadius: 8,
-
-                                                        backgroundColor:
-                                                            isActivePage
-                                                                ? colors.primary
-                                                                : colors.surface,
-
-                                                        color:
-                                                            isActivePage
-                                                                ? colors.surface
-                                                                : colors.text,
-
-                                                        fontSize: 12,
-
-                                                        fontWeight:
-                                                            isActivePage
-                                                                ? 700
-                                                                : 500,
-
-                                                        cursor: "pointer",
-
-                                                        boxShadow:
-                                                            isActivePage
-                                                                ? `0 0 0 2px ${colors.primary}22`
-                                                                : "none",
-                                                    }}
-                                                >
-                                                    {pageNumber}
-                                                </button>
-                                            );
-                                        }
-                                    )}
+                                                            : colors.surface,
+                                                    color:
+                                                        isActivePage
+                                                            ? colors.surface
+                                                            : colors.text,
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        isActivePage
+                                                            ? 700
+                                                            : 500,
+                                                    cursor: "pointer",
+                                                    boxShadow:
+                                                        isActivePage
+                                                            ? `0 0 0 2px ${colors.primary}22`
+                                                            : "none",
+                                                }}
+                                            >
+                                                {pageNumber}
+                                            </button>
+                                        );
+                                    })}
 
                                     <button
                                         type="button"
@@ -1496,8 +1535,7 @@ export default function Workspace({
                                                 : "Next page"
                                         }
                                         disabled={
-                                            safeCurrentPage >=
-                                            totalWorkspacePages
+                                            safeCurrentPage >= totalWorkspacePages
                                         }
                                         onClick={() =>
                                             setCurrentPage((page) =>
@@ -1508,30 +1546,22 @@ export default function Workspace({
                                             )
                                         }
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? 0.35
                                                     : 0.9,
                                         }}
@@ -1547,39 +1577,28 @@ export default function Workspace({
                                                 : "Last page"
                                         }
                                         disabled={
-                                            safeCurrentPage >=
-                                            totalWorkspacePages
+                                            safeCurrentPage >= totalWorkspacePages
                                         }
                                         onClick={() =>
-                                            setCurrentPage(
-                                                totalWorkspacePages
-                                            )
+                                            setCurrentPage(totalWorkspacePages)
                                         }
                                         style={{
-                                            width: 32,
+                                            width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
-
                                             display: "inline-flex",
                                             alignItems: "center",
                                             justifyContent: "center",
-
                                             border: `1px solid ${colors.border}`,
                                             borderRadius: 8,
-
                                             backgroundColor: colors.surface,
                                             color: colors.text,
-
                                             fontSize: 16,
-
                                             cursor:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? "default"
                                                     : "pointer",
-
                                             opacity:
-                                                safeCurrentPage >=
-                                                    totalWorkspacePages
+                                                safeCurrentPage >= totalWorkspacePages
                                                     ? 0.35
                                                     : 0.9,
                                         }}
@@ -1591,6 +1610,346 @@ export default function Workspace({
                         </div>
                     </div>
                 </WorkspaceHeader>
+
+                {!isLoadingWorkspaceItems && !hasWorkspaceItemsError && selectedWorkspaceItemCount > 0 && (
+                    <View
+                        style={[
+                            styles.selectionToolbar,
+                            isPhoneWorkspace && styles.phoneSelectionToolbar,
+                            {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.primary,
+                            },
+                        ]}
+                    >
+                        <View style={[styles.selectionToolbarSummary, isPhoneWorkspace && styles.phoneSelectionToolbarRow]}>
+                            <View
+                                style={[
+                                    styles.selectionCountBadge,
+                                    {
+                                        backgroundColor: colors.primary,
+                                    },
+                                ]}
+                            >
+                                <Text style={styles.selectionCountBadgeText}>
+                                    {selectedWorkspaceItemCount}
+                                </Text>
+                            </View>
+
+                            <Text
+                                style={[
+                                    styles.selectionToolbarText,
+                                    {
+                                        color: colors.text,
+                                        textAlign,
+                                    },
+                                ]}
+                            >
+                                {direction === "rtl"
+                                    ? `${selectedWorkspaceItemCount} مورد انتخاب شده`
+                                    : `${selectedWorkspaceItemCount} selected`}
+                            </Text>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={
+                                    allPageWorkspaceItemsSelected
+                                        ? t("deselectItems")
+                                        : t("selectItems")
+                                }
+                                onPress={
+                                    allPageWorkspaceItemsSelected
+                                        ? handleDeselectAllPageWorkspaceItems
+                                        : handleSelectAllPageWorkspaceItems
+                                }
+                                style={({ pressed }) => [
+                                    styles.selectionTextButton,
+                                    { borderColor: colors.border, backgroundColor: colors.background },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather name={allPageWorkspaceItemsSelected ? "x-square" : "check-square"} size={14} color={colors.primary} />
+                                <Text style={[styles.selectionTextButtonLabel, { color: colors.primary }]}>
+                                    {allPageWorkspaceItemsSelected
+                                        ? t("deselectItems")
+                                        : t("selectItems")}
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={direction === "rtl" ? "معکوس کردن انتخاب این صفحه" : "Invert selection on this page"}
+                                onPress={handleInvertPageWorkspaceSelection}
+                                style={({ pressed }) => [
+                                    styles.selectionTextButton,
+                                    { borderColor: colors.border, backgroundColor: colors.background },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather name="repeat" size={14} color={colors.primary} />
+                                <Text style={[styles.selectionTextButtonLabel, { color: colors.primary }]}>
+                                    {direction === "rtl" ? "معکوس" : "Invert"}
+                                </Text>
+                            </Pressable>
+                        </View>
+
+                        <View style={[styles.selectionToolbarActions, isPhoneWorkspace && styles.phoneSelectionToolbarRow]}>
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={
+                                    allSelectedWorkspaceItemsPinned
+                                        ? t("unpinItem")
+                                        : t("pinItem")
+                                }
+                                onPress={handleBulkTogglePinnedWorkspaceItems}
+                                style={({ pressed }) => [
+                                    styles.selectionActionButton,
+                                    {
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.background,
+                                    },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather
+                                    name="pin"
+                                    size={16}
+                                    color={colors.primary}
+                                />
+                                <Text
+                                    style={[
+                                        styles.selectionActionLabel,
+                                        {
+                                            color: colors.text,
+                                        },
+                                    ]}
+                                >
+                                    {allSelectedWorkspaceItemsPinned
+                                        ? t("unpinItem")
+                                        : t("pinItem")}
+                                </Text>
+                            </Pressable>
+
+                            {pageType === "workspace" && (
+                                <>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("moveItem")}
+                                        onPress={handleRequestBulkMoveWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="folder"
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {t("moveItem")}
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("deleteOrArchiveItem")}
+                                        onPress={handleRequestBulkDeleteWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: "#D97706",
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="archive"
+                                            size={16}
+                                            color="#D97706"
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: "#D97706",
+                                                },
+                                            ]}
+                                        >
+                                            {t("deleteOrArchive")}
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            )}
+
+                            {pageType === "archive" && (
+                                <>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("restoreFromArchive")}
+                                        onPress={handleBulkRestoreWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="rotate-ccw"
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {t("restore")}
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("moveArchivedToTrash")}
+                                        onPress={handleBulkMoveWorkspaceItemsToTrash}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: "#DC2626",
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="trash-2"
+                                            size={16}
+                                            color="#DC2626"
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: "#DC2626",
+                                                },
+                                            ]}
+                                        >
+                                            {t("moveToTrash")}
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            )}
+
+                            {pageType === "trash" && (
+                                <>
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("restoreFromTrash")}
+                                        onPress={handleBulkRestoreWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: colors.border,
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="rotate-ccw"
+                                            size={16}
+                                            color={colors.primary}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                        >
+                                            {t("restore")}
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel={t("permanentlyDeleteItem")}
+                                        onPress={handleRequestBulkPermanentDeleteWorkspaceItems}
+                                        style={({ pressed }) => [
+                                            styles.selectionActionButton,
+                                            {
+                                                borderColor: "#DC2626",
+                                                backgroundColor: colors.background,
+                                            },
+                                            pressed && styles.pressedSelectionAction,
+                                        ]}
+                                    >
+                                        <Feather
+                                            name="trash-2"
+                                            size={16}
+                                            color="#DC2626"
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.selectionActionLabel,
+                                                {
+                                                    color: "#DC2626",
+                                                },
+                                            ]}
+                                        >
+                                            {t("permanentlyDeleteItem")}
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            )}
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={
+                                    direction === "rtl"
+                                        ? "لغو انتخاب"
+                                        : "Clear selection"
+                                }
+                                onPress={handleClearWorkspaceSelection}
+                                style={({ pressed }) => [
+                                    styles.selectionIconButton,
+                                    {
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.background,
+                                    },
+                                    pressed && styles.pressedSelectionAction,
+                                ]}
+                            >
+                                <Feather
+                                    name="x"
+                                    size={17}
+                                    color={colors.text}
+                                />
+                            </Pressable>
+                        </View>
+                    </View>
+                )}
+
+                {shouldShowLoadingState && <PageLoadingIndicator label={direction === "rtl" ? "در حال بارگذاری اسناد..." : "Loading documents..."} />}
 
                 <ScrollView
                     style={styles.workspaceBody}
@@ -1631,12 +1990,6 @@ export default function Workspace({
                                                 workspaceGridColumnCount
                                             );
 
-                                        const selectedRowItem =
-                                            rowItems.find(
-                                                (item) =>
-                                                    selectedItemId ===
-                                                    item.id
-                                            ) ?? null;
 
                                         const previewItem =
                                             rowItems.find(
@@ -1650,34 +2003,6 @@ export default function Workspace({
                                             <Fragment
                                                 key={`workspace-row-${rowIndex}`}
                                             >
-                                                {selectedRowItem && (
-                                                    <View
-                                                        style={
-                                                            styles.workspaceDetailsRow
-                                                        }
-                                                    >
-                                                        <WorkspaceItemDetailsPanel
-                                                            item={
-                                                                selectedRowItem
-                                                            }
-                                                            primaryAction={
-                                                                detailsPrimaryAction
-                                                            }
-                                                            secondaryAction={
-                                                                detailsSecondaryAction
-                                                            }
-                                                            tertiaryAction={
-                                                                detailsTertiaryAction
-                                                            }
-                                                            pinAction={
-                                                                detailsPinAction
-                                                            }
-                                                            onClose={
-                                                                handleCloseWorkspaceItemDetails
-                                                            }
-                                                        />
-                                                    </View>
-                                                )}
 
                                                 <View
                                                     style={[
@@ -1710,15 +2035,16 @@ export default function Workspace({
                                                                         isCompactWorkspace
                                                                     }
                                                                     isSelected={
-                                                                        selectedItemId ===
-                                                                        item.id ||
                                                                         isPreviewOpen
+                                                                    }
+                                                                    isMultiSelected={
+                                                                        multiSelectedItemIds.includes(item.id)
                                                                     }
                                                                     onPress={
                                                                         handlePressWorkspaceItem
                                                                     }
-                                                                    onOpenActions={
-                                                                        handleOpenWorkspaceItemActions
+                                                                    onToggleSelection={
+                                                                        handleToggleWorkspaceItemSelection
                                                                     }
                                                                 />
                                                             );
@@ -1757,8 +2083,6 @@ export default function Workspace({
                                 )
                                 : paginatedWorkspaceItems.map(
                                     (item) => {
-                                        const isSelected =
-                                            selectedItemId === item.id;
 
                                         const isPreviewOpen =
                                             previewItemId === item.id &&
@@ -1766,32 +2090,6 @@ export default function Workspace({
 
                                         return (
                                             <Fragment key={item.id}>
-                                                {isSelected && (
-                                                    <View
-                                                        style={
-                                                            styles.workspaceDetailsRow
-                                                        }
-                                                    >
-                                                        <WorkspaceItemDetailsPanel
-                                                            item={item}
-                                                            primaryAction={
-                                                                detailsPrimaryAction
-                                                            }
-                                                            secondaryAction={
-                                                                detailsSecondaryAction
-                                                            }
-                                                            tertiaryAction={
-                                                                detailsTertiaryAction
-                                                            }
-                                                            pinAction={
-                                                                detailsPinAction
-                                                            }
-                                                            onClose={
-                                                                handleCloseWorkspaceItemDetails
-                                                            }
-                                                        />
-                                                    </View>
-                                                )}
 
                                                 <WorkspaceItemCard
                                                     item={item}
@@ -1800,14 +2098,16 @@ export default function Workspace({
                                                         isCompactWorkspace
                                                     }
                                                     isSelected={
-                                                        isSelected ||
                                                         isPreviewOpen
+                                                    }
+                                                    isMultiSelected={
+                                                        multiSelectedItemIds.includes(item.id)
                                                     }
                                                     onPress={
                                                         handlePressWorkspaceItem
                                                     }
-                                                    onOpenActions={
-                                                        handleOpenWorkspaceItemActions
+                                                    onToggleSelection={
+                                                        handleToggleWorkspaceItemSelection
                                                     }
                                                 />
 
@@ -1842,11 +2142,37 @@ export default function Workspace({
                     )}
 
                     {shouldShowLoadingState && (
-                        <WorkspaceEmptyState
-                            icon="..."
-                            title="در حال بارگذاری اسناد"
-                            description="لطفاً چند لحظه صبر کنید."
-                        />
+                        <View
+                            accessibilityRole="progressbar"
+                            accessibilityLabel={direction === "rtl" ? "در حال بارگذاری اسناد" : "Loading documents"}
+                            style={viewMode === "grid" ? styles.workspaceGrid : styles.workspaceList}
+                        >
+                            {Array.from({ length: viewMode === "grid" ? workspaceGridColumnCount * 2 : 6 }, (_, index) => (
+                                <View
+                                    key={`workspace-skeleton-${index}`}
+                                    aria-hidden={true}
+                                    style={[
+                                        styles.skeletonCard,
+                                        viewMode === "grid" ? {
+                                            width: `calc((100% - ${(workspaceGridColumnCount - 1) * (isPhoneWorkspace ? spacing.sm : spacing.lg)}px) / ${workspaceGridColumnCount})`,
+                                            minHeight: isPhoneWorkspace ? 144 : 176,
+                                            flexDirection: "column",
+                                        } : styles.skeletonListCard,
+                                        { backgroundColor: colors.surface, borderColor: colors.border },
+                                    ]}
+                                >
+                                    <View style={[
+                                        styles.skeletonBlock,
+                                        viewMode === "grid" ? styles.skeletonIcon : styles.skeletonListIcon,
+                                        { backgroundColor: colors.border },
+                                    ]} />
+                                    <View style={styles.skeletonLines}>
+                                        <View style={[styles.skeletonBlock, styles.skeletonTitle, { backgroundColor: colors.border }]} />
+                                        <View style={[styles.skeletonBlock, styles.skeletonSubtitle, { backgroundColor: colors.border }]} />
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
                     )}
 
                     {shouldShowErrorState && (
@@ -1955,7 +2281,7 @@ export default function Workspace({
             <WorkspaceDeleteDialog
                 visible={
                     pageType === "workspace" &&
-                    pendingDeleteItemId !== null
+                    (pendingDeleteItemId !== null || isBulkDeletePending)
                 }
                 onMoveToTrash={
                     handleMovePendingWorkspaceItemToTrash
@@ -1980,13 +2306,8 @@ export default function Workspace({
                     pageType === "workspace" &&
                     pendingMoveItemId !== null
                 }
-                value={
-                    isMoveDestinationComboOpen
-                        ? moveSearchQuery
-                        : getSelectedDestinationLabel()
-                }
-                isOpen={isMoveDestinationComboOpen}
-                destinationFolders={filteredDestinationFolders}
+                selectedDestinationId={selectedDestinationFolderId}
+                destinationFolders={destinationFolders}
                 outsideFolderDestinationId={
                     MOVE_OUTSIDE_FOLDER_DESTINATION_ID
                 }
@@ -1996,14 +2317,6 @@ export default function Workspace({
                 canSave={canSaveMoveWorkspaceItem}
                 isDestinationDisabled={
                     isMoveDestinationDisabled
-                }
-                onFocus={handleFocusMoveDestination}
-                onChange={handleChangeMoveDestination}
-                onToggle={handleToggleMoveDestination}
-                onSelectOutsideFolder={() =>
-                    handleSelectMoveDestination(
-                        MOVE_OUTSIDE_FOLDER_DESTINATION_ID
-                    )
                 }
                 onSelectDestination={
                     handleSelectMoveDestination
@@ -2015,7 +2328,7 @@ export default function Workspace({
             <WorkspacePermanentDeleteDialog
                 visible={
                     pageType === "trash" &&
-                    pendingPermanentDeleteItemId !== null
+                    (pendingPermanentDeleteItemId !== null || isBulkPermanentDeletePending)
                 }
                 onConfirm={
                     handleConfirmPermanentDeleteWorkspaceItem
@@ -2024,53 +2337,6 @@ export default function Workspace({
                     handleCancelPermanentDeleteWorkspaceItem
                 }
             />
-
-            {undoToast && (
-                <View
-                    style={[
-                        styles.undoToast,
-                        {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.undoToastText,
-                            {
-                                color: colors.text,
-                                textAlign,
-                            },
-                        ]}
-                    >
-                        {undoToast.message}
-                    </Text>
-
-                    <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={t("undoAction")}
-                        onPress={handleUndoWorkspaceAction}
-                        style={[
-                            styles.undoToastButton,
-                            {
-                                borderColor: colors.primary,
-                            },
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                styles.undoToastButtonText,
-                                {
-                                    color: colors.primary,
-                                },
-                            ]}
-                        >
-                            ↶ {t("undo")}
-                        </Text>
-                    </Pressable>
-                </View>
-            )}
         </View>
     );
 }
@@ -2171,57 +2437,189 @@ const styles = StyleSheet.create({
      * ============================================================================
      */
 
+    /** Placeholder cards use theme colors and follow the current responsive grid/list layout. */
+    skeletonCard: {
+        minWidth: 0,
+        padding: spacing.md,
+        borderWidth: 1,
+        borderRadius: radius.lg,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.md,
+        opacity: 0.72,
+
+    },
+
+    skeletonListCard: {
+        width: "100%",
+        minHeight: 88,
+        flexDirection: "row",
+        justifyContent: "flex-start",
+    },
+
+    skeletonBlock: {
+        borderRadius: radius.md,
+    },
+
+    skeletonIcon: {
+        width: 52,
+        height: 52,
+    },
+
+    skeletonListIcon: {
+        width: 44,
+        height: 44,
+        flexShrink: 0,
+    },
+
+    skeletonLines: {
+        width: "100%",
+        flex: 1,
+        gap: spacing.sm,
+        justifyContent: "center",
+    },
+
+    skeletonTitle: {
+        width: "80%",
+        height: 12,
+    },
+
+    skeletonSubtitle: {
+        width: "55%",
+        height: 9,
+    },
+
     workspacePreviewRow: {
         width: "100%",
         maxWidth: "100%",
         flexBasis: "100%",
     },
 
-    workspaceDetailsRow: {
-        width: "100%",
-        maxWidth: "100%",
-        flexBasis: "100%",
-    },
+    selectionToolbar: {
+        position: "sticky",
+        top: spacing.sm,
+        zIndex: 30,
 
-    undoToast: {
-        position: "absolute",
-        right: spacing.xl,
-        bottom: spacing.xl,
+        width: "100%",
 
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
 
-        maxWidth: 420,
+        gap: spacing.sm,
+        marginBottom: spacing.md,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
 
         borderWidth: 1,
         borderRadius: radius.lg,
 
-        gap: spacing.md,
+        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.14)",
 
-        ...shadows.md,
+        animation:
+            "edms-workspace-panel-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+
+        backdropFilter: "blur(10px)",
     },
 
-    undoToastText: {
-        flex: 1,
-
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "start",
+    phoneSelectionToolbar: {
+        paddingHorizontal: spacing.sm,
+        alignItems: "stretch",
     },
 
-    undoToastButton: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-
-        borderWidth: 1,
-        borderRadius: radius.md,
+    phoneSelectionToolbarRow: {
+        width: "100%",
+        minWidth: 0,
+        justifyContent: "flex-start",
     },
 
-    undoToastButtonText: {
+    selectionToolbarSummary: {
+        minWidth: 0,
+        flexDirection: "row",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: spacing.sm,
+    },
+
+    selectionToolbarActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        flexWrap: "wrap",
+        gap: spacing.xs,
+    },
+
+    selectionCountBadge: {
+        minWidth: 28,
+        height: 28,
+        paddingHorizontal: spacing.xs,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: radius.pill,
+        transition: "transform 150ms ease",
+    },
+
+    selectionCountBadgeText: {
+        color: "#ffffff",
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.bold,
+    },
+
+    selectionToolbarText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
+    },
+
+    selectionTextButton: {
+        minHeight: 32,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+        transition: "transform 140ms ease, opacity 140ms ease",
+    },
+
+    selectionTextButtonLabel: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+    },
+
+    selectionActionButton: {
+        minHeight: 34,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+        transition:
+            "transform 140ms ease, opacity 140ms ease, background-color 140ms ease, border-color 140ms ease",
+    },
+
+    selectionActionLabel: {
+        fontSize: typography.fontSize.xs,
+        fontWeight: typography.fontWeight.semibold,
+        whiteSpace: "nowrap",
+    },
+
+    selectionIconButton: {
+        width: 34,
+        height: 34,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderRadius: radius.pill,
+        transition: "transform 140ms ease, opacity 140ms ease",
+    },
+
+    pressedSelectionAction: {
+        opacity: 0.78,
+        transform: "scale(0.96)",
     },
 
     workspaceGridRow: {

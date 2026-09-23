@@ -61,6 +61,7 @@ export interface WorkspaceItemUpdate {
     fileTime?: string;
     fileTypeLabel?: string;
     categoryId?: string;
+    description?: string;
 }
 
 /**

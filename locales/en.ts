@@ -47,6 +47,8 @@ const en: Record<TranslationKey, string> = {
     showItemActions: "Show options for",
     pinItem: "Pin item",
     unpinItem: "Unpin item",
+    selectItems: "Select Items",
+    deselectItems: "Deselect Items",
     home: "Home",
     workspace: "Workspace",
     workspaceSubtitle: "Manage organizational folders, files, and documents",

@@ -5,6 +5,8 @@ import { radius, semanticColors, shadows, spacing, typography } from "../../them
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 import type { WorkspaceItem } from "./workspace.types";
+import Tooltip from "../common/Tooltip";
+import EdmsSelect from "../common/EdmsSelect";
 
 interface WorkspaceDialogFrameProps {
     visible: boolean;
@@ -160,7 +162,7 @@ export function WorkspaceRenameDialog({
                 value={value}
                 onChangeText={onChange}
                 placeholder={t("newNamePlaceholder")}
-                placeholderTextColor={colors.border}
+                placeholderTextColor={colors.text}
                 style={[
                     styles.renameInput,
                     {
@@ -204,17 +206,12 @@ export function WorkspaceRenameDialog({
 
 interface WorkspaceMoveDialogProps {
     visible: boolean;
-    value: string;
-    isOpen: boolean;
+    selectedDestinationId: string | null;
     destinationFolders: WorkspaceItem[];
     outsideFolderDestinationId: string;
     isOutsideFolderVisible: boolean;
     canSave: boolean;
     isDestinationDisabled: (destinationId: string) => boolean;
-    onFocus: () => void;
-    onChange: (query: string) => void;
-    onToggle: () => void;
-    onSelectOutsideFolder: () => void;
     onSelectDestination: (destinationId: string) => void;
     onSave: () => void;
     onCancel: () => void;
@@ -222,17 +219,12 @@ interface WorkspaceMoveDialogProps {
 
 export function WorkspaceMoveDialog({
     visible,
-    value,
-    isOpen,
+    selectedDestinationId,
     destinationFolders,
     outsideFolderDestinationId,
     isOutsideFolderVisible,
     canSave,
     isDestinationDisabled,
-    onFocus,
-    onChange,
-    onToggle,
-    onSelectOutsideFolder,
     onSelectDestination,
     onSave,
     onCancel,
@@ -240,6 +232,7 @@ export function WorkspaceMoveDialog({
     const { direction, t, theme } = useSettings();
     const colors = theme.colors;
     const { textAlign } = getDirectionalLayout(direction);
+
     return (
         <WorkspaceDialogFrame
             visible={visible}
@@ -247,165 +240,73 @@ export function WorkspaceMoveDialog({
             description={t("moveItemDescription")}
             onClose={onCancel}
         >
-            <View style={styles.destinationCombo}>
-                <TextInput
-                    value={value}
-                    onFocus={onFocus}
-                    onChangeText={onChange}
-                    placeholder={`${t("selectDestination")}...`}
-                    placeholderTextColor={colors.border}
-                    style={[
-                        styles.destinationComboInput,
-                        {
-                            color: colors.text,
-                            borderColor: colors.border,
-                            backgroundColor: colors.background,
-                            textAlign,
-                        },
-                    ]}
-                />
-
-                <Pressable
-                    title={isOpen ? t("closeDestinationList") : t("openDestinationList")}
-                    accessibilityRole="button"
-                    accessibilityLabel={isOpen ? t("closeDestinationList") : t("openDestinationList")}
-                    accessibilityState={{ expanded: isOpen }}
-                    onPress={onToggle}
-                    style={({ pressed }) => [
-                        styles.destinationComboIcon,
-                        pressed && styles.destinationComboIconPressed,
-                    ]}
-                >
-                    <Feather
-                        name={isOpen ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color={colors.text}
-                    />
-                </Pressable>
-
-                {isOpen && (
-                    <View
-                        style={[
-                            styles.destinationDropdown,
+            <EdmsSelect
+                value={selectedDestinationId ?? ""}
+                ariaLabel={t("selectDestination")}
+                placeholder={t("selectDestination")}
+                options={[
+                    ...(isOutsideFolderVisible
+                        ? [
                             {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
+                                value: outsideFolderDestinationId,
+                                label: isDestinationDisabled(outsideFolderDestinationId)
+                                    ? `${t("outsideFolder")} — ${t("currentLocation")}`
+                                    : t("outsideFolder"),
+                                disabled: isDestinationDisabled(
+                                    outsideFolderDestinationId
+                                ),
                             },
-                        ]}
-                    >
-                        {isOutsideFolderVisible && (
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("moveOutsideFolder")}
-                                disabled={isDestinationDisabled(outsideFolderDestinationId)}
-                                onPress={onSelectOutsideFolder}
-                                style={[
-                                    styles.destinationOption,
-                                    isDestinationDisabled(outsideFolderDestinationId) &&
-                                        styles.destinationOptionCurrentLocation,
-                                    {
-                                        backgroundColor: isDestinationDisabled(
-                                            outsideFolderDestinationId
-                                        )
-                                            ? colors.background
-                                            : colors.surface,
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.destinationOptionText,
-                                        { color: colors.text },
-                                    ]}
-                                >
-                                    {t("outsideFolder")}
-                                    {isDestinationDisabled(outsideFolderDestinationId)
-                                        ? `  ${t("currentLocation")}`
-                                        : ""}
-                                </Text>
-                            </Pressable>
-                        )}
-
-                        {destinationFolders.map((folder) => {
-                            const isCurrentDestination =
-                                isDestinationDisabled(folder.id);
-
-                            return (
-                                <Pressable
-                                    key={folder.id}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`${t("selectFolder")} ${folder.name}`}
-                                    disabled={isCurrentDestination}
-                                    onPress={() => onSelectDestination(folder.id)}
-                                    style={[
-                                        styles.destinationOption,
-                                        isCurrentDestination &&
-                                            styles.destinationOptionCurrentLocation,
-                                        {
-                                            backgroundColor: isCurrentDestination
-                                                ? colors.background
-                                                : colors.surface,
-                                        },
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.destinationOptionText,
-                                            { color: colors.text },
-                                        ]}
-                                    >
-                                        {folder.name}
-                                        {isCurrentDestination
-                                            ? `  ${t("currentLocation")}`
-                                            : ""}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
-
-                        {!isOutsideFolderVisible && destinationFolders.length === 0 && (
-                            <Text
-                                style={[
-                                    styles.destinationEmptyText,
-                                    { color: colors.text },
-                                ]}
-                            >
-                                {t("noDestinationFound")}
-                            </Text>
-                        )}
-                    </View>
-                )}
-            </View>
+                        ]
+                        : []),
+                    ...destinationFolders.map((folder) => ({
+                        value: folder.id,
+                        label: isDestinationDisabled(folder.id)
+                            ? `${folder.name} — ${t("currentLocation")}`
+                            : folder.name,
+                        disabled: isDestinationDisabled(folder.id),
+                    })),
+                ]}
+                onChange={onSelectDestination}
+                style={{ marginBottom: spacing.lg }}
+            />
 
             <View style={styles.modalActions}>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={t("saveMove")}
-                    disabled={!canSave}
-                    onPress={onSave}
-                    style={[
-                        styles.modalPrimaryButton,
-                        {
-                            backgroundColor: canSave
-                                ? colors.primary
-                                : colors.border,
-                            opacity: canSave ? 1 : 0.76,
-                        },
-                    ]}
+                    accessibilityLabel={t("cancel")}
+                    onPress={onCancel}
+                    style={styles.modalTextButton}
                 >
-                    <Text style={[styles.modalPrimaryButtonText, { color: colors.surface }]}>
-                        {t("moveItem")}
+                    <Text
+                        style={[
+                            styles.modalTextButtonText,
+                            { color: colors.text },
+                        ]}
+                    >
+                        {t("cancel")}
                     </Text>
                 </Pressable>
 
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={t("cancelMove")}
-                    onPress={onCancel}
-                    style={styles.modalTextButton}
+                    accessibilityLabel={t("moveItem")}
+                    disabled={!canSave}
+                    onPress={onSave}
+                    style={[
+                        styles.modalPrimaryButton,
+                        {
+                            backgroundColor: colors.primary,
+                            opacity: canSave ? 1 : 0.45,
+                        },
+                    ]}
                 >
-                    <Text style={[styles.modalTextButtonText, { color: colors.text }]}>
-                        {t("cancel")}
+                    <Text
+                        style={[
+                            styles.modalPrimaryButtonText,
+                            { color: colors.surface },
+                        ]}
+                    >
+                        {t("moveItem")}
                     </Text>
                 </Pressable>
             </View>
@@ -444,7 +345,12 @@ export function WorkspacePermanentDeleteDialog({
                         { backgroundColor: semanticColors.destructive },
                     ]}
                 >
-                    <Text style={[styles.modalDangerButtonText, { color: colors.surface }]}>
+                    <Text
+                        style={[
+                            styles.modalDangerButtonText,
+                            { color: colors.surface },
+                        ]}
+                    >
                         {t("permanentlyDeleteItem")}
                     </Text>
                 </Pressable>
@@ -455,7 +361,12 @@ export function WorkspacePermanentDeleteDialog({
                     onPress={onCancel}
                     style={styles.modalTextButton}
                 >
-                    <Text style={[styles.modalTextButtonText, { color: colors.text }]}>
+                    <Text
+                        style={[
+                            styles.modalTextButtonText,
+                            { color: colors.text },
+                        ]}
+                    >
                         {t("cancel")}
                     </Text>
                 </Pressable>
@@ -476,6 +387,7 @@ const styles = StyleSheet.create({
         padding: spacing.xl,
         backgroundColor: semanticColors.backdropSubtle,
     },
+
     modalCard: {
         width: "100%",
         maxWidth: 460,
@@ -484,12 +396,14 @@ const styles = StyleSheet.create({
         borderRadius: radius.xl,
         ...shadows.md,
     },
+
     modalTitle: {
         marginBottom: spacing.sm,
         fontSize: typography.fontSize.lg,
         fontWeight: typography.fontWeight.semibold,
         textAlign: "start",
     },
+
     modalDescription: {
         marginBottom: spacing.lg,
         fontSize: typography.fontSize.sm,
@@ -497,38 +411,49 @@ const styles = StyleSheet.create({
         textAlign: "start",
         opacity: 0.72,
     },
+
     modalActions: {
         flexDirection: "row",
         alignItems: "center",
         gap: spacing.sm,
     },
-    modalActionSpacer: { flex: 1 },
+
+    modalActionSpacer: {
+        flex: 1,
+    },
+
     modalDangerButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: radius.md,
     },
+
     modalDangerButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
+
     modalPrimaryButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: radius.md,
     },
+
     modalPrimaryButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
+
     modalTextButton: {
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
     },
+
     modalTextButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
     },
+
     renameInput: {
         marginBottom: spacing.lg,
         paddingHorizontal: spacing.md,
@@ -538,50 +463,9 @@ const styles = StyleSheet.create({
         fontSize: typography.fontSize.md,
         fontWeight: typography.fontWeight.medium,
         textAlign: "start",
+        outline: "none",
     },
-    destinationCombo: {
-        position: "relative",
-        marginBottom: spacing.lg,
-    },
-    destinationComboInput: {
-        minHeight: 40,
-        paddingRight: spacing.md,
-        paddingLeft: 40,
-        paddingVertical: spacing.sm,
-        borderWidth: 1,
-        borderRadius: radius.md,
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.medium,
-        textAlign: "start",
-    },
-    destinationComboIcon: {
-        position: "absolute",
-        left: spacing.md,
-        top: 7,
-        zIndex: 2,
-        width: 26,
-        height: 26,
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: 0.72,
-    },
-    destinationComboIconPressed: { opacity: 1 },
-    destinationDropdown: {
-        marginTop: spacing.xs,
-        borderWidth: 1,
-        borderRadius: radius.md,
-        overflow: "hidden",
-    },
-    destinationOption: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-    },
-    destinationOptionCurrentLocation: { opacity: 0.78 },
-    destinationOptionText: {
-        fontSize: typography.fontSize.sm,
-        fontWeight: typography.fontWeight.semibold,
-        textAlign: "start",
-    },
+
     destinationEmptyText: {
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,

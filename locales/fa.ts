@@ -45,6 +45,8 @@ const fa = {
     showItemActions: "نمایش گزینه‌های",
     pinItem: "سنجاق کردن آیتم",
     unpinItem: "برداشتن از سنجاق‌شده‌ها",
+    selectItems: "انتخاب موارد",
+    deselectItems: "لغو انتخاب موارد",
     home: "خانه",
     workspace: "فضای کاری",
     workspaceSubtitle: "مدیریت پوشه‌ها، فایل‌ها و اسناد سازمانی",

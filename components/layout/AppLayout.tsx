@@ -6,17 +6,18 @@
  * ============================================================================
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
     Modal,
     Pressable,
     ScrollView,
     StyleSheet,
-    useWindowDimensions,
     View,
 } from "../../web/ui";
 
 import { Feather } from "../../web/icons";
+
+import { DEFAULT_START_PAGE } from "../../constants/app";
 
 import { semanticColors, shadows, spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
@@ -60,6 +61,8 @@ import {
     getWorkspaceCategories,
 } from "../workspace/workspace.categories";
 
+import AppToast, { type AppToastMessage } from "../common/AppToast";
+
 /**
  * ============================================================================
  * Types
@@ -80,7 +83,36 @@ export default function AppLayout() {
     const colors = theme.colors;
     const { isRtl } = getDirectionalLayout(direction);
 
-    const { width } = useWindowDimensions();
+    const hasCompletedInitialWorkspaceLoad = useRef(false);
+
+    /**
+     * Keep the application shell synchronized with the visible viewport.
+     * Also handles browser device-emulation and visual viewport changes.
+     */
+    const getViewportWidth = () => {
+        const layoutWidth = document.documentElement.clientWidth || window.innerWidth;
+        const visualWidth = window.visualViewport?.width ?? layoutWidth;
+
+        return Math.min(layoutWidth, visualWidth);
+    };
+
+    const [width, setWidth] = useState(getViewportWidth);
+
+    useEffect(() => {
+        const updateViewportWidth = () => {
+            setWidth(getViewportWidth());
+        };
+
+        window.addEventListener("resize", updateViewportWidth);
+        window.visualViewport?.addEventListener("resize", updateViewportWidth);
+
+        updateViewportWidth();
+
+        return () => {
+            window.removeEventListener("resize", updateViewportWidth);
+            window.visualViewport?.removeEventListener("resize", updateViewportWidth);
+        };
+    }, []);
 
     /** Mobile breakpoints use CSS viewport width. */
     const isMobileShell = width < 760;
@@ -93,9 +125,32 @@ export default function AppLayout() {
         setWorkspaceCategoryDefinitions,
     ] = useState<WorkspaceCategoryDefinition[]>([]);
 
+    useEffect(() => {
+        let isActive = true;
+
+
+        getWorkspaceCategoryDefinitions()
+            .then((definitions) => {
+                if (isActive) {
+                    setWorkspaceCategoryDefinitions(definitions);
+                }
+            })
+            .catch((error) => {
+                console.error(
+                    "Failed to load workspace category definitions:",
+                    error
+                );
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
     const [workspaceTotal, setWorkspaceTotal] = useState(0);
     const [workspaceOffset, setWorkspaceOffset] = useState(0);
-    const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
+    const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(true);
+    const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 
     const workspacePageSize = 100;
 
@@ -126,7 +181,7 @@ export default function AppLayout() {
      * ============================================================================
      */
     const [activeWorkspacePage, setActiveWorkspacePage] =
-        useState<ContentPageType>("dashboard");
+        useState<ContentPageType>(DEFAULT_START_PAGE);
 
     const [isProjectInfoLoading, setIsProjectInfoLoading] = useState(true);
     const [projectInfoError, setProjectInfoError] = useState<string | null>(null);
@@ -136,6 +191,35 @@ export default function AppLayout() {
 
     const [projectFilterOptions, setProjectFilterOptions] =
         useState<ProjectFilterOption[]>([]);
+
+    /**
+     * Shared notification queue.
+     * Retains at most four notifications; each notification has a unique ID.
+     */
+    const [appToasts, setAppToasts] = useState<AppToastMessage[]>([]);
+    const nextToastId = useRef(0);
+
+    /**
+     * Adds a notification and removes the oldest one when the queue exceeds four.
+     * A monotonically increasing ID prevents collisions during rapid updates.
+     */
+    const showAppToast = useCallback((notification: Omit<AppToastMessage, "id">) => {
+        const id = ++nextToastId.current;
+
+        setAppToasts((current) => [
+            ...current,
+            { ...notification, id },
+        ].slice(-4));
+
+        return id;
+    }, []);
+
+    /**
+     * Removes a specific notification without affecting other active timers.
+     */
+    const dismissAppToast = useCallback((id: number) => {
+        setAppToasts((current) => current.filter((toast) => toast.id !== id));
+    }, []);
 
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -166,16 +250,22 @@ export default function AppLayout() {
 
     const filteredWorkspaceItems = workspaceItems.filter((item) => {
         const matchesProject =
-            !workspaceFilters.projectId || item.projectId === workspaceFilters.projectId;
+            workspaceFilters.projectIds.length === 0 ||
+            (item.projectId !== undefined && workspaceFilters.projectIds.includes(item.projectId));
+
         const matchesFileType =
-            !workspaceFilters.fileType ||
+            workspaceFilters.fileTypes.length === 0 ||
             item.type === "folder" ||
-            item.extension?.toLowerCase() === workspaceFilters.fileType.toLowerCase();
+            workspaceFilters.fileTypes.some(
+                (fileType) => item.extension?.toLowerCase() === fileType.toLowerCase()
+            );
+
         return matchesProject && matchesFileType;
     });
+
     const activeProjectId =
-        workspaceFilters.projectId ??
-        workspaceItems.find((item) => item.id === currentFolderId)?.projectId;
+        workspaceFilters.projectIds.length === 1 ? workspaceFilters.projectIds[0] :
+            workspaceItems.find((item) => item.id === currentFolderId)?.projectId;
     const projectConnectionProps = {
         isProjectInfoLoading,
         projectInfoError,
@@ -213,6 +303,7 @@ export default function AppLayout() {
         activeAction: activeWorkspaceAction,
         searchQuery: workspaceSearchQuery,
         canCreateWorkspaceItems: activeWorkspacePage === "workspace",
+        isWorkspaceLoading,
         ...projectConnectionProps,
         ...workspaceFilterProps,
         isMobileMenuOpen,
@@ -336,25 +427,45 @@ export default function AppLayout() {
     useEffect(() => {
         let isCurrentRequest = true;
 
-        const timer = setTimeout(() => {
+        // Show the full-page loading UI only until the first request finishes.
+        if (!hasCompletedInitialWorkspaceLoad.current) {
             setIsWorkspaceLoading(true);
+        }
 
+        setWorkspaceError(null);
+
+        const timer = setTimeout(() => {
             getWorkspaceItems({
                 from: 0,
                 cnt: workspacePageSize,
                 search: workspaceSearchQuery.trim() || undefined,
             })
                 .then((result) => {
-                    if (!isCurrentRequest) {
-                        return;
-                    }
+                    if (!isCurrentRequest) return;
 
                     setWorkspaceItems(result.items);
                     setWorkspaceTotal(result.total);
                     setWorkspaceOffset(result.items.length);
                 })
+                .catch((error) => {
+                    if (!isCurrentRequest) return;
+
+                    console.error("Failed to load workspace items:", error);
+
+                    if (!hasCompletedInitialWorkspaceLoad.current) {
+                        setWorkspaceError("Workspace service unavailable.");
+                    } else {
+                        showAppToast({
+                            type: "error",
+                            message: direction === "rtl"
+                                ? "به‌روزرسانی اسناد انجام نشد. لطفاً دوباره تلاش کنید."
+                                : "Could not refresh documents. Please try again.",
+                        });
+                    }
+                })
                 .finally(() => {
                     if (isCurrentRequest) {
+                        hasCompletedInitialWorkspaceLoad.current = true;
                         setIsWorkspaceLoading(false);
                     }
                 });
@@ -365,26 +476,6 @@ export default function AppLayout() {
             clearTimeout(timer);
         };
     }, [workspaceSearchQuery]);
-
-    useEffect(() => {
-        getWorkspaceCategoryDefinitions()
-            .then((categories) => {
-                console.log(
-                    "FILE CATEGORIES API RESULT:",
-                    categories
-                );
-
-                setWorkspaceCategoryDefinitions(categories);
-            })
-            .catch((error) => {
-                console.error(
-                    "FILE CATEGORIES API ERROR:",
-                    error
-                );
-
-                setWorkspaceCategoryDefinitions([]);
-            });
-    }, []);
 
     /**
      * ============================================================================
@@ -546,11 +637,16 @@ export default function AppLayout() {
         );
     }
 
+    /**
+     * Restores an item's previous state after a reversible workspace operation.
+     * Preserves its original status, folder, and metadata while updating the
+     * modification timestamp.
+     */
     function handleRestoreWorkspaceItem(restoredItem: WorkspaceItem) {
         setWorkspaceItems((currentItems) =>
-            updateWorkspaceItem(currentItems, restoredItem.id, (item) => ({
-                ...item,
-                status: "active",
+            updateWorkspaceItem(currentItems, restoredItem.id, (currentItem) => ({
+                ...currentItem,
+                ...restoredItem,
                 updatedAt: new Date().toISOString(),
             }))
         );
@@ -763,6 +859,8 @@ export default function AppLayout() {
                             pageType={activeWorkspacePage}
                             currentFolderId={currentFolderId}
                             workspaceItems={filteredWorkspaceItems}
+                            isLoadingWorkspaceItems={isWorkspaceLoading}
+                            workspaceErrorMessage={workspaceError}
                             workspaceCategories={workspaceCategories}
                             workspaceCategoryDefinitions={workspaceCategoryDefinitions}
                             activeWorkspaceCategory={activeWorkspaceCategory}
@@ -782,6 +880,7 @@ export default function AppLayout() {
                             onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
                             onDropFiles={handleDropWorkspaceFiles}
                             onOpenPreviewPage={handleOpenPreviewPage}
+                            onShowToast={showAppToast}
                         />
                     ) : (
                         <ScrollView
@@ -790,7 +889,7 @@ export default function AppLayout() {
                             showsVerticalScrollIndicator
                             showsHorizontalScrollIndicator={false}
                         >
-                            <Dashboard workspaceItems={filteredWorkspaceItems} />
+                            <Dashboard workspaceItems={filteredWorkspaceItems} isLoading={isWorkspaceLoading} />
                         </ScrollView>
                     )}
                 </View>
@@ -799,6 +898,11 @@ export default function AppLayout() {
                     <SettingsPage onClose={() => setIsSettingsOpen(false)} />
                 )}
             </View>
+
+            <AppToast
+                toasts={appToasts}
+                onDismiss={dismissAppToast}
+            />
         </View>
     );
 }
