@@ -18,6 +18,8 @@ export type WorkspaceItemStatus = "active" | "archived" | "trashed";
 export interface WorkspaceItem {
     id: string;
     projectId?: string;
+    projectCode?: string;
+    contractNumber?: string;
 
     type: WorkspaceItemType;
 
@@ -52,6 +54,20 @@ export interface WorkspaceItem {
     fileDate?: string;
     fileTime?: string;
     fileTypeLabel?: string;
+
+    changeReason?: string;
+    fileTypeId?: string;
+    owner?: string;
+    alternateFileName?: string;
+    comment?: string;
+    date?: string;
+    task?: string;
+    taskCode?: string;
+    versionId?: string;
+    referenceId?: string;
+    mainSubject?: string;
+    subSubject?: string;
+    keywords?: string;
 }
 
 export interface WorkspaceItemUpdate {
@@ -60,28 +76,56 @@ export interface WorkspaceItemUpdate {
     fileDate?: string;
     fileTime?: string;
     fileTypeLabel?: string;
+    changeReason?: string;
+    fileTypeId?: string;
+    owner?: string;
+    alternateFileName?: string;
+    comment?: string;
+    date?: string;
+    task?: string;
+    taskCode?: string;
+    mainSubject?: string;
+    subSubject?: string;
+    keywords?: string;
     categoryId?: string;
     description?: string;
 }
 
 /**
  * File record returned by the files API.
+ *
+ * PMIS-specific field names remain isolated in the service layer and are
+ * mapped into WorkspaceItem before being consumed by the EDMS UI.
  */
 export interface WorkspaceFileApiItem {
     file_id: string;
-    file_name: string;
-    file_project: string;
+    prj_id: string | null;
 
-    file_size: string;
-    file_version: string;
-    file_date: string;
-    file_time: string;
-    noe_file: string;
+    name: string;
+    change: string | null;
+    ver: string;
+    size: string;
+    type: string;
+    f_type: string | null;
+    owner: string | null;
 
-    file_parent: string | null;
-    file_type: string;
+    no_code: string | null;
+    date_code: string | null;
+    comment: string | null;
+    date: string;
 
-    file_category: string | null;
+    task: string | null;
+    task_code: string | null;
+
+    ver_id: string;
+    ref_id: string;
+
+    internal: string | null;
+    Def: string | null;
+
+    file_subject_main: string | null;
+    file_subject_det: string | null;
+    word: string | null;
 
     is_deleted: string;
 

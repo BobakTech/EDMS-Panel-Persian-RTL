@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
     Modal,
     Pressable,
@@ -192,6 +192,33 @@ export default function AppLayout() {
     const [projectFilterOptions, setProjectFilterOptions] =
         useState<ProjectFilterOption[]>([]);
 
+    const projectLookup = useMemo(
+        () => new Map(projectFilterOptions.map((project) => [project.id, project])),
+        [projectFilterOptions]
+    );
+
+    const enrichWorkspaceItemsWithProjects = useCallback(
+        (items: WorkspaceItem[]) =>
+            items.map((item) => {
+                if (!item.projectId) return item;
+
+                const project = projectLookup.get(item.projectId);
+                if (!project) return item;
+
+                return {
+                    ...item,
+                    projectCode: project.projectCode || undefined,
+                    contractNumber: project.contractNumber || undefined,
+                };
+            }),
+        [projectLookup]
+    );
+
+    const enrichedWorkspaceItems = useMemo(
+        () => enrichWorkspaceItemsWithProjects(workspaceItems),
+        [workspaceItems, enrichWorkspaceItemsWithProjects]
+    );
+
     /**
      * Shared notification queue.
      * Retains at most four notifications; each notification has a unique ID.
@@ -234,7 +261,7 @@ export default function AppLayout() {
 
     const fileTypeOptions = Array.from(
         new Set(
-            workspaceItems
+            enrichedWorkspaceItems
                 .filter((item) => item.type === "file")
                 .map((item) =>
                     (
@@ -248,7 +275,7 @@ export default function AppLayout() {
         )
     ).sort();
 
-    const filteredWorkspaceItems = workspaceItems.filter((item) => {
+    const filteredWorkspaceItems = enrichedWorkspaceItems.filter((item) => {
         const matchesProject =
             workspaceFilters.projectIds.length === 0 ||
             (item.projectId !== undefined && workspaceFilters.projectIds.includes(item.projectId));
@@ -266,6 +293,7 @@ export default function AppLayout() {
     const activeProjectId =
         workspaceFilters.projectIds.length === 1 ? workspaceFilters.projectIds[0] :
             workspaceItems.find((item) => item.id === currentFolderId)?.projectId;
+
     const projectConnectionProps = {
         isProjectInfoLoading,
         projectInfoError,
@@ -278,7 +306,7 @@ export default function AppLayout() {
         onResetFilters: handleResetWorkspaceFilters,
     };
 
-    const workspaceCategoryItems = workspaceItems.filter((item) => {
+    const workspaceCategoryItems = enrichedWorkspaceItems.filter((item) => {
         if (activeWorkspacePage === "workspace") {
             return item.status === "active";
         }

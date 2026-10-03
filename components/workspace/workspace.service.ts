@@ -23,15 +23,20 @@ import type {
 
 /**
  * Converts an API file record into the EDMS workspace model.
+ *
+ * Project metadata such as Project Code and Contract Number is resolved
+ * separately through the Projects API using projectId/prj_id.
  */
 function mapWorkspaceFile(item: WorkspaceFileApiItem): WorkspaceItem {
     return {
         id: item.file_id,
-        projectId: item.file_project,
+        projectId: item.prj_id ?? undefined,
+
         type: "file",
-        name: item.file_name,
-        description: item.file_name,
-        updatedAt: item.file_date,
+
+        name: item.name,
+        description: item.comment || item.name,
+        updatedAt: item.date,
 
         status:
             item.is_deleted === "1"
@@ -41,14 +46,32 @@ function mapWorkspaceFile(item: WorkspaceFileApiItem): WorkspaceItem {
                     : "active",
 
         parentFolderId: null,
-        mimeType: item.file_type,
-        sizeLabel: item.file_size,
-        categoryId: item.file_category ?? undefined,
 
-        fileVersion: item.file_version,
-        fileDate: item.file_date,
-        fileTime: item.file_time,
-        fileTypeLabel: item.noe_file,
+        mimeType: item.type,
+        sizeLabel: item.size,
+
+        /**
+         * f_type is the PMIS business file-type/category identifier.
+         */
+        categoryId: item.f_type ?? undefined,
+
+        fileVersion: item.ver,
+        fileDate: item.date_code ?? undefined,
+        fileTypeLabel: item.f_type ?? undefined,
+
+        changeReason: item.change || undefined,
+        fileTypeId: item.f_type ?? undefined,
+        owner: item.owner ?? undefined,
+        alternateFileName: item.no_code ?? undefined,
+        comment: item.comment || undefined,
+        date: item.date,
+        task: item.task ?? undefined,
+        taskCode: item.task_code ?? undefined,
+        versionId: item.ver_id,
+        referenceId: item.ref_id,
+        mainSubject: item.file_subject_main ?? undefined,
+        subSubject: item.file_subject_det ?? undefined,
+        keywords: item.word ?? undefined,
     };
 }
 
