@@ -90,23 +90,29 @@ function mapWorkspaceCategory(
 }
 
 /**
- * Extracts the total count returned by paginated endpoints.
+ * Remembers the latest valid total for each server-side search.
  *
- * A negative count means the endpoint returned the complete result set and
- * therefore did not provide a separate total.
+ * PMIS may return cnt=-1 after the first paginated request, so later pages
+ * reuse the positive total previously returned for the same search.
  */
+const workspaceTotals = new Map<string, number>();
+
 function resolveTotal(
     items: WorkspaceFileApiItem[],
+    query?: WorkspaceQuery,
 ): number {
-    if (items.length === 0) {
-        return 0;
+    const isPaginated = query?.cnt !== undefined;
+    const searchKey = query?.search?.trim() ?? "";
+    const total = items.length > 0 ? Number(items[0].cnt) : -1;
+
+    if (Number.isFinite(total) && total >= 0) {
+        if (isPaginated) workspaceTotals.set(searchKey, total);
+        return total;
     }
 
-    const total = Number(items[0].cnt);
+    if (!isPaginated) return items.length;
 
-    return Number.isFinite(total) && total >= 0
-        ? total
-        : items.length;
+    return workspaceTotals.get(searchKey) ?? items.length;
 }
 
 export async function getWorkspaceItems(
@@ -126,7 +132,7 @@ export async function getWorkspaceItems(
 
     return {
         items: result.map(mapWorkspaceFile),
-        total: resolveTotal(result),
+        total: resolveTotal(result, query),
     };
 }
 

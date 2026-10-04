@@ -184,6 +184,11 @@ interface WorkspaceProps {
     pageType: WorkspacePageType;
     currentFolderId: string | null;
     workspaceItems: WorkspaceItem[];
+    workspaceTotal: number;
+    currentPage: number;
+    itemsPerPage: number;
+    onChangePage: (page: number) => void;
+    onChangePageSize: (pageSize: number) => void;
     isLoadingWorkspaceItems: boolean;
     workspaceErrorMessage: string | null;
     searchQuery: string;
@@ -230,6 +235,11 @@ export default function Workspace({
     pageType,
     currentFolderId,
     workspaceItems,
+    workspaceTotal,
+    currentPage,
+    itemsPerPage,
+    onChangePage,
+    onChangePageSize,
     isLoadingWorkspaceItems,
     workspaceErrorMessage,
     searchQuery,
@@ -322,8 +332,6 @@ export default function Workspace({
     const [viewMode, setViewMode] = useState<WorkspaceViewMode>("grid");
 
     const WORKSPACE_PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
-    const [itemsPerPage, setItemsPerPage] = useState(25);
-    const [currentPage, setCurrentPage] = useState(1);
 
     /**
      * Workspace multi-selection is independent from preview/details selection.
@@ -829,7 +837,7 @@ export default function Workspace({
         setIsBulkPermanentDeletePending(true);
     }
 
-    const totalWorkspaceItems = visibleWorkspaceItems.length;
+    const totalWorkspaceItems = workspaceTotal;
 
     const totalWorkspacePages = Math.max(
         1,
@@ -845,14 +853,12 @@ export default function Workspace({
         (safeCurrentPage - 1) * itemsPerPage;
 
     const paginationEndIndex = Math.min(
-        paginationStartIndex + itemsPerPage,
+        paginationStartIndex + visibleWorkspaceItems.length,
         totalWorkspaceItems
     );
 
-    const paginatedWorkspaceItems = visibleWorkspaceItems.slice(
-        paginationStartIndex,
-        paginationEndIndex
-    );
+    // The API already returns only the requested page; do not slice it again.
+    const paginatedWorkspaceItems = visibleWorkspaceItems;
 
     const allPageWorkspaceItemsSelected =
         paginatedWorkspaceItems.length > 0 &&
@@ -905,16 +911,6 @@ export default function Workspace({
         },
         (_, index) => Math.max(1, paginationWindowStart) + index
     );
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [
-        activeWorkspaceCategory,
-        currentFolderId,
-        normalizedSearchQuery,
-        pageType,
-        itemsPerPage,
-    ]);
 
     useEffect(() => {
         setMultiSelectedItemIds([]);
@@ -1367,10 +1363,9 @@ export default function Workspace({
                                             value: pageSize,
                                             label: String(pageSize),
                                         }))}
-                                        onChange={(value) => {
-                                            setItemsPerPage(Number(value));
-                                            setCurrentPage(1);
-                                        }}
+                                        onChange={(value) =>
+                                            onChangePageSize(Number(value))
+                                        }
                                         ariaLabel={
                                             direction === "rtl"
                                                 ? "تعداد آیتم در هر صفحه"
@@ -1412,7 +1407,7 @@ export default function Workspace({
                                                 : "First page"
                                         }
                                         disabled={safeCurrentPage <= 1}
-                                        onClick={() => setCurrentPage(1)}
+                                        onClick={() => onChangePage(1)}
                                         style={{
                                             width: isPhoneWorkspace ? 28 : 32,
                                             height: 32,
@@ -1446,8 +1441,8 @@ export default function Workspace({
                                         }
                                         disabled={safeCurrentPage <= 1}
                                         onClick={() =>
-                                            setCurrentPage((page) =>
-                                                Math.max(1, page - 1)
+                                            onChangePage(
+                                                Math.max(1, currentPage - 1)
                                             )
                                         }
                                         style={{
@@ -1488,7 +1483,7 @@ export default function Workspace({
                                                         : undefined
                                                 }
                                                 onClick={() =>
-                                                    setCurrentPage(pageNumber)
+                                                    onChangePage(pageNumber)
                                                 }
                                                 style={{
                                                     minWidth: isPhoneWorkspace ? 28 : 32,
@@ -1538,10 +1533,10 @@ export default function Workspace({
                                             safeCurrentPage >= totalWorkspacePages
                                         }
                                         onClick={() =>
-                                            setCurrentPage((page) =>
+                                            onChangePage(
                                                 Math.min(
                                                     totalWorkspacePages,
-                                                    page + 1
+                                                    currentPage + 1
                                                 )
                                             )
                                         }
@@ -1580,7 +1575,7 @@ export default function Workspace({
                                             safeCurrentPage >= totalWorkspacePages
                                         }
                                         onClick={() =>
-                                            setCurrentPage(totalWorkspacePages)
+                                            onChangePage(totalWorkspacePages)
                                         }
                                         style={{
                                             width: isPhoneWorkspace ? 28 : 32,

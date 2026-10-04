@@ -148,11 +148,10 @@ export default function AppLayout() {
     }, []);
 
     const [workspaceTotal, setWorkspaceTotal] = useState(0);
-    const [workspaceOffset, setWorkspaceOffset] = useState(0);
-    const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(true);
+    const [workspaceCurrentPage, setWorkspaceCurrentPage] = useState(1);
+    const [workspacePageSize, setWorkspacePageSize] = useState(25);
+    const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
     const [workspaceError, setWorkspaceError] = useState<string | null>(null);
-
-    const workspacePageSize = 100;
 
     const [activeWorkspaceAction, setActiveWorkspaceAction] =
         useState<WorkspaceActionType | null>(null);
@@ -336,7 +335,12 @@ export default function AppLayout() {
         ...workspaceFilterProps,
         isMobileMenuOpen,
         onPressMobileMenu: handleToggleMobileMenu,
-        onChangeSearchQuery: setWorkspaceSearchQuery,
+
+        onChangeSearchQuery: (value: string) => {
+            setWorkspaceCurrentPage(1);
+            setWorkspaceSearchQuery(value);
+        },
+
         onPressCreateFolder: handlePressCreateFolder,
         onDismissAction: handleDismissWorkspaceAction,
         onCreateFolder: handleCreateFolder,
@@ -382,35 +386,6 @@ export default function AppLayout() {
         previewPageItemIndex >= 0 && previewPageItemIndex < previewPageItems.length - 1
             ? previewPageItems[previewPageItemIndex + 1]
             : null;
-
-    const loadMoreWorkspaceItems = async () => {
-        if (isWorkspaceLoading || workspaceItems.length >= workspaceTotal) {
-            return;
-        }
-
-        setIsWorkspaceLoading(true);
-
-        try {
-            const result = await getWorkspaceItems({
-                from: workspaceOffset,
-                cnt: workspacePageSize,
-                search: workspaceSearchQuery.trim() || undefined,
-            });
-
-            setWorkspaceItems((current) => [
-                ...current,
-                ...result.items,
-            ]);
-
-            setWorkspaceOffset((current) =>
-                current + result.items.length
-            );
-
-            setWorkspaceTotal(result.total);
-        } finally {
-            setIsWorkspaceLoading(false);
-        }
-    };
 
     /**
      * ============================================================================
@@ -464,7 +439,7 @@ export default function AppLayout() {
 
         const timer = setTimeout(() => {
             getWorkspaceItems({
-                from: 0,
+                from: (workspaceCurrentPage - 1) * workspacePageSize,
                 cnt: workspacePageSize,
                 search: workspaceSearchQuery.trim() || undefined,
             })
@@ -473,7 +448,6 @@ export default function AppLayout() {
 
                     setWorkspaceItems(result.items);
                     setWorkspaceTotal(result.total);
-                    setWorkspaceOffset(result.items.length);
                 })
                 .catch((error) => {
                     if (!isCurrentRequest) return;
@@ -503,7 +477,7 @@ export default function AppLayout() {
             isCurrentRequest = false;
             clearTimeout(timer);
         };
-    }, [workspaceSearchQuery]);
+    }, [workspaceCurrentPage, workspacePageSize, workspaceSearchQuery]);
 
     /**
      * ============================================================================
@@ -887,6 +861,14 @@ export default function AppLayout() {
                             pageType={activeWorkspacePage}
                             currentFolderId={currentFolderId}
                             workspaceItems={filteredWorkspaceItems}
+                            workspaceTotal={workspaceTotal}
+                            currentPage={workspaceCurrentPage}
+                            itemsPerPage={workspacePageSize}
+                            onChangePage={setWorkspaceCurrentPage}
+                            onChangePageSize={(pageSize) => {
+                                setWorkspaceCurrentPage(1);
+                                setWorkspacePageSize(pageSize);
+                            }}
                             isLoadingWorkspaceItems={isWorkspaceLoading}
                             workspaceErrorMessage={workspaceError}
                             workspaceCategories={workspaceCategories}
