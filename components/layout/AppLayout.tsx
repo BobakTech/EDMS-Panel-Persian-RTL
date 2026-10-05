@@ -52,6 +52,8 @@ import {
     type WorkspacePageType,
     type WorkspacePickedFile,
     type WorkspaceCategoryDefinition,
+    type WorkspaceSortField,
+    type WorkspaceSortOrder,
 } from "../workspace";
 
 import type { DroppedWorkspaceFile } from "../workspace/WorkspaceEmptyState";
@@ -150,6 +152,8 @@ export default function AppLayout() {
     const [workspaceTotal, setWorkspaceTotal] = useState(0);
     const [workspaceCurrentPage, setWorkspaceCurrentPage] = useState(1);
     const [workspacePageSize, setWorkspacePageSize] = useState(25);
+    const [workspaceSortField] = useState<WorkspaceSortField>("file_name");
+    const [workspaceSortOrder] = useState<WorkspaceSortOrder>(0);
     const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
     const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 
@@ -442,6 +446,8 @@ export default function AppLayout() {
                 from: (workspaceCurrentPage - 1) * workspacePageSize,
                 cnt: workspacePageSize,
                 search: workspaceSearchQuery.trim() || undefined,
+                sort: workspaceSortField,
+                order: workspaceSortOrder,
             })
                 .then((result) => {
                     if (!isCurrentRequest) return;
@@ -477,7 +483,13 @@ export default function AppLayout() {
             isCurrentRequest = false;
             clearTimeout(timer);
         };
-    }, [workspaceCurrentPage, workspacePageSize, workspaceSearchQuery]);
+    }, [
+        workspaceCurrentPage,
+        workspacePageSize,
+        workspaceSearchQuery,
+        workspaceSortField,
+        workspaceSortOrder,
+    ]);
 
     /**
      * ============================================================================

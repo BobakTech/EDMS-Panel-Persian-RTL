@@ -7,7 +7,7 @@
  * Keeps transport rules centralized:
  * - Base URL handling
  * - Required API fields
- * - Optional pagination/search parameters
+ * - Optional pagination/search/sorting parameters
  *
  * Feature services should only provide endpoint-specific data.
  * ============================================================================
@@ -19,6 +19,8 @@ export interface ApiQuery {
     from?: number;
     cnt?: number;
     search?: string;
+    sort?: string;
+    order?: 0 | 1;
 }
 
 interface ApiRequestOptions extends ApiQuery {
@@ -50,6 +52,8 @@ export async function postApi<T>(
         from: query?.from,
         cnt: query?.cnt,
         search: query?.search,
+        sort: query?.sort,
+        order: query?.order,
     });
 
     const url = `${apiConfig.baseUrl}${endpoint}`;

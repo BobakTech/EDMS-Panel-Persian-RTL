@@ -331,7 +331,7 @@ export default function Workspace({
 
     const [viewMode, setViewMode] = useState<WorkspaceViewMode>("grid");
 
-    const WORKSPACE_PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
+    const WORKSPACE_PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100, 200];
 
     /**
      * Workspace multi-selection is independent from preview/details selection.

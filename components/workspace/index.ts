@@ -20,6 +20,8 @@ export { default as WorkspaceBreadcrumb } from "./WorkspaceBreadcrumb";
 export { default as WorkspaceHeader } from "./WorkspaceHeader";
 
 export type {
+    WorkspaceSortField,
+    WorkspaceSortOrder,
     WorkspaceItem,
     WorkspaceItemUpdate,
     WorkspaceItemStatus,

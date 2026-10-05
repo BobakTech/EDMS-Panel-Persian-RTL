@@ -167,11 +167,18 @@ export interface WorkspaceCategoryDefinition {
  * from   Pagination offset.
  * cnt    Pagination limit.
  * search Server-side search value.
+ * sort   Server-side sort field.
+ * order  Sort direction: 0 = ASC, 1 = DESC.
  */
+export type WorkspaceSortField = "file_name" | "file_date" | "file_size";
+export type WorkspaceSortOrder = 0 | 1;
+
 export interface WorkspaceQuery {
     from?: number;
     cnt?: number;
     search?: string;
+    sort?: WorkspaceSortField;
+    order?: WorkspaceSortOrder;
 }
 
 /**
