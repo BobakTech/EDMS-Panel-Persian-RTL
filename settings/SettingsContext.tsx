@@ -38,6 +38,8 @@ interface SettingsContextValue {
 
     setLanguage: (language: Language) => void;
 
+    resetSettings: () => void;
+
     t: (key: TranslationKey) => string;
 }
 
@@ -89,6 +91,11 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
                 ),
 
             setLanguage,
+
+            resetSettings: () => {
+                setThemeMode(DEFAULT_THEME);
+                setLanguage(DEFAULT_LANGUAGE);
+            },
 
             t,
         }),

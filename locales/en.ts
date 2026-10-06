@@ -15,6 +15,8 @@ const en: Record<TranslationKey, string> = {
     showArchive: "Show archive",
     showTrash: "Show trash",
     showSettings: "Show settings",
+    defaultSettings: "Default",
+    resetToDefaultSettings: "Reset settings to default",
     loadingProjectInfo: "Loading project information...",
     projectInfoUnavailable: "Project information is unavailable.",
     projectConnectionConnected: "Web service connected",
@@ -170,7 +172,7 @@ const en: Record<TranslationKey, string> = {
     english: "English",
     selectLanguage: "Select language",
     currentStatus: "Current status",
-    temporarySettingsNotice: "Settings are temporary and frontend-only in this version. Persistent storage and connection to the main panel will be added later.",
+    temporarySettingsNotice: "Settings are applied temporarily in this version. Persistent settings will be added in a future version.",
 };
 
 export default en;

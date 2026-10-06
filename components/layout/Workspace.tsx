@@ -675,11 +675,6 @@ export default function Workspace({
     function showUndoToast(item: WorkspaceItem, message: string) {
         const originalItem = { ...item };
 
-        console.log("[EDMS Undo] Publishing toast:", {
-            itemId: originalItem.id,
-            message,
-        });
-
         onShowToast({
             type: "success",
             message,
