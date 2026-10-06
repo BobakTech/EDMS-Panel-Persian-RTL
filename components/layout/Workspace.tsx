@@ -81,6 +81,8 @@ import type {
     WorkspaceItem,
     WorkspaceItemUpdate,
     WorkspacePageType,
+    WorkspaceSortField,
+    WorkspaceSortOrder,
     WorkspaceViewMode,
 } from "../workspace";
 
@@ -187,11 +189,13 @@ interface WorkspaceProps {
     workspaceTotal: number;
     currentPage: number;
     itemsPerPage: number;
-    onChangePage: (page: number) => void;
-    onChangePageSize: (pageSize: number) => void;
     isLoadingWorkspaceItems: boolean;
+    isSearchApplying: boolean;
+    isSortApplying: boolean;
     workspaceErrorMessage: string | null;
     searchQuery: string;
+    onChangePage: (page: number) => void;
+    onChangePageSize: (pageSize: number) => void;
     onChangeFolder: (folderId: string | null) => void;
     onPressCreateFolder: () => void;
     onPressUpload: () => void;
@@ -223,6 +227,13 @@ interface WorkspaceProps {
     workspaceCategoryDefinitions: WorkspaceCategoryDefinition[];
     activeWorkspaceCategory: string;
     setActiveWorkspaceCategory: (categoryId: string) => void;
+
+    sortField: WorkspaceSortField;
+    sortOrder: WorkspaceSortOrder;
+    onChangeSort: (
+        sortField: WorkspaceSortField,
+        sortOrder: WorkspaceSortOrder
+    ) => void;
 }
 
 /**
@@ -240,7 +251,12 @@ export default function Workspace({
     itemsPerPage,
     onChangePage,
     onChangePageSize,
+    sortField,
+    sortOrder,
+    onChangeSort,
     isLoadingWorkspaceItems,
+    isSearchApplying,
+    isSortApplying,
     workspaceErrorMessage,
     searchQuery,
     onChangeFolder,
@@ -330,6 +346,15 @@ export default function Workspace({
     }
 
     const [viewMode, setViewMode] = useState<WorkspaceViewMode>("grid");
+
+    // Controls visibility of the custom sort menu opened from the Sort button.
+    const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+
+    // Treats the Sort trigger and popup as one interactive region.
+    // Leaving the region closes the popup after a short grace period so the
+    // pointer can move naturally between the trigger and menu.
+    const sortMenuRef = useRef<HTMLDivElement>(null);
+    const sortMenuCloseTimerRef = useRef<number | null>(null);
 
     const WORKSPACE_PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100, 200];
 
@@ -989,16 +1014,31 @@ export default function Workspace({
     const hasWorkspaceItems = visibleWorkspaceItems.length > 0;
     const hasWorkspaceItemsError = workspaceErrorMessage !== null;
 
+    // Initial loading owns the page-level loading indicator.
+    // Search refresh keeps the workspace shell visible and replaces only the result cards with skeletons.
     const shouldShowLoadingState = isLoadingWorkspaceItems;
-    const shouldShowErrorState = !isLoadingWorkspaceItems && hasWorkspaceItemsError;
+    const shouldShowResultsSkeleton =
+        isLoadingWorkspaceItems ||
+        isSearchApplying ||
+        isSortApplying;
+
+    const shouldShowErrorState =
+        !isLoadingWorkspaceItems &&
+        !isSearchApplying &&
+        !isSortApplying &&
+        hasWorkspaceItemsError;
 
     const shouldShowWorkspaceItems =
         !isLoadingWorkspaceItems &&
+        !isSearchApplying &&
+        !isSortApplying &&
         !hasWorkspaceItemsError &&
         hasWorkspaceItems;
 
     const shouldShowEmptyState =
         !isLoadingWorkspaceItems &&
+        !isSearchApplying &&
+        !isSortApplying &&
         !hasWorkspaceItemsError &&
         !hasWorkspaceItems;
 
@@ -1037,6 +1077,66 @@ export default function Workspace({
             };
         }),
     ];
+
+    const combinedSortValue = `${sortField}:${sortOrder}`;
+
+    // The default workspace order is Filename ascending. Show a compact
+    // indicator on the Sort button only while a non-default sort is active.
+    const isCustomSortActive = sortField !== "file_name" || sortOrder !== 0;
+
+    function clearSortMenuCloseTimer() {
+        if (sortMenuCloseTimerRef.current === null) return;
+        window.clearTimeout(sortMenuCloseTimerRef.current);
+        sortMenuCloseTimerRef.current = null;
+    }
+
+    function handleSortMenuPointerEnter() {
+        clearSortMenuCloseTimer();
+    }
+
+    function handleSortMenuPointerLeave() {
+        clearSortMenuCloseTimer();
+        sortMenuCloseTimerRef.current = window.setTimeout(() => {
+            setIsSortMenuOpen(false);
+            sortMenuCloseTimerRef.current = null;
+        }, 250);
+    }
+
+    useEffect(() => {
+        if (!isSortMenuOpen) return;
+
+        function handlePointerDown(event: PointerEvent) {
+            const target = event.target;
+            if (!(target instanceof Node)) return;
+            if (sortMenuRef.current?.contains(target)) return;
+            clearSortMenuCloseTimer();
+            setIsSortMenuOpen(false);
+        }
+
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key !== "Escape") return;
+            clearSortMenuCloseTimer();
+            setIsSortMenuOpen(false);
+        }
+
+        document.addEventListener("pointerdown", handlePointerDown);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown);
+            clearSortMenuCloseTimer();
+        };
+    }, [isSortMenuOpen]);
+
+    function handleChangeCombinedSort(value: string | number) {
+        const [nextSortField, nextSortOrder] = String(value).split(":");
+
+        onChangeSort(
+            nextSortField as WorkspaceSortField,
+            Number(nextSortOrder) as WorkspaceSortOrder
+        );
+    }
 
     return (
         <View
@@ -1272,6 +1372,184 @@ export default function Workspace({
                                 viewMode={viewMode}
                                 onChangeViewMode={setViewMode}
                             />
+
+                            <div
+                                ref={sortMenuRef}
+                                onMouseEnter={handleSortMenuPointerEnter}
+                                onMouseLeave={handleSortMenuPointerLeave}
+                                style={{
+                                    position: "relative",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    aria-haspopup="menu"
+                                    aria-expanded={isSortMenuOpen}
+                                    aria-label={
+                                        direction === "rtl"
+                                            ? "مرتب‌سازی اسناد"
+                                            : "Sort documents"
+                                    }
+                                    title={
+                                        direction === "rtl"
+                                            ? "مرتب‌سازی"
+                                            : "Sort"
+                                    }
+                                    onClick={() => setIsSortMenuOpen((current) => !current)}
+                                    style={{
+                                        width: 36,
+                                        height: 36,
+                                        padding: 0,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        border: `1px solid ${isSortMenuOpen ? colors.primary : colors.border}`,
+                                        borderRadius: 8,
+                                        backgroundColor: isSortMenuOpen
+                                            ? `${colors.primary}14`
+                                            : colors.surface,
+                                        color: isSortMenuOpen
+                                            ? colors.primary
+                                            : colors.text,
+                                        cursor: "pointer",
+                                        transform: isSortMenuOpen ? "scale(0.96)" : "scale(1)",
+                                        boxShadow: isSortMenuOpen ? `0 0 0 2px ${colors.primary}18` : "none",
+                                        transition: "transform 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease",
+                                    }}
+                                >
+                                    <Feather
+                                        name="filter"
+                                        size={17}
+                                        color={isSortMenuOpen || isCustomSortActive ? colors.primary : colors.text}
+                                        style={{
+                                            transition: "color 150ms ease",
+                                        }}
+                                    />
+
+                                    {isCustomSortActive && (
+                                        <span
+                                            aria-hidden="true"
+                                            style={{
+                                                position: "absolute",
+                                                top: 3,
+                                                [direction === "rtl" ? "left" : "right"]: 3,
+                                                width: 7,
+                                                height: 7,
+                                                borderRadius: 999,
+                                                backgroundColor: colors.primary,
+                                                boxShadow: `0 0 0 2px ${colors.surface}`,
+                                                pointerEvents: "none",
+                                                animation: "edms-workspace-panel-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+                                            }}
+                                        />
+                                    )}
+                                </button>
+
+                                {isSortMenuOpen && (
+                                    <div
+                                        role="menu"
+                                        style={{
+                                            position: "absolute",
+                                            top: 42,
+                                            [direction === "rtl" ? "right" : "left"]: 0,
+                                            zIndex: 50,
+                                            minWidth: 170,
+                                            paddingBlock: 5,
+                                            border: `1px solid ${colors.border}`,
+                                            borderRadius: 8,
+                                            backgroundColor: colors.surface,
+                                            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.14)",
+                                            transformOrigin: direction === "rtl" ? "top right" : "top left",
+                                            animation: "edms-workspace-panel-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+                                        }}
+                                    >
+                                        {([
+                                            ["file_name", 0, direction === "rtl" ? "نام فایل" : "Filename"],
+                                            ["file_name", 1, direction === "rtl" ? "نام فایل" : "Filename"],
+                                            ["file_date", 0, direction === "rtl" ? "تاریخ" : "Date"],
+                                            ["file_date", 1, direction === "rtl" ? "تاریخ" : "Date"],
+                                            ["file_size", 0, direction === "rtl" ? "حجم" : "Size"],
+                                            ["file_size", 1, direction === "rtl" ? "حجم" : "Size"],
+                                        ] as const).map(([field, order, label], index) => {
+                                            const value = `${field}:${order}`;
+                                            const isSelected = combinedSortValue === value;
+
+                                            return (
+                                                <Fragment key={value}>
+                                                    {(index === 2 || index === 4) && (
+                                                        <div
+                                                            aria-hidden="true"
+                                                            style={{
+                                                                height: 1,
+                                                                marginBlock: 5,
+                                                                backgroundColor: colors.border,
+                                                            }}
+                                                        />
+                                                    )}
+
+                                                    <button
+                                                        type="button"
+                                                        role="menuitemradio"
+                                                        aria-checked={isSelected}
+                                                        onClick={() => {
+                                                            handleChangeCombinedSort(value);
+                                                            setIsSortMenuOpen(false);
+                                                        }}
+                                                        style={{
+                                                            width: "100%",
+                                                            minHeight: 34,
+                                                            paddingInline: 11,
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "space-between",
+                                                            gap: 16,
+                                                            border: 0,
+                                                            backgroundColor: isSelected
+                                                                ? `${colors.primary}14`
+                                                                : "transparent",
+                                                            color: isSelected
+                                                                ? colors.primary
+                                                                : colors.text,
+                                                            fontSize: 13,
+                                                            fontWeight: isSelected ? 700 : 500,
+                                                            cursor: "pointer",
+                                                            textAlign: direction === "rtl" ? "right" : "left",
+                                                        }}
+                                                    >
+                                                        <span>{label}</span>
+
+                                                        <Feather
+                                                            name={order === 0 ? "arrow-up" : "arrow-down"}
+                                                            size={15}
+                                                            color={isSelected ? colors.primary : colors.text}
+                                                        />
+                                                    </button>
+                                                </Fragment>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+
+
+                            {isSortApplying && (
+                                <span
+                                    className="edms-activity-spinner"
+                                    role="status"
+                                    aria-label={
+                                        direction === "rtl"
+                                            ? "در حال اعمال مرتب‌سازی"
+                                            : "Applying sort"
+                                    }
+                                    style={{
+                                        borderTopColor: colors.primary,
+                                        borderRightColor: colors.border,
+                                        borderBottomColor: colors.border,
+                                        borderLeftColor: colors.border,
+                                    }}
+                                />
+                            )}
                         </div>
 
                         <div
@@ -2136,7 +2414,7 @@ export default function Workspace({
                         </View>
                     )}
 
-                    {shouldShowLoadingState && (
+                    {shouldShowResultsSkeleton && (
                         <View
                             accessibilityRole="progressbar"
                             accessibilityLabel={direction === "rtl" ? "در حال بارگذاری اسناد" : "Loading documents"}

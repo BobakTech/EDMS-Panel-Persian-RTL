@@ -152,9 +152,11 @@ export default function AppLayout() {
     const [workspaceTotal, setWorkspaceTotal] = useState(0);
     const [workspaceCurrentPage, setWorkspaceCurrentPage] = useState(1);
     const [workspacePageSize, setWorkspacePageSize] = useState(25);
-    const [workspaceSortField] = useState<WorkspaceSortField>("file_name");
-    const [workspaceSortOrder] = useState<WorkspaceSortOrder>(0);
+    const [workspaceSortField, setWorkspaceSortField] = useState<WorkspaceSortField>("file_name");
+    const [workspaceSortOrder, setWorkspaceSortOrder] = useState<WorkspaceSortOrder>(0);
     const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
+    const [workspaceApplyingAction, setWorkspaceApplyingAction] =
+        useState<"search" | "sort" | null>(null);
     const [workspaceError, setWorkspaceError] = useState<string | null>(null);
 
     const [activeWorkspaceAction, setActiveWorkspaceAction] =
@@ -335,6 +337,7 @@ export default function AppLayout() {
         searchQuery: workspaceSearchQuery,
         canCreateWorkspaceItems: activeWorkspacePage === "workspace",
         isWorkspaceLoading,
+        isSearchApplying: workspaceApplyingAction === "search",
         ...projectConnectionProps,
         ...workspaceFilterProps,
         isMobileMenuOpen,
@@ -342,6 +345,7 @@ export default function AppLayout() {
 
         onChangeSearchQuery: (value: string) => {
             setWorkspaceCurrentPage(1);
+            setWorkspaceApplyingAction("search");
             setWorkspaceSearchQuery(value);
         },
 
@@ -475,6 +479,7 @@ export default function AppLayout() {
                     if (isCurrentRequest) {
                         hasCompletedInitialWorkspaceLoad.current = true;
                         setIsWorkspaceLoading(false);
+                        setWorkspaceApplyingAction(null);
                     }
                 });
         }, 300);
@@ -881,7 +886,17 @@ export default function AppLayout() {
                                 setWorkspaceCurrentPage(1);
                                 setWorkspacePageSize(pageSize);
                             }}
+                            sortField={workspaceSortField}
+                            sortOrder={workspaceSortOrder}
+                            onChangeSort={(sortField, sortOrder) => {
+                                setWorkspaceCurrentPage(1);
+                                setWorkspaceApplyingAction("sort");
+                                setWorkspaceSortField(sortField);
+                                setWorkspaceSortOrder(sortOrder);
+                            }}
                             isLoadingWorkspaceItems={isWorkspaceLoading}
+                            isSearchApplying={workspaceApplyingAction === "search"}
+                            isSortApplying={workspaceApplyingAction === "sort"}
                             workspaceErrorMessage={workspaceError}
                             workspaceCategories={workspaceCategories}
                             workspaceCategoryDefinitions={workspaceCategoryDefinitions}

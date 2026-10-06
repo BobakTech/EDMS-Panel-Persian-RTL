@@ -64,6 +64,7 @@ interface ToolbarProps {
     onCreateFile: (file: WorkspacePickedFile) => void;
     canCreateWorkspaceItems: boolean;
     isWorkspaceLoading?: boolean;
+    isSearchApplying?: boolean;
     variant?: ToolbarVariant;
     isProjectInfoLoading?: boolean;
     projectInfoError?: string | null;
@@ -104,6 +105,7 @@ export default function Toolbar({
     onCreateFile,
     canCreateWorkspaceItems,
     isWorkspaceLoading = false,
+    isSearchApplying = false,
     variant = "desktop",
     isProjectInfoLoading = false,
     projectInfoError = null,
@@ -137,12 +139,29 @@ export default function Toolbar({
     const isMobileMenu = variant === "mobile-menu";
 
     const searchField = (isMobile = false) => (
-        <ToolbarSearchField
-            value={searchQuery}
-            mobile={isMobile}
-            onChange={(query) => { if (!isWorkspaceLoading) onChangeSearchQuery(query); }}
-        />
+        <View style={styles.searchFieldShell}>
+            <ToolbarSearchField
+                value={searchQuery}
+                mobile={isMobile}
+                isApplying={isSearchApplying}
+                onChange={(query) => { if (!isWorkspaceLoading) onChangeSearchQuery(query); }}
+            />
+            {isSearchApplying && (
+                <View
+                    accessibilityLabel="Applying search"
+                    style={[
+                        styles.searchApplyingIndicator,
+                        {
+                            borderColor: colors.border,
+                            borderTopColor: colors.primary,
+                            [isRtl ? "left" : "right"]: spacing.sm,
+                        },
+                    ]}
+                />
+            )}
+        </View>
     );
+
     const filterMenu = (compact = false) => (
         <WorkspaceFilterMenu
             compact={compact}
@@ -1358,6 +1377,23 @@ const styles = StyleSheet.create({
 
         borderWidth: 1,
         borderRadius: radius.md,
+    },
+
+    searchFieldShell: {
+        position: "relative",
+        width: "100%",
+        minWidth: 0,
+    },
+
+    searchApplyingIndicator: {
+        position: "absolute",
+        top: "50%",
+        width: 16,
+        height: 16,
+        marginTop: -8,
+        borderWidth: 2,
+        borderRadius: radius.pill,
+        pointerEvents: "none",
     },
 
     desktopSearchField: {

@@ -1,13 +1,55 @@
-:root { font-family: Tahoma, Arial, sans-serif; color: #17202a; background: #f4f6f8; font-synthesis: none; }
-* { box-sizing: border-box; }
-html { width: 100%; min-width: 320px; min-height: 100%; margin: 0; }
-body, #root { width: 100%; min-width: 320px; min-height: 100vh; margin: 0; }
-#root { display: flex; }
-body { overflow-x: hidden; overflow-y: auto; }
-button, input { font: inherit; }
-button { appearance: none; color: inherit; }
-input::placeholder { color: var(--placeholder-color, #8b95a1); }
-iframe { border: 0; }
+:root {
+    font-family: Tahoma, Arial, sans-serif;
+    color: #17202a;
+    background: #f4f6f8;
+    font-synthesis: none;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    min-width: 320px;
+    min-height: 100%;
+    margin: 0;
+}
+
+body,
+#root {
+    width: 100%;
+    min-width: 320px;
+    min-height: 100vh;
+    margin: 0;
+}
+
+#root {
+    display: flex;
+}
+
+body {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    appearance: none;
+    color: inherit;
+}
+
+input::placeholder {
+    color: var(--placeholder-color, #8b95a1);
+}
+
+iframe {
+    border: 0;
+}
 
 .workspace-category-scrollbar {
     scrollbar-width: thin;
@@ -55,20 +97,57 @@ iframe { border: 0; }
     background: rgba(59, 130, 246, 0.8);
 }
 
-@keyframes edms-spin { to { transform: rotate(360deg); } }
+@keyframes edms-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.edms-activity-spinner {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 50%;
+    animation: edms-spin 700ms linear infinite;
+}
+
 @keyframes edms-drawer-in-rtl {
-    from { opacity: 0; transform: translateX(24px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 @keyframes edms-drawer-in-ltr {
-    from { opacity: 0; transform: translateX(-24px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-24px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 @keyframes edms-user-menu-in {
-    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @keyframes edms-workspace-panel-in {

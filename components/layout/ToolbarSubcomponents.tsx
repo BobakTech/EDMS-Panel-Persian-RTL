@@ -7,12 +7,14 @@ import { getDirectionalLayout } from "../../settings/direction";
 interface ToolbarSearchFieldProps {
     value: string;
     mobile?: boolean;
+    isApplying?: boolean;
     onChange: (value: string) => void;
 }
 
 export function ToolbarSearchField({
     value,
     mobile = false,
+    isApplying = false,
     onChange,
 }: ToolbarSearchFieldProps) {
     const { direction, t, theme } = useSettings();
@@ -26,11 +28,29 @@ export function ToolbarSearchField({
                 mobile && styles.mobileSearchInput,
                 {
                     backgroundColor: colors.background,
-                    borderColor: colors.border,
+                    borderColor: isApplying ? colors.primary : colors.border,
                     direction,
                 },
             ]}
         >
+            {isApplying && (
+                <View
+                    accessibilityLabel="Applying search"
+                    style={styles.searchLoadingIndicator}
+                >
+                    <span
+                        className="edms-activity-spinner"
+                        aria-hidden="true"
+                        style={{
+                            borderTopColor: colors.primary,
+                            borderRightColor: colors.border,
+                            borderBottomColor: colors.border,
+                            borderLeftColor: colors.border,
+                        }}
+                    />
+                </View>
+            )}
+
             {value.length > 0 && (
                 <Pressable
                     accessibilityRole="button"
@@ -173,6 +193,14 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         cursor: "pointer",
     },
+
+    searchLoadingIndicator: {
+        width: 38,
+        alignSelf: "stretch",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
     mobileSearchInput: {
         width: "100%",
         flex: 0,
