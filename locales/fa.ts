@@ -33,6 +33,8 @@ const fa = {
     showArchive: "نمایش آرشیو",
     showTrash: "نمایش سطل زباله",
     showSettings: "نمایش تنظیمات",
+    defaultSettings: "پیش‌فرض",
+    resetToDefaultSettings: "بازگردانی تنظیمات به حالت پیش‌فرض",
     loadingProjectInfo: "در حال دریافت اطلاعات پروژه...",
     projectInfoUnavailable: "اطلاعات پروژه در دسترس نیست.",
     folder: "پوشه",
@@ -168,7 +170,13 @@ const fa = {
     english: "English",
     selectLanguage: "انتخاب زبان",
     currentStatus: "وضعیت فعلی",
-    temporarySettingsNotice: "تنظیمات در این نسخه به‌صورت فرانت‌اندی و موقت اعمال می‌شوند. ذخیره‌سازی دائمی و اتصال به پنل اصلی بعداً اضافه می‌شود.",
+    temporarySettingsNotice: "تنظیمات در این نسخه به‌صورت موقت اعمال می‌شوند. ذخیره‌سازی دائمی تنظیمات در نسخه‌های بعدی اضافه خواهد شد.",
+    saveAsDefault: "ذخیره به‌عنوان پیش‌فرض",
+    saveAsDefaultSettings: "ذخیره تنظیمات فعلی به‌عنوان پیش‌فرض",
+    defaultSaved: "به‌عنوان پیش‌فرض ذخیره شد",
+    defaultSaveFailed: "ذخیره ناموفق بود",
+    confirmRestoreDefaultSettings: "تنظیمات پیش‌فرض ذخیره‌شده بازگردانی شوند؟",
+    restoreDefaultSettings: "بازگردانی",
 } as const;
 
 export type TranslationKey = keyof typeof fa;
