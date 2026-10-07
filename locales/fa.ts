@@ -171,6 +171,12 @@ const fa = {
     selectLanguage: "انتخاب زبان",
     currentStatus: "وضعیت فعلی",
     temporarySettingsNotice: "تنظیمات در این نسخه به‌صورت موقت اعمال می‌شوند. ذخیره‌سازی دائمی تنظیمات در نسخه‌های بعدی اضافه خواهد شد.",
+    saveAsDefault: "ذخیره به‌عنوان پیش‌فرض",
+    saveAsDefaultSettings: "ذخیره تنظیمات فعلی به‌عنوان پیش‌فرض",
+    defaultSaved: "به‌عنوان پیش‌فرض ذخیره شد",
+    defaultSaveFailed: "ذخیره ناموفق بود",
+    confirmRestoreDefaultSettings: "تنظیمات پیش‌فرض ذخیره‌شده بازگردانی شوند؟",
+    restoreDefaultSettings: "بازگردانی",
 } as const;
 
 export type TranslationKey = keyof typeof fa;

@@ -173,6 +173,12 @@ const en: Record<TranslationKey, string> = {
     selectLanguage: "Select language",
     currentStatus: "Current status",
     temporarySettingsNotice: "Settings are applied temporarily in this version. Persistent settings will be added in a future version.",
+    saveAsDefault: "Save as default",
+    saveAsDefaultSettings: "Save current settings as default",
+    defaultSaved: "Saved as default",
+    defaultSaveFailed: "Save failed",
+    confirmRestoreDefaultSettings: "Restore the saved default settings?",
+    restoreDefaultSettings: "Restore",
 };
 
 export default en;

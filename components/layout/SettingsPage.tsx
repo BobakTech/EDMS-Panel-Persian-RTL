@@ -2,11 +2,11 @@
  * ============================================================================
  * Settings Page
  * ----------------------------------------------------------------------------
- * Displays frontend-only panel settings such as appearance and language.
+ * Displays panel settings such as appearance and language.
  * ============================================================================
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Feather } from "../../web/icons";
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "../../web/ui";
 
@@ -68,7 +68,9 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
         direction,
         setThemeMode,
         setLanguage,
+        hasDefaultChanges,
         resetSettings,
+        saveSettingsAsDefault,
         t,
     } = useSettings();
 
@@ -77,16 +79,59 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
     const { width } = useWindowDimensions();
     const isCompact = width < 680;
 
+    const [showDefaultConfirmation, setShowDefaultConfirmation] = useState(false);
+    const [saveResult, setSaveResult] = useState<"success" | "error" | null>(null);
+    const saveResultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleSaveAsDefault = () => {
+        if (!hasDefaultChanges) return;
+
+        const succeeded = saveSettingsAsDefault();
+        setSaveResult(succeeded ? "success" : "error");
+
+        if (saveResultTimer.current) clearTimeout(saveResultTimer.current);
+
+        saveResultTimer.current = setTimeout(() => {
+            setSaveResult(null);
+            saveResultTimer.current = null;
+        }, 3000);
+    };
+
+    const handleConfirmDefault = () => {
+        const succeeded = resetSettings();
+
+        setShowDefaultConfirmation(false);
+        setSaveResult(succeeded ? "success" : "error");
+
+        if (saveResultTimer.current) clearTimeout(saveResultTimer.current);
+
+        saveResultTimer.current = setTimeout(() => {
+            setSaveResult(null);
+            saveResultTimer.current = null;
+        }, 3000);
+    };
+
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === "Escape") {
+                if (showDefaultConfirmation) {
+                    setShowDefaultConfirmation(false);
+                    return;
+                }
+
                 onClose();
             }
         }
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [onClose]);
+    }, [onClose, showDefaultConfirmation]);
+
+    useEffect(() => {
+        return () => {
+            if (saveResultTimer.current) clearTimeout(saveResultTimer.current);
+        };
+    }, []);
 
     return (
         <Modal
@@ -344,7 +389,7 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                         ]}
                     />
 
-                    {/* Current status and reset action */}
+                    {/* Current status and default actions */}
                     <View
                         style={[
                             styles.statusNote,
@@ -386,36 +431,166 @@ export default function SettingsPage({ onClose }: SettingsPageProps) {
                             </Text>
                         </View>
 
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={t("resetToDefaultSettings")}
-                            onPress={resetSettings}
-                            style={({ pressed }) => [
-                                styles.defaultButton,
-                                {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.text,
-                                },
-                                pressed && styles.defaultButtonPressed,
-                            ]}
-                        >
-                            <Feather
-                                name="rotate-ccw"
-                                size={16}
-                                color={colors.text}
-                            />
+                        <View style={styles.defaultArea}>
+                            <View style={styles.defaultGroup}>
+                                <Pressable
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t("resetToDefaultSettings")}
+                                    onPress={() => setShowDefaultConfirmation(true)}
+                                    style={({ pressed }) => [
+                                        styles.defaultButton,
+                                        {
+                                            backgroundColor: colors.surface,
+                                            borderColor: colors.text,
+                                        },
+                                        pressed && styles.defaultButtonPressed,
+                                    ]}
+                                >
+                                    <Feather
+                                        name="rotate-ccw"
+                                        size={16}
+                                        color={colors.text}
+                                    />
 
-                            <Text
-                                style={[
-                                    styles.defaultButtonText,
+                                    <Text
+                                        style={[
+                                            styles.defaultButtonText,
+                                            {
+                                                color: colors.text,
+                                            },
+                                        ]}
+                                    >
+                                        {t("defaultSettings")}
+                                    </Text>
+                                </Pressable>
+
+                                {showDefaultConfirmation && (
+                                    <View
+                                        style={[
+                                            styles.defaultConfirmation,
+                                            {
+                                                backgroundColor: colors.surface,
+                                                borderColor: colors.border,
+                                            },
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.defaultConfirmationText,
+                                                {
+                                                    color: colors.text,
+                                                    textAlign,
+                                                },
+                                            ]}
+                                        >
+                                            {t("confirmRestoreDefaultSettings")}
+                                        </Text>
+
+                                        <View style={styles.confirmationActions}>
+                                            <Pressable
+                                                accessibilityRole="button"
+                                                onPress={() => setShowDefaultConfirmation(false)}
+                                                style={({ pressed }) => [
+                                                    styles.confirmationButton,
+                                                    {
+                                                        backgroundColor: colors.background,
+                                                        borderColor: colors.border,
+                                                    },
+                                                    pressed && styles.defaultButtonPressed,
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.defaultButtonText,
+                                                        {
+                                                            color: colors.text,
+                                                        },
+                                                    ]}
+                                                >
+                                                    {t("cancel")}
+                                                </Text>
+                                            </Pressable>
+
+                                            <Pressable
+                                                accessibilityRole="button"
+                                                onPress={handleConfirmDefault}
+                                                style={({ pressed }) => [
+                                                    styles.confirmationButton,
+                                                    {
+                                                        backgroundColor: colors.primary,
+                                                        borderColor: colors.primary,
+                                                    },
+                                                    pressed && styles.defaultButtonPressed,
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.defaultButtonText,
+                                                        {
+                                                            color: colors.background,
+                                                        },
+                                                    ]}
+                                                >
+                                                    {t("restoreDefaultSettings")}
+                                                </Text>
+                                            </Pressable>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+
+                            <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={t("saveAsDefaultSettings")}
+                                disabled={!hasDefaultChanges}
+                                onPress={handleSaveAsDefault}
+                                style={({ pressed }) => [
+                                    styles.defaultButton,
+                                    styles.saveDefaultButton,
                                     {
-                                        color: colors.text,
+                                        backgroundColor:
+                                            saveResult === "success"
+                                                ? "#16a34a"
+                                                : saveResult === "error"
+                                                    ? "#dc2626"
+                                                    : colors.primary,
+                                        borderColor:
+                                            saveResult === "success"
+                                                ? "#16a34a"
+                                                : saveResult === "error"
+                                                    ? "#dc2626"
+                                                    : colors.primary,
                                     },
+                                    !hasDefaultChanges &&
+                                    saveResult === null &&
+                                    styles.disabledButton,
+                                    pressed &&
+                                    hasDefaultChanges &&
+                                    styles.defaultButtonPressed,
                                 ]}
                             >
-                                {t("defaultSettings")}
-                            </Text>
-                        </Pressable>
+                                <Feather
+                                    name={saveResult === "error" ? "x" : "check"}
+                                    size={16}
+                                    color={colors.background}
+                                />
+
+                                <Text
+                                    style={[
+                                        styles.defaultButtonText,
+                                        {
+                                            color: colors.background,
+                                        },
+                                    ]}
+                                >
+                                    {saveResult === "success"
+                                        ? t("defaultSaved")
+                                        : saveResult === "error"
+                                            ? t("defaultSaveFailed")
+                                            : t("saveAsDefault")}
+                                </Text>
+                            </Pressable>
+                        </View>
                     </View>
                 </View>
             </View>
@@ -600,6 +775,17 @@ const styles = StyleSheet.create({
         textAlign: "right",
     },
 
+    defaultArea: {
+        minWidth: 190,
+        alignItems: "stretch",
+        gap: spacing.sm,
+    },
+
+    defaultGroup: {
+        alignItems: "stretch",
+        gap: spacing.sm,
+    },
+
     defaultButton: {
         flexDirection: "row",
         alignItems: "center",
@@ -612,12 +798,49 @@ const styles = StyleSheet.create({
         opacity: 0.82,
     },
 
+    saveDefaultButton: {
+        opacity: 1,
+    },
+
+    disabledButton: {
+        opacity: 0.35,
+        cursor: "not-allowed",
+    },
+
     defaultButtonPressed: {
         opacity: 0.58,
     },
-    
+
     defaultButtonText: {
         fontSize: typography.fontSize.sm,
         fontWeight: typography.fontWeight.semibold,
+    },
+
+    defaultConfirmation: {
+        gap: spacing.sm,
+        padding: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
+    },
+
+    defaultConfirmationText: {
+        fontSize: typography.fontSize.sm,
+        fontWeight: typography.fontWeight.regular,
+    },
+
+    confirmationActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        gap: spacing.sm,
+    },
+
+    confirmationButton: {
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderWidth: 1,
+        borderRadius: radius.md,
     },
 });
