@@ -66,6 +66,11 @@ import WorkspaceEmptyState, {
 } from "../workspace/WorkspaceEmptyState";
 
 import { filterWorkspaceByCategory } from "../workspace/workspace.categories";
+import { mapWorkspaceItemToCard } from "../workspace/card.mapper";
+import type { Card } from "../workspace/Card";
+import { createWorkspacePresentation } from "../workspace/workspace.presentation.controller";
+import { workspaceCardPresentationRules } from "../workspace/workspace.presentation.config";
+import { legacyWorkspaceCardNavigation, legacyWorkspaceNavigation, WORKSPACE_DASHBOARD_TARGET, WORKSPACE_ROOT_TARGET, WORKSPACE_FOLDER_TARGET } from "../workspace/workspace.navigation.adapter";
 import type { WorkspaceCategory } from "../workspace/workspace.types";
 
 /**
@@ -186,6 +191,8 @@ interface WorkspaceProps {
     pageType: WorkspacePageType;
     currentFolderId: string | null;
     workspaceItems: WorkspaceItem[];
+    /** Optional presentation-owned cards; when omitted, legacy PMIS items are adapted. */
+    presentationCards?: Card[];
     workspaceTotal: number;
     currentPage: number;
     itemsPerPage: number;
@@ -246,6 +253,7 @@ export default function Workspace({
     pageType,
     currentFolderId,
     workspaceItems,
+    presentationCards,
     workspaceTotal,
     currentPage,
     itemsPerPage,
@@ -425,6 +433,8 @@ export default function Workspace({
      */
 
     function handleToggleWorkspaceItemSelection(itemId: string) {
+        const card = presentationCardsById.get(itemId);
+        if (!card || card.disabled || !workspaceItemsById.has(itemId) || (card.capabilities.length > 0 && !card.can("select"))) return;
         setSelectedItemIdsSafe(itemId);
         setPreviewItemId(null);
     }
@@ -442,14 +452,15 @@ export default function Workspace({
     }
 
     function handlePressWorkspaceItem(itemId: string) {
-        const pressedItem = visibleWorkspaceItems.find(
-            (item) => item.id === itemId
-        );
+        const card = presentationCardsById.get(itemId);
+        if (!card || card.disabled || (card.capabilities.length > 0 && !card.can("open"))) return;
+        // Resolve the PMIS record from the same presentation-page lookup used by card rendering.
+        const pressedItem = workspaceItemsById.get(itemId);
 
-        if (pageType === "workspace" && pressedItem?.type === "folder") {
-            onChangeFolder(pressedItem.id);
+        const navigation = card.navigation;
+        if (navigation?.target === WORKSPACE_FOLDER_TARGET && typeof navigation.params?.folderId === "string") {
+            onChangeFolder(navigation.params.folderId);
             setPreviewItemId(null);
-
             return;
         }
 
@@ -484,12 +495,13 @@ export default function Workspace({
     }
 
     function handleReturnToPreviousFolder() {
-        if (!currentWorkspaceFolder) {
-            onChangeFolder(null);
-            return;
-        }
+        onChangeFolder(presentation.navigation.parentId ?? null);
+    }
 
-        onChangeFolder(currentWorkspaceFolder.parentFolderId ?? null);
+    function handlePresentationBreadcrumb(targetId: string) {
+        if (targetId === WORKSPACE_DASHBOARD_TARGET) onOpenDashboard();
+        else if (targetId === WORKSPACE_ROOT_TARGET) onChangeFolder(null);
+        else onChangeFolder(targetId);
     }
 
     function handleCloseDocumentPreview() {
@@ -880,30 +892,53 @@ export default function Workspace({
     // The API already returns only the requested page; do not slice it again.
     const paginatedWorkspaceItems = visibleWorkspaceItems;
 
+    // Compatibility integration: explicit presentation configuration at the UI boundary.
+    // Navigation, folder filtering, and API pagination remain owned by the legacy flow
+    // until their independent presentation contracts are integrated in later steps.
+    const presentation = createWorkspacePresentation({
+        id: `workspace:${pageType}:${currentFolderId ?? "root"}`,
+        environment: "workspace",
+        level: 1,
+        cards: presentationCards ?? paginatedWorkspaceItems.map((item) => mapWorkspaceItemToCard(item, { level: 1, navigation: legacyWorkspaceCardNavigation(item, pageType) })),
+        navigation: legacyWorkspaceNavigation(currentFolderId, pageContent.breadcrumbLabel, currentFolderPath, t("home")),
+        pagination: { page: safeCurrentPage, pageSize: itemsPerPage, totalItems: workspaceTotal },
+        ...workspaceCardPresentationRules,
+    });
+    // Presentation controls card visibility and order; legacy items remain the
+    // authoritative source for file operations, metadata, and document previews.
+    const workspaceItemsById = new Map(paginatedWorkspaceItems.map((item) => [item.id, item]));
+    const renderedCards = presentation.cards;
+    // Only PMIS-backed cards participate in legacy bulk operations.
+    const renderedWorkspaceItems = renderedCards.flatMap((card) => {
+        const item = workspaceItemsById.get(card.id);
+        return item ? [item] : [];
+    });
+    const presentationCardsById = new Map(renderedCards.map((card) => [card.id, card]));
+
     const allPageWorkspaceItemsSelected =
-        paginatedWorkspaceItems.length > 0 &&
-        paginatedWorkspaceItems.every((item) =>
+        renderedWorkspaceItems.some((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))) &&
+        renderedWorkspaceItems.filter((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))).every((item) =>
             multiSelectedItemIds.includes(item.id)
         );
 
     function handleSelectAllPageWorkspaceItems() {
         setMultiSelectedItemIds((currentIds) => {
             const nextIds = new Set(currentIds);
-            paginatedWorkspaceItems.forEach((item) => nextIds.add(item.id));
+            renderedWorkspaceItems.filter((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))).forEach((item) => nextIds.add(item.id));
             return Array.from(nextIds);
         });
         setPreviewItemId(null);
     }
 
     function handleDeselectAllPageWorkspaceItems() {
-        const pageItemIds = new Set(paginatedWorkspaceItems.map((item) => item.id));
+        const pageItemIds = new Set(renderedWorkspaceItems.map((item) => item.id));
         setMultiSelectedItemIds((currentIds) => currentIds.filter((itemId) => !pageItemIds.has(itemId)));
     }
 
     function handleInvertPageWorkspaceSelection() {
         setMultiSelectedItemIds((currentIds) => {
             const nextIds = new Set(currentIds);
-            paginatedWorkspaceItems.forEach((item) => {
+            renderedWorkspaceItems.filter((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))).forEach((item) => {
                 if (nextIds.has(item.id)) nextIds.delete(item.id);
                 else nextIds.add(item.id);
             });
@@ -1006,7 +1041,7 @@ export default function Workspace({
         });
     }
 
-    const hasWorkspaceItems = visibleWorkspaceItems.length > 0;
+    const hasWorkspaceItems = renderedCards.length > 0;
     const hasWorkspaceItemsError = workspaceErrorMessage !== null;
 
     // Initial loading owns the page-level loading indicator.
@@ -1049,29 +1084,13 @@ export default function Workspace({
      * ============================================================================
      */
 
-    const breadcrumbItems = [
-        {
-            label: t("home"),
-            accessibilityLabel: "رفتن به داشبورد",
-            onPress: onOpenDashboard,
-        },
-        {
-            label: pageContent.breadcrumbLabel,
-            accessibilityLabel: "بازگشت به ریشه اسناد",
-            onPress: handleReturnToWorkspaceRoot,
-        },
-        ...currentFolderPath.map((folder, folderIndex) => {
-            const isLastFolder = folderIndex === currentFolderPath.length - 1;
-
-            return {
-                label: folder.name,
-                accessibilityLabel: `رفتن به ${folder.name}`,
-                onPress: isLastFolder
-                    ? undefined
-                    : () => onChangeFolder(folder.id),
-            };
-        }),
-    ];
+    const breadcrumbItems = presentation.navigation.breadcrumbs.map((crumb) => ({
+        label: crumb.label,
+        accessibilityLabel: crumb.label,
+        onPress: !crumb.disabled && crumb.targetId != null
+            ? () => handlePresentationBreadcrumb(crumb.targetId!)
+            : undefined,
+    }));
 
     const combinedSortValue = `${sortField}:${sortOrder}`;
 
@@ -1157,7 +1176,7 @@ export default function Workspace({
                 <View style={styles.workspaceTopBar}>
                     <WorkspaceBreadcrumb items={breadcrumbItems} />
 
-                    {currentWorkspaceFolder && (
+                    {presentation.navigation.canGoBack && (
                         <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={t("back")}
@@ -2242,7 +2261,7 @@ export default function Workspace({
                                 ? Array.from(
                                     {
                                         length: Math.ceil(
-                                            paginatedWorkspaceItems.length /
+                                            renderedCards.length /
                                             workspaceGridColumnCount
                                         ),
                                     },
@@ -2252,7 +2271,7 @@ export default function Workspace({
                                             workspaceGridColumnCount;
 
                                         const rowItems =
-                                            paginatedWorkspaceItems.slice(
+                                            renderedCards.slice(
                                                 rowStartIndex,
                                                 rowStartIndex +
                                                 workspaceGridColumnCount
@@ -2260,12 +2279,8 @@ export default function Workspace({
 
 
                                         const previewItem =
-                                            rowItems.find(
-                                                (item) =>
-                                                    previewItemId ===
-                                                    item.id &&
-                                                    item.type === "file"
-                                            ) ?? null;
+                                            rowItems.map((card) => workspaceItemsById.get(card.id))
+                                                .find((item) => item && previewItemId === item.id && item.type === "file") ?? null;
 
                                         return (
                                             <Fragment
@@ -2281,21 +2296,21 @@ export default function Workspace({
                                                     ]}
                                                 >
                                                     {rowItems.map(
-                                                        (item) => {
+                                                        (card) => {
+                                                            const item = workspaceItemsById.get(card.id);
                                                             const isPreviewOpen =
                                                                 previewItemId ===
-                                                                item.id &&
-                                                                item.type ===
+                                                                card.id &&
+                                                                item?.type ===
                                                                 "file";
 
                                                             return (
                                                                 <WorkspaceItemCard
-                                                                    key={
-                                                                        item.id
-                                                                    }
+                                                                    key={card.id}
                                                                     item={
                                                                         item
                                                                     }
+                                                                    card={card}
                                                                     viewMode={
                                                                         viewMode
                                                                     }
@@ -2306,7 +2321,7 @@ export default function Workspace({
                                                                         isPreviewOpen
                                                                     }
                                                                     isMultiSelected={
-                                                                        multiSelectedItemIds.includes(item.id)
+                                                                        multiSelectedItemIds.includes(card.id)
                                                                     }
                                                                     onPress={
                                                                         handlePressWorkspaceItem
@@ -2314,6 +2329,7 @@ export default function Workspace({
                                                                     onToggleSelection={
                                                                         handleToggleWorkspaceItemSelection
                                                                     }
+                                                                    allowSelection={Boolean(item)}
                                                                 />
                                                             );
                                                         }
@@ -2349,18 +2365,19 @@ export default function Workspace({
                                         );
                                     }
                                 )
-                                : paginatedWorkspaceItems.map(
-                                    (item) => {
-
+                                : renderedCards.map(
+                                    (card) => {
+                                        const item = workspaceItemsById.get(card.id);
                                         const isPreviewOpen =
-                                            previewItemId === item.id &&
-                                            item.type === "file";
+                                            previewItemId === card.id &&
+                                            item?.type === "file";
 
                                         return (
-                                            <Fragment key={item.id}>
+                                            <View key={card.id} style={styles.workspaceListItem}>
 
                                                 <WorkspaceItemCard
                                                     item={item}
+                                                    card={card}
                                                     viewMode={viewMode}
                                                     isCompact={
                                                         isCompactWorkspace
@@ -2369,7 +2386,7 @@ export default function Workspace({
                                                         isPreviewOpen
                                                     }
                                                     isMultiSelected={
-                                                        multiSelectedItemIds.includes(item.id)
+                                                        multiSelectedItemIds.includes(card.id)
                                                     }
                                                     onPress={
                                                         handlePressWorkspaceItem
@@ -2377,9 +2394,10 @@ export default function Workspace({
                                                     onToggleSelection={
                                                         handleToggleWorkspaceItemSelection
                                                     }
+                                                    allowSelection={Boolean(item)}
                                                 />
 
-                                                {isPreviewOpen && (
+                                                {isPreviewOpen && item && (
                                                     <View
                                                         style={
                                                             styles.workspacePreviewRow
@@ -2402,7 +2420,7 @@ export default function Workspace({
                                                         />
                                                     </View>
                                                 )}
-                                            </Fragment>
+                                            </View>
                                         );
                                     }
                                 )}
@@ -2694,7 +2712,17 @@ const styles = StyleSheet.create({
         flexDirection: "column",
         alignItems: "stretch",
 
-        gap: spacing.md,
+        gap: spacing.sm,
+    },
+
+    // Keep each list card and its inline preview in one natural-height flex item.
+    workspaceListItem: {
+        width: "100%",
+        minWidth: 0,
+        flexGrow: 0,
+        flexShrink: 0,
+        flexDirection: "column",
+        gap: spacing.sm,
     },
 
     /**

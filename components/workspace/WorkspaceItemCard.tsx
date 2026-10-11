@@ -9,15 +9,15 @@
 
 import { Feather } from "../../web/icons";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 
 import {
     Pressable,
-    StyleSheet,
     Text,
     View,
 } from "../../web/ui";
 
-import { radius, spacing, typography } from "../../theme";
+import { spacing } from "../../theme";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
 
@@ -34,6 +34,11 @@ import {
 
 import Tooltip from "../common/Tooltip";
 
+import "./Card.css";
+import { cardStyles as styles } from "./CardStyle";
+import { mapWorkspaceItemToCard } from "./card.mapper";
+import type { Card } from "./Card";
+
 /**
  * ============================================================================
  * Types
@@ -49,7 +54,9 @@ type FeatherIconName = keyof typeof Feather.glyphMap;
  */
 
 interface WorkspaceItemCardProps {
-    item: WorkspaceItem;
+    /** A resolved Card is sufficient; legacy WorkspaceItem is optional. */
+    item?: WorkspaceItem;
+    card?: Card;
     viewMode: WorkspaceViewMode;
     isCompact: boolean;
 
@@ -63,6 +70,8 @@ interface WorkspaceItemCardProps {
      * Indicates that the item belongs to the workspace multi-selection.
      */
     isMultiSelected: boolean;
+    /** Disable PMIS selection for presentation-only cards. */
+    allowSelection?: boolean;
 
     onPress: (itemId: string) => void;
     onToggleSelection: (itemId: string) => void;
@@ -74,8 +83,9 @@ interface WorkspaceItemCardProps {
  * ============================================================================
  */
 
-function getItemIconName(item: WorkspaceItem): FeatherIconName {
-    return item.type === "folder" ? "folder" : "file-text";
+function getItemIconName(card: Card): FeatherIconName {
+    if (card.icon && Object.prototype.hasOwnProperty.call(Feather.glyphMap, card.icon)) return card.icon as FeatherIconName;
+    return card.isFolder ? "folder" : "file-text";
 }
 
 /**
@@ -91,16 +101,16 @@ function getItemIconName(item: WorkspaceItem): FeatherIconName {
  *   report (draft) final (1).jpg  -> preserves "(1).jpg"
  */
 function getWorkspaceCardItemName(
-    item: WorkspaceItem,
+    card: Card,
     maxLength = 26
 ): string {
-    const itemName = item.name;
+    const itemName = card.name;
 
     if (itemName.length <= maxLength) {
         return itemName;
     }
 
-    if (item.type === "folder") {
+    if (card.isFolder) {
         return `${itemName.slice(
             0,
             Math.max(4, maxLength - 3)
@@ -168,10 +178,12 @@ function getWorkspaceCardItemName(
 
 export default function WorkspaceItemCard({
     item,
+    card: resolvedCard,
     viewMode,
     isCompact,
     isSelected,
     isMultiSelected,
+    allowSelection = true,
     onPress,
     onToggleSelection,
 }: WorkspaceItemCardProps) {
@@ -191,6 +203,13 @@ export default function WorkspaceItemCard({
     const isListMode =
         viewMode === "list";
 
+    // The presentation Card is authoritative. Legacy callers may still supply only an item.
+    const card = resolvedCard ?? (item ? mapWorkspaceItemToCard(item) : null);
+    if (!card) return null;
+    const isDisabled = card.disabled;
+    const canOpen = !isDisabled && (card.capabilities.length === 0 || card.can("open"));
+    const canSelect = allowSelection && !isDisabled && (card.capabilities.length === 0 || card.can("select"));
+
     const isVisuallySelected =
         isSelected || isMultiSelected;
 
@@ -200,36 +219,18 @@ export default function WorkspaceItemCard({
     const ambientShadow =
         "rgba(0, 0, 0, 0.18)";
 
-    const itemTypeLabel =
-        item.type === "folder"
-            ? getWorkspaceItemLabel(item, t)
-            : (
-                item.extension ??
-                getWorkspaceFileExtension(item.name)
-            ).toUpperCase();
+    // PMIS metadata is an optional compatibility source, never a rendering prerequisite.
+    const itemTypeLabel = item
+        ? (card.isFolder ? getWorkspaceItemLabel(item, t) : (card.extension || item.extension || getWorkspaceFileExtension(card.name)).toUpperCase())
+        : (card.extension || card.type).toUpperCase();
+    const rawItemSizeLabel = item ? getWorkspaceItemUpdatedAtLabel(item, t, language) : (card.footer || card.size);
+    const itemSizeLabel = card.isFile && /^\d+(?:[.,]\d+)?$/.test(rawItemSizeLabel.trim())
+        ? `${rawItemSizeLabel} MB` : rawItemSizeLabel;
+    const itemMetaLabel = item
+        ? (card.isFolder ? itemSizeLabel : `${itemTypeLabel} · ${itemSizeLabel}`)
+        : [itemTypeLabel, itemSizeLabel].filter(Boolean).join(" · ");
 
-    const rawItemSizeLabel =
-        getWorkspaceItemUpdatedAtLabel(
-            item,
-            t,
-            language
-        );
-
-    const itemSizeLabel =
-        item.type === "file" &&
-        /^\d+(?:[.,]\d+)?$/.test(
-            rawItemSizeLabel.trim()
-        )
-            ? `${rawItemSizeLabel} MB`
-            : rawItemSizeLabel;
-
-    const itemMetaLabel =
-        item.type === "folder"
-            ? itemSizeLabel
-            : `${itemTypeLabel} · ${itemSizeLabel}`;
-
-    const displayItemName =
-        getWorkspaceCardItemName(item);
+    const displayItemName = getWorkspaceCardItemName(card);
 
     const selectionLabel =
         isMultiSelected
@@ -243,14 +244,15 @@ export default function WorkspaceItemCard({
     const selectionAccessibilityLabel =
         isMultiSelected
             ? direction === "rtl"
-                ? `لغو انتخاب ${item.name}`
-                : `Deselect ${item.name}`
+                ? `لغو انتخاب ${card.name}`
+                : `Deselect ${card.name}`
             : direction === "rtl"
-                ? `انتخاب ${item.name}`
-                : `Select ${item.name}`;
+                ? `انتخاب ${card.name}`
+                : `Select ${card.name}`;
 
     return (
         <View
+            className={`${card.cssClassName} ${isListMode ? "card-list" : "card-grid"}${!isListMode && isCompact ? " card-compact" : ""}${isVisuallySelected ? " card-selected" : ""}${isHovered ? " card-hovered" : ""}${isPressed ? " card-pressed" : ""}${isDisabled ? " card-disabled" : ""}`}
             onPointerEnter={() =>
                 setIsHovered(true)
             }
@@ -268,46 +270,15 @@ export default function WorkspaceItemCard({
                 setIsPressed(false)
             }
             style={[
-                styles.card,
-
-                isListMode
-                    ? styles.listCard
-                    : styles.gridCard,
-
-                !isListMode &&
-                    isCompact &&
-                    styles.compactGridCard,
-
                 {
-                    backgroundColor:
-                        isVisuallySelected
-                            ? `color-mix(in srgb, ${colors.primary} 8%, ${colors.surface})`
-                            : colors.surface,
+                    "--card-surface": colors.surface,
+                    "--card-primary": colors.primary,
+                    "--card-border": colors.border,
+                    "--card-depth": depthColor,
+                    "--card-shadow": ambientShadow,
+                    "--card-selected-surface": `color-mix(in srgb, ${colors.primary} 8%, ${colors.surface})`,
+                } as CSSProperties,
 
-                    borderColor:
-                        isVisuallySelected
-                            ? colors.primary
-                            : `color-mix(in srgb, ${colors.primary} 38%, ${colors.border})`,
-
-                    boxShadow:
-                        isVisuallySelected
-                            ? `inset 0 0 0 1px color-mix(in srgb, ${colors.primary} 34%, transparent), 0 3px 0 ${depthColor}, 0 8px 18px ${ambientShadow}`
-                            : isPressed
-                                ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 1px 0 ${depthColor}, 0 3px 7px ${ambientShadow}`
-                                : isHovered
-                                    ? `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 5px 0 ${depthColor}, 0 12px 22px ${ambientShadow}`
-                                    : `inset 0 1px 0 color-mix(in srgb, ${colors.surface} 75%, transparent), 0 3px 0 ${depthColor}, 0 7px 14px ${ambientShadow}`,
-
-                    transform:
-                        isPressed
-                            ? "translateY(2px)"
-                            : isHovered
-                                ? "translateY(-2px)"
-                                : "translateY(0)",
-                },
-
-                isVisuallySelected &&
-                    styles.selectedCard,
             ]}
         >
             {/*
@@ -324,7 +295,7 @@ export default function WorkspaceItemCard({
                     styles.cardActionCluster,
 
                     isListMode &&
-                        styles.listCardActionCluster,
+                    styles.listCardActionCluster,
 
                     {
                         left: isRtl
@@ -337,7 +308,7 @@ export default function WorkspaceItemCard({
                     },
                 ]}
             >
-                {item.isPinned && (
+                {Boolean(item?.isPinned) && (
                     <Tooltip
                         label={t("unpinItem")}
                     >
@@ -368,10 +339,11 @@ export default function WorkspaceItemCard({
                     </Tooltip>
                 )}
 
-                <Tooltip
+                {canSelect && <Tooltip
                     label={selectionLabel}
                 >
                     <Pressable
+                        disabled={!canSelect}
                         accessibilityRole="checkbox"
                         accessibilityLabel={
                             selectionAccessibilityLabel
@@ -382,7 +354,7 @@ export default function WorkspaceItemCard({
                         }}
                         onPress={() =>
                             onToggleSelection(
-                                item.id
+                                card.id
                             )
                         }
                         style={({ pressed }) => [
@@ -427,7 +399,7 @@ export default function WorkspaceItemCard({
                             }
                         />
                     </Pressable>
-                </Tooltip>
+                </Tooltip>}
             </View>
 
             {/*
@@ -439,22 +411,23 @@ export default function WorkspaceItemCard({
              */}
 
             <Pressable
+                disabled={!canOpen}
                 accessibilityRole="button"
                 accessibilityLabel={
-                    `${t("openItem")} ${item.name}`
+                    `${t("openItem")} ${card.name}`
                 }
                 onPress={() =>
-                    onPress(item.id)
+                    onPress(card.id)
                 }
                 style={[
                     styles.contentButton,
 
                     isListMode &&
-                        styles.listContentButton,
+                    styles.listContentButton,
 
                     isListMode &&
-                        !isRtl &&
-                        styles.ltrListContentButton,
+                    !isRtl &&
+                    styles.ltrListContentButton,
 
                     {
                         direction,
@@ -466,11 +439,11 @@ export default function WorkspaceItemCard({
                         styles.iconMetaRow,
 
                         isListMode &&
-                            styles.listIconMetaRow,
+                        styles.listIconMetaRow,
 
                         isListMode &&
-                            !isRtl &&
-                            styles.ltrListIconMetaRow,
+                        !isRtl &&
+                        styles.ltrListIconMetaRow,
                     ]}
                 >
                     <View
@@ -479,7 +452,7 @@ export default function WorkspaceItemCard({
                         <Feather
                             name={
                                 getItemIconName(
-                                    item
+                                    card
                                 )
                             }
                             size={24}
@@ -512,10 +485,7 @@ export default function WorkspaceItemCard({
                                 ]}
                                 numberOfLines={1}
                             >
-                                {getWorkspaceItemLabel(
-                                    item,
-                                    t
-                                )}
+                                {item ? getWorkspaceItemLabel(item, t) : card.type}
                             </Text>
                         </View>
                     )}
@@ -526,26 +496,26 @@ export default function WorkspaceItemCard({
                         styles.textArea,
 
                         isListMode &&
-                            styles.listTextArea,
+                        styles.listTextArea,
 
                         {
                             direction,
 
                             alignItems:
                                 isListMode &&
-                                !isRtl
+                                    !isRtl
                                     ? "stretch"
                                     : "flex-start",
                         },
                     ]}
                 >
                     <Text
-                        title={item.name}
+                        title={card.name}
                         style={[
                             styles.name,
 
                             isListMode &&
-                                styles.listName,
+                            styles.listName,
 
                             {
                                 color:
@@ -561,7 +531,7 @@ export default function WorkspaceItemCard({
                         dir="auto"
                     >
                         {isListMode
-                            ? item.name
+                            ? card.name
                             : displayItemName}
                     </Text>
 
@@ -570,8 +540,8 @@ export default function WorkspaceItemCard({
                             styles.meta,
 
                             isListMode &&
-                                !isRtl &&
-                                styles.ltrListMeta,
+                            !isRtl &&
+                            styles.ltrListMeta,
 
                             {
                                 color:
@@ -595,280 +565,3 @@ export default function WorkspaceItemCard({
         </View>
     );
 }
-
-/**
- * ============================================================================
- * Styles
- * ============================================================================
- */
-
-const styles = StyleSheet.create({
-    card: {
-        position: "relative",
-        minWidth: 0,
-        overflow: "hidden",
-
-        borderWidth: 1.5,
-        borderRadius: radius.lg,
-
-        transition:
-            "transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background-color 150ms ease",
-
-        willChange:
-            "transform, box-shadow, border-color, background-color",
-    },
-
-    gridCard: {
-        width: 252,
-        maxWidth: "100%",
-        height: 142,
-    },
-
-    compactGridCard: {
-        width: "48%",
-        minWidth: 0,
-        maxWidth: "48%",
-    },
-
-    listCard: {
-        width: "100%",
-        height: 68,
-    },
-
-    selectedCard: {
-        borderWidth: 2,
-    },
-
-    /**
-     * ============================================================================
-     * Selection / Pin Cluster
-     * ============================================================================
-     */
-
-    cardActionCluster: {
-        position: "absolute",
-        top: spacing.sm,
-        zIndex: 2,
-
-        flexDirection: "row",
-        alignItems: "center",
-
-        gap: 6,
-    },
-
-    listCardActionCluster: {
-        top: 19,
-    },
-
-    selectionButton: {
-        width: 30,
-        height: 30,
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        borderWidth: 1,
-        borderRadius: radius.pill,
-
-        transition:
-            "transform 150ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 180ms ease",
-
-        willChange:
-            "transform, background-color, border-color, box-shadow",
-    },
-
-    pinnedIndicator: {
-        width: 26,
-        height: 26,
-
-        alignItems: "center",
-        justifyContent: "center",
-
-        borderWidth: 1,
-        borderRadius: radius.pill,
-
-        transition:
-            "transform 150ms ease, background-color 150ms ease, border-color 150ms ease",
-    },
-
-    pressedButton: {
-        opacity: 0.82,
-    },
-
-    /**
-     * ============================================================================
-     * Card Content
-     * ============================================================================
-     */
-
-    contentButton: {
-        width: "100%",
-        minWidth: 0,
-        height: "100%",
-
-        paddingHorizontal: spacing.md,
-        paddingTop: 40,
-        paddingBottom: 10,
-
-        justifyContent: "flex-start",
-
-        gap: 5,
-    },
-
-    listContentButton: {
-        width: "100%",
-        height: 68,
-        minHeight: 0,
-
-        flexDirection: "row",
-        alignItems: "center",
-
-        paddingTop: 8,
-        paddingBottom: 8,
-        paddingHorizontal: spacing.md,
-
-        gap: spacing.sm,
-    },
-
-    ltrListContentButton: {
-        paddingHorizontal: spacing.md,
-    },
-
-    iconMetaRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "flex-start",
-
-        width: "100%",
-        paddingHorizontal: 0,
-
-        gap: 6,
-    },
-
-    listIconMetaRow: {
-        width: "auto",
-        flexShrink: 0,
-
-        paddingHorizontal: 0,
-
-        alignItems: "center",
-        justifyContent: "flex-start",
-
-        gap: spacing.sm,
-    },
-
-    ltrListIconMetaRow: {
-        paddingHorizontal: 0,
-    },
-
-    itemIcon: {
-        width: 28,
-        height: 28,
-
-        alignItems: "center",
-        justifyContent: "center",
-    },
-
-    typePill: {
-        maxWidth: 84,
-
-        marginTop: 0,
-
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-
-        borderWidth: 1,
-        borderRadius: radius.pill,
-    },
-
-    typePillText: {
-        fontSize: typography.fontSize.xs,
-        fontWeight:
-            typography.fontWeight.semibold,
-
-        textAlign: "center",
-    },
-
-    textArea: {
-        flex: 1,
-
-        width: "100%",
-        minWidth: 0,
-
-        alignItems: "flex-start",
-        justifyContent: "flex-start",
-
-        direction: "rtl",
-
-        gap: 3,
-    },
-
-    listTextArea: {
-        flex: 1,
-
-        width: "auto",
-        minWidth: 0,
-
-        alignItems: "flex-start",
-        justifyContent: "center",
-
-        gap: 1,
-    },
-
-    name: {
-        width: "100%",
-        maxWidth: "100%",
-        minWidth: 0,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-
-        fontSize:
-            typography.fontSize.md,
-
-        fontWeight:
-            typography.fontWeight.bold,
-    },
-
-    listName: {
-        width: "100%",
-        minWidth: 0,
-
-        fontWeight: 500,
-
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-    },
-
-    meta: {
-        width: "100%",
-        minWidth: 0,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-
-        marginTop: "auto",
-
-        fontSize:
-            typography.fontSize.xs,
-
-        fontWeight:
-            typography.fontWeight.semibold,
-
-        textAlign: "right",
-
-        opacity: 0.56,
-    },
-
-    ltrListMeta: {
-        width: "100%",
-
-        marginTop: 0,
-        paddingTop: 0,
-
-        borderTopWidth: 0,
-
-        opacity: 0.56,
-    },
-});
