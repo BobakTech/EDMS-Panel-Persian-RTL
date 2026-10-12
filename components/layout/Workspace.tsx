@@ -68,6 +68,8 @@ import WorkspaceEmptyState, {
 import { filterWorkspaceByCategory } from "../workspace/workspace.categories";
 import { mapWorkspaceItemToCard } from "../workspace/card.mapper";
 import type { Card } from "../workspace/Card";
+import { createCardActionRequest } from "../workspace/card.actions";
+import type { CardActionDispatcher } from "../workspace/card.actions";
 import { createWorkspacePresentation } from "../workspace/workspace.presentation.controller";
 import { workspaceCardPresentationRules } from "../workspace/workspace.presentation.config";
 import { legacyWorkspaceCardNavigation, legacyWorkspaceNavigation, WORKSPACE_DASHBOARD_TARGET, WORKSPACE_ROOT_TARGET, WORKSPACE_FOLDER_TARGET } from "../workspace/workspace.navigation.adapter";
@@ -193,6 +195,8 @@ interface WorkspaceProps {
     workspaceItems: WorkspaceItem[];
     /** Optional presentation-owned cards; when omitted, legacy PMIS items are adapted. */
     presentationCards?: Card[];
+    /** Optional external dispatcher for explicitly declared presentation actions. */
+    onCardAction?: CardActionDispatcher;
     workspaceTotal: number;
     currentPage: number;
     itemsPerPage: number;
@@ -254,6 +258,7 @@ export default function Workspace({
     currentFolderId,
     workspaceItems,
     presentationCards,
+    onCardAction,
     workspaceTotal,
     currentPage,
     itemsPerPage,
@@ -434,7 +439,13 @@ export default function Workspace({
 
     function handleToggleWorkspaceItemSelection(itemId: string) {
         const card = presentationCardsById.get(itemId);
-        if (!card || card.disabled || !workspaceItemsById.has(itemId) || (card.capabilities.length > 0 && !card.can("select"))) return;
+        if (!card || card.disabled || (card.capabilities.length > 0 && !card.can("select"))) return;
+        // Explicit presentation actions are handled by the host, never by PMIS fallback.
+        if (card.capabilities.length > 0 && onCardAction) {
+            void onCardAction({ card, request: createCardActionRequest(card, "select") });
+            return;
+        }
+        if (!workspaceItemsById.has(itemId)) return;
         setSelectedItemIdsSafe(itemId);
         setPreviewItemId(null);
     }
@@ -454,6 +465,11 @@ export default function Workspace({
     function handlePressWorkspaceItem(itemId: string) {
         const card = presentationCardsById.get(itemId);
         if (!card || card.disabled || (card.capabilities.length > 0 && !card.can("open"))) return;
+        // An explicitly permitted action may be delegated to the host dispatcher.
+        if (card.capabilities.length > 0 && onCardAction) {
+            void onCardAction({ card, request: createCardActionRequest(card, "open") });
+            return;
+        }
         // Resolve the PMIS record from the same presentation-page lookup used by card rendering.
         const pressedItem = workspaceItemsById.get(itemId);
 

@@ -141,7 +141,8 @@ export default function Sidebar({
     );
 
     const connectionStatus = (showLabel: boolean) => (
-        <Tooltip label={connection.shortLabel}>
+        <View style={styles.connectionStatusWrapper}>
+            <Tooltip label={connection.shortLabel} fill>
             <View
                 accessibilityRole="status"
                 accessibilityLabel={connection.label}
@@ -162,7 +163,8 @@ export default function Sidebar({
                     </Text>
                 )}
             </View>
-        </Tooltip>
+            </Tooltip>
+        </View>
     );
 
     return (
@@ -176,13 +178,8 @@ export default function Sidebar({
             ]}
         >
             {variant === "desktop" && (
-                <Tooltip
-                    label={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
-                    wrapperStyle={[
-                        styles.sidebarPinWrapper,
-                        isRtl ? { left: -18 } : { right: -18 },
-                    ]}
-                >
+                <View style={[styles.sidebarToggleAnchor, isRtl ? { left: -18 } : { right: -18 }]}>
+                <Tooltip label={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}>
                     <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={t(isPinnedOpen ? "unpinSidebar" : "pinSidebar")}
@@ -190,6 +187,7 @@ export default function Sidebar({
                         onPress={() => setIsPinnedOpen((current) => !current)}
                         style={[
                             styles.sidebarPinButton,
+                            { position: "relative", top: 0 },
                             {
                                 backgroundColor: colors.surface,
                                 borderColor: colors.border,
@@ -203,6 +201,7 @@ export default function Sidebar({
                         />
                     </Pressable>
                 </Tooltip>
+                </View>
             )}
 
             <View
@@ -338,7 +337,7 @@ export default function Sidebar({
                                                 color={itemColor}
                                             />
                                         </View>
-
+    
                                         {isExpanded && <Text
                                             style={[
                                                 styles.navigationItem,
@@ -433,7 +432,7 @@ export default function Sidebar({
                                         }
                                     />
                                 </View>
-
+    
                                 {isExpanded && <Text
                                     style={[
                                         styles.utilityItem,
@@ -610,7 +609,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    sidebarPinWrapper: {
+    sidebarToggleAnchor: {
         position: "absolute",
         top: 42,
         zIndex: 60,
@@ -619,6 +618,10 @@ const styles = StyleSheet.create({
     sidebarPinButton: {
         width: 36,
         height: 36,
+
+        position: "absolute",
+        top: 42,
+        zIndex: 60,
 
         alignItems: "center",
         justifyContent: "center",
@@ -668,6 +671,12 @@ const styles = StyleSheet.create({
     collapsedLogo: {
         width: 32,
         height: 32,
+    },
+
+    connectionStatusWrapper: {
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "center",
     },
 
     collapsedConnectionStatus: {
