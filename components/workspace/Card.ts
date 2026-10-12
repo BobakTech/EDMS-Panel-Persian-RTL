@@ -1,7 +1,17 @@
 /** Generic, data-driven card presentation model. No PMIS-specific logic. */
 export type CardType = string;
-export interface CardCapability { id: string; enabled?: boolean; visible?: boolean; }
+
+/** Describes an available action and its optional presentation metadata. */
+export interface CardCapability {
+    id: string;
+    enabled?: boolean;
+    visible?: boolean;
+    label?: string;
+    icon?: string;
+}
+
 export interface CardNavigation { target: string; params?: Record<string, unknown>; }
+
 export interface CardData {
     id: string;
     name: string;

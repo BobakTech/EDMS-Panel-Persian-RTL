@@ -64,6 +64,8 @@ import {
 } from "../workspace/workspace.categories";
 
 import AppToast, { type AppToastMessage } from "../common/AppToast";
+import { Card } from "../workspace/Card";
+import type { CardActionDispatcher } from "../workspace/card.actions";
 
 /**
  * ============================================================================
@@ -73,6 +75,14 @@ import AppToast, { type AppToastMessage } from "../common/AppToast";
 
 type ContentPageType = "dashboard" | WorkspacePageType;
 type AppPageType = ContentPageType | "settings";
+
+/** Temporary presentation-only fixtures; these never become WorkspaceItem records. */
+const PRESENTATION_TEST_CARDS = [
+    new Card({ id: "__card_test_select__", name: "Test — Selectable", type: "file", level: 1, extension: "TEST", footer: "Selection only", capabilities: [{ id: "select" }] }),
+    new Card({ id: "__card_test_navigate__", name: "Test — Navigation", type: "folder", level: 1, footer: "Navigation dispatch", capabilities: [{ id: "open" }], navigation: { target: "test-navigation", params: { source: "workspace" } } }),
+    new Card({ id: "__card_test_preview__", name: "Test — Preview", type: "file", level: 1, extension: "TEST", footer: "Preview dispatch", capabilities: [{ id: "open" }, { id: "preview", label: "Preview", icon: "eye" }, { id: "test-hidden", visible: false }, { id: "test-disabled", enabled: false }], navigation: { target: "test-preview" } }),
+    new Card({ id: "__card_test_disabled__", name: "Test — Disabled", type: "file", level: 1, extension: "TEST", footer: "No actions", disabled: true, capabilities: [] }),
+];
 
 /** Frontend-only folder fixture; never submitted to PMIS or counted by the API. */
 const TEST_FOLDER_ID = "__presentation_test_folder__";
@@ -267,6 +277,23 @@ export default function AppLayout() {
     /**
      * Removes a specific notification without affecting other active timers.
      */
+    const [selectedTestCardIds, setSelectedTestCardIds] = useState<string[]>([]);
+    const handlePresentationCardAction: CardActionDispatcher = ({ card, request }) => {
+        if (!PRESENTATION_TEST_CARDS.some((fixture) => fixture.id === card.id) || !card.can(request.actionId)) return;
+        if (request.actionId === "select") {
+            setSelectedTestCardIds((ids) => ids.includes(card.id) ? ids.filter((id) => id !== card.id) : [...ids, card.id]);
+            return;
+        }
+        if (request.actionId === "preview") {
+            showAppToast({ type: "info", message: "Test preview capability dispatched (no PMIS operation)." });
+            return;
+        }
+        if (request.actionId === "open") {
+            const isPreview = request.navigation?.target === "test-preview";
+            showAppToast({ type: "info", message: isPreview ? "Test preview action dispatched (no PMIS file opened)." : "Test navigation action dispatched (no PMIS route opened)." });
+        }
+    };
+
     const dismissAppToast = useCallback((id: number) => {
         setAppToasts((current) => current.filter((toast) => toast.id !== id));
     }, []);
@@ -904,6 +931,9 @@ export default function AppLayout() {
                             pageType={activeWorkspacePage}
                             currentFolderId={currentFolderId}
                             workspaceItems={filteredWorkspaceItems}
+                             additionalPresentationCards={activeWorkspacePage === "workspace" && currentFolderId === null && !workspaceSearchQuery.trim() && activeWorkspaceCategory === "all" ? PRESENTATION_TEST_CARDS : []}
+                             selectedPresentationCardIds={selectedTestCardIds}
+                             onCardAction={handlePresentationCardAction}
                             workspaceTotal={workspaceTotal}
                             currentPage={workspaceCurrentPage}
                             itemsPerPage={workspacePageSize}

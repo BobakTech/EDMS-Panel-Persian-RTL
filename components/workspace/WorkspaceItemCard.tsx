@@ -8,8 +8,8 @@
  */
 
 import { Feather } from "../../web/icons";
-import { useState } from "react";
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 
 import {
     Pressable,
@@ -75,6 +75,7 @@ interface WorkspaceItemCardProps {
 
     onPress: (itemId: string) => void;
     onToggleSelection: (itemId: string) => void;
+    onAdditionalAction?: (cardId: string, actionId: string) => void;
 }
 
 /**
@@ -186,6 +187,7 @@ export default function WorkspaceItemCard({
     allowSelection = true,
     onPress,
     onToggleSelection,
+    onAdditionalAction,
 }: WorkspaceItemCardProps) {
     const { direction, language, t, theme } =
         useSettings();
@@ -199,6 +201,29 @@ export default function WorkspaceItemCard({
 
     const [isPressed, setIsPressed] =
         useState(false);
+    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+    const actionMenuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const actionMenuTriggerRef = useRef<HTMLDivElement | null>(null);
+
+    // Match the Workspace sort menu: keep the popup open while hovering over
+    // the trigger or popup, then close it 250 ms after leaving that region.
+    function clearActionMenuCloseTimer() {
+        if (actionMenuCloseTimerRef.current === null) return;
+        clearTimeout(actionMenuCloseTimerRef.current);
+        actionMenuCloseTimerRef.current = null;
+    }
+
+    function handleActionMenuPointerLeave() {
+        clearActionMenuCloseTimer();
+        actionMenuCloseTimerRef.current = setTimeout(() => {
+            setIsActionMenuOpen(false);
+            actionMenuCloseTimerRef.current = null;
+        }, 250);
+    }
+
+    useEffect(() => () => {
+        if (actionMenuCloseTimerRef.current !== null) clearTimeout(actionMenuCloseTimerRef.current);
+    }, []);
 
     const isListMode =
         viewMode === "list";
@@ -209,6 +234,7 @@ export default function WorkspaceItemCard({
     const isDisabled = card.disabled;
     const canOpen = !isDisabled && (card.capabilities.length === 0 || card.can("open"));
     const canSelect = allowSelection && !isDisabled && (card.capabilities.length === 0 || card.can("select"));
+    const additionalActions = onAdditionalAction ? card.capabilities.filter((capability) => capability.id !== "open" && capability.id !== "select" && card.can(capability.id)) : [];
 
     const isVisuallySelected =
         isSelected || isMultiSelected;
@@ -400,6 +426,25 @@ export default function WorkspaceItemCard({
                         />
                     </Pressable>
                 </Tooltip>}
+                {additionalActions.length > 0 && (
+                    <View onPointerEnter={clearActionMenuCloseTimer} onPointerLeave={handleActionMenuPointerLeave} onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => { if (event.key === "Escape" && isActionMenuOpen) { event.preventDefault(); event.stopPropagation(); clearActionMenuCloseTimer(); setIsActionMenuOpen(false); actionMenuTriggerRef.current?.querySelector("button")?.focus(); } }} style={{ position: "relative", zIndex: isActionMenuOpen ? 20 : 1 }}>
+                        <View ref={actionMenuTriggerRef}><Pressable accessibilityRole="button" accessibilityLabel={direction === "rtl" ? "اقدامات کارت" : "Card actions"} onPress={() => { clearActionMenuCloseTimer(); setIsActionMenuOpen((open) => !open); }} style={{ padding: 5, borderRadius: 6, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}>
+                            <Feather name="more-horizontal" size={16} color={colors.text} />
+                        </Pressable></View>
+                        {isActionMenuOpen && (
+                            <View style={{ position: "absolute", top: 30, [isRtl ? "left" : "right"]: 0, minWidth: 130, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 4, zIndex: 30, boxShadow: "0 4px 16px rgba(0,0,0,0.18)" }}>
+                                {additionalActions.map((action) => (
+                                    <Pressable key={action.id} accessibilityRole="button" accessibilityLabel={action.label || action.id} onPress={() => { clearActionMenuCloseTimer(); setIsActionMenuOpen(false); if (card.can(action.id)) onAdditionalAction?.(card.id, action.id); }} style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
+                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                                            {action.icon === "eye" ? <Feather name="eye" size={14} color={colors.text} /> : action.icon && Object.prototype.hasOwnProperty.call(Feather.glyphMap, action.icon) ? <Feather name={action.icon as FeatherIconName} size={14} color={colors.text} /> : null}
+                                            <Text style={{ color: colors.text, fontSize: 12 }}>{action.label || action.id}</Text>
+                                        </View>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                )}
             </View>
 
             {/*

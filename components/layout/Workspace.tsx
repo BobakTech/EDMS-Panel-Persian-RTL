@@ -195,6 +195,9 @@ interface WorkspaceProps {
     workspaceItems: WorkspaceItem[];
     /** Optional presentation-owned cards; when omitted, legacy PMIS items are adapted. */
     presentationCards?: Card[];
+    /** Temporary additional cards are prepended without replacing legacy cards. */
+    additionalPresentationCards?: Card[];
+    selectedPresentationCardIds?: string[];
     /** Optional external dispatcher for explicitly declared presentation actions. */
     onCardAction?: CardActionDispatcher;
     workspaceTotal: number;
@@ -257,6 +260,8 @@ export default function Workspace({
     currentFolderId,
     workspaceItems,
     presentationCards,
+    additionalPresentationCards = [],
+    selectedPresentationCardIds = [],
     onCardAction,
     workspaceTotal,
     currentPage,
@@ -439,8 +444,8 @@ export default function Workspace({
         const card = presentationCardsById.get(itemId);
         if (!card || !canInvokeCardAction(card, "select", workspaceItemsById.has(itemId))) return;
         // Explicit presentation actions are handled by the host, never by PMIS fallback.
-        if (card.capabilities.length > 0 && onCardAction) {
-            void onCardAction({ card, request: createCardActionRequest(card, "select") });
+        if (card.capabilities.length > 0) {
+            if (onCardAction) void onCardAction({ card, request: createCardActionRequest(card, "select") });
             return;
         }
         if (!workspaceItemsById.has(itemId)) return;
@@ -456,16 +461,19 @@ export default function Workspace({
         );
     }
 
-    function handleClearWorkspaceSelection() {
-        setMultiSelectedItemIds([]);
+    function handleAdditionalCardAction(itemId: string, actionId: string) {
+        const card = presentationCardsById.get(itemId);
+        if (!card || !onCardAction || !card.capabilities.length || !canInvokeCardAction(card, actionId)) return;
+        if (actionId === "open" || actionId === "select") return;
+        void onCardAction({ card, request: createCardActionRequest(card, actionId) });
     }
 
     function handlePressWorkspaceItem(itemId: string) {
         const card = presentationCardsById.get(itemId);
         if (!card || !canInvokeCardAction(card, "open", workspaceItemsById.has(itemId))) return;
         // An explicitly permitted action may be delegated to the host dispatcher.
-        if (card.capabilities.length > 0 && onCardAction) {
-            void onCardAction({ card, request: createCardActionRequest(card, "open") });
+        if (card.capabilities.length > 0) {
+            if (onCardAction) void onCardAction({ card, request: createCardActionRequest(card, "open") });
             return;
         }
         // Resolve the PMIS record from the same presentation-page lookup used by card rendering.
@@ -915,7 +923,7 @@ export default function Workspace({
         id: `workspace:${pageType}:${currentFolderId ?? "root"}`,
         environment: "workspace",
         level: 1,
-        cards: presentationCards ?? orderedWorkspaceItems.map((item) => mapWorkspaceItemToCard(item, { level: 1, navigation: legacyWorkspaceCardNavigation(item, pageType) })), 
+        cards: [...additionalPresentationCards, ...(presentationCards ?? orderedWorkspaceItems.map((item) => mapWorkspaceItemToCard(item, { level: 1, navigation: legacyWorkspaceCardNavigation(item, pageType) })))], 
         navigation: legacyWorkspaceNavigation(currentFolderId, pageContent.breadcrumbLabel, currentFolderPath, t("home")),
         pagination: { page: safeCurrentPage, pageSize: itemsPerPage, totalItems: workspaceTotal },
         ...workspaceCardPresentationRules,
@@ -931,36 +939,46 @@ export default function Workspace({
     });
     const presentationCardsById = new Map(renderedCards.map((card) => [card.id, card]));
 
-    const allPageWorkspaceItemsSelected =
-        renderedWorkspaceItems.some((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)) &&
-        renderedWorkspaceItems.filter((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)).every((item) =>
-            multiSelectedItemIds.includes(item.id)
-        );
+    // Keep presentation selection independent from legacy PMIS bulk operations.
+    const legacySelectableCards = renderedCards.filter((card) => workspaceItemsById.has(card.id) && card.capabilities.length === 0 && canInvokeCardAction(card, "select", true));
+    const genericSelectableCards = renderedCards.filter((card) => !workspaceItemsById.has(card.id) && card.capabilities.length > 0 && canInvokeCardAction(card, "select"));
+    const selectableCards = [...legacySelectableCards, ...genericSelectableCards];
+    const selectedGenericCardCount = genericSelectableCards.filter((card) => selectedPresentationCardIds.includes(card.id)).length;
+    const totalSelectedCardCount = selectedWorkspaceItemCount + selectedGenericCardCount;
+    const allPageWorkspaceItemsSelected = selectableCards.length > 0 && selectableCards.every((card) =>
+        workspaceItemsById.has(card.id) ? multiSelectedItemIds.includes(card.id) : selectedPresentationCardIds.includes(card.id)
+    );
+
+    function dispatchGenericSelection(card: Card) {
+        if (onCardAction) void onCardAction({ card, request: createCardActionRequest(card, "select") });
+    }
 
     function handleSelectAllPageWorkspaceItems() {
-        setMultiSelectedItemIds((currentIds) => {
-            const nextIds = new Set(currentIds);
-            renderedWorkspaceItems.filter((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)).forEach((item) => nextIds.add(item.id));
-            return Array.from(nextIds);
-        });
+        setMultiSelectedItemIds((ids) => Array.from(new Set([...ids, ...legacySelectableCards.map((card) => card.id)])));
+        genericSelectableCards.filter((card) => !selectedPresentationCardIds.includes(card.id)).forEach(dispatchGenericSelection);
         setPreviewItemId(null);
     }
 
     function handleDeselectAllPageWorkspaceItems() {
-        const pageItemIds = new Set(renderedWorkspaceItems.map((item) => item.id));
-        setMultiSelectedItemIds((currentIds) => currentIds.filter((itemId) => !pageItemIds.has(itemId)));
+        const pageIds = new Set(legacySelectableCards.map((card) => card.id));
+        setMultiSelectedItemIds((ids) => ids.filter((id) => !pageIds.has(id)));
+        genericSelectableCards.filter((card) => selectedPresentationCardIds.includes(card.id)).forEach(dispatchGenericSelection);
     }
 
     function handleInvertPageWorkspaceSelection() {
-        setMultiSelectedItemIds((currentIds) => {
-            const nextIds = new Set(currentIds);
-            renderedWorkspaceItems.filter((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)).forEach((item) => {
-                if (nextIds.has(item.id)) nextIds.delete(item.id);
-                else nextIds.add(item.id);
-            });
+        const pageIds = new Set(legacySelectableCards.map((card) => card.id));
+        setMultiSelectedItemIds((ids) => {
+            const nextIds = new Set(ids);
+            pageIds.forEach((id) => { if (nextIds.has(id)) nextIds.delete(id); else nextIds.add(id); });
             return Array.from(nextIds);
         });
+        genericSelectableCards.forEach(dispatchGenericSelection);
         setPreviewItemId(null);
+    }
+
+    function handleClearAllCardSelection() {
+        setMultiSelectedItemIds([]);
+        genericSelectableCards.filter((card) => selectedPresentationCardIds.includes(card.id)).forEach(dispatchGenericSelection);
     }
 
     const paginationWindowSize = isPhoneWorkspace ? 3 : 5;
@@ -1914,7 +1932,7 @@ export default function Workspace({
                     </div>
                 </WorkspaceHeader>
 
-                {!isLoadingWorkspaceItems && !hasWorkspaceItemsError && selectedWorkspaceItemCount > 0 && (
+                {!isLoadingWorkspaceItems && !hasWorkspaceItemsError && totalSelectedCardCount > 0 && (
                     <View
                         style={[
                             styles.selectionToolbar,
@@ -1935,7 +1953,7 @@ export default function Workspace({
                                 ]}
                             >
                                 <Text style={styles.selectionCountBadgeText}>
-                                    {selectedWorkspaceItemCount}
+                                    {totalSelectedCardCount}
                                 </Text>
                             </View>
 
@@ -1949,8 +1967,8 @@ export default function Workspace({
                                 ]}
                             >
                                 {direction === "rtl"
-                                    ? `${selectedWorkspaceItemCount} مورد انتخاب شده`
-                                    : `${selectedWorkspaceItemCount} selected`}
+                                    ? `${totalSelectedCardCount} مورد انتخاب شده`
+                                    : `${totalSelectedCardCount} selected`}
                             </Text>
 
                             <Pressable
@@ -1997,6 +2015,7 @@ export default function Workspace({
                         </View>
 
                         <View style={[styles.selectionToolbarActions, isPhoneWorkspace && styles.phoneSelectionToolbarRow]}>
+                            {selectedGenericCardCount === 0 && (<>
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel={
@@ -2225,6 +2244,7 @@ export default function Workspace({
                                 </>
                             )}
 
+                            </>)}
                             <Pressable
                                 accessibilityRole="button"
                                 accessibilityLabel={
@@ -2232,7 +2252,7 @@ export default function Workspace({
                                         ? "لغو انتخاب"
                                         : "Clear selection"
                                 }
-                                onPress={handleClearWorkspaceSelection}
+                                onPress={handleClearAllCardSelection}
                                 style={({ pressed }) => [
                                     styles.selectionIconButton,
                                     {
@@ -2337,15 +2357,16 @@ export default function Workspace({
                                                                         isPreviewOpen
                                                                     }
                                                                     isMultiSelected={
-                                                                        multiSelectedItemIds.includes(card.id)
+                                                                        (multiSelectedItemIds.includes(card.id) || selectedPresentationCardIds.includes(card.id))
                                                                     }
                                                                     onPress={
                                                                         handlePressWorkspaceItem
                                                                     }
+                                                                    onAdditionalAction={handleAdditionalCardAction}
                                                                     onToggleSelection={
                                                                         handleToggleWorkspaceItemSelection
                                                                     }
-                                                                    allowSelection={Boolean(item)}
+                                                                    allowSelection={Boolean(item) || card.can("select")}
                                                                 />
                                                             );
                                                         }
@@ -2402,15 +2423,16 @@ export default function Workspace({
                                                         isPreviewOpen
                                                     }
                                                     isMultiSelected={
-                                                        multiSelectedItemIds.includes(card.id)
+                                                        (multiSelectedItemIds.includes(card.id) || selectedPresentationCardIds.includes(card.id))
                                                     }
                                                     onPress={
                                                         handlePressWorkspaceItem
                                                     }
+                                                    onAdditionalAction={handleAdditionalCardAction}
                                                     onToggleSelection={
                                                         handleToggleWorkspaceItemSelection
                                                     }
-                                                    allowSelection={Boolean(item)}
+                                                    allowSelection={Boolean(item) || card.can("select")}
                                                 />
 
                                                 {isPreviewOpen && item && (
