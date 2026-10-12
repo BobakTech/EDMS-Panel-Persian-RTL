@@ -34,6 +34,18 @@ export function isCardActionAvailable(card: Card, actionId: CardActionId): boole
     return card.can(actionId);
 }
 
+/**
+ * Application-boundary compatibility policy.
+ * Undeclared actions are permitted only when the caller explicitly identifies
+ * a legacy-backed card; generic presentation cards always require capabilities.
+ * This is a UI policy, not backend authorization.
+ */
+export function canInvokeCardAction(card: Card | null | undefined, actionId: CardActionId, legacyBacked = false): boolean {
+    if (!card || card.disabled || !card.visible) return false;
+    if (card.capabilities.length === 0) return legacyBacked;
+    return isCardActionAvailable(card, actionId);
+}
+
 /** Build a request without executing it; the application chooses the dispatcher. */
 export function createCardActionRequest(card: Card, actionId: CardActionId, params?: Record<string, unknown>): CardActionRequest {
     return {

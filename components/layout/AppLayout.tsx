@@ -74,6 +74,16 @@ import AppToast, { type AppToastMessage } from "../common/AppToast";
 type ContentPageType = "dashboard" | WorkspacePageType;
 type AppPageType = ContentPageType | "settings";
 
+/** Frontend-only folder fixture; never submitted to PMIS or counted by the API. */
+const TEST_FOLDER_ID = "__presentation_test_folder__";
+const TEST_FOLDER: WorkspaceItem = {
+    id: TEST_FOLDER_ID, type: "folder", name: "Presentation Test Folder",
+    description: "Temporary frontend-only folder for interaction testing",
+    updatedAt: "2026-10-12T00:00:00.000Z", status: "active",
+    parentFolderId: null, childrenCount: 0,
+};
+
+
 /**
  * ============================================================================
  * Component
@@ -121,6 +131,9 @@ export default function AppLayout() {
     const isPhoneShell = width < 430;
 
     const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>([]);
+    // Local move overlay survives API refreshes during this session, but not a browser reload.
+    const [testFolderMoves, setTestFolderMoves] = useState<Record<string, string | null>>({});
+
 
     const [
         workspaceCategoryDefinitions,
@@ -219,10 +232,15 @@ export default function AppLayout() {
         [projectLookup]
     );
 
-    const enrichedWorkspaceItems = useMemo(
-        () => enrichWorkspaceItemsWithProjects(workspaceItems),
-        [workspaceItems, enrichWorkspaceItemsWithProjects]
-    );
+    const enrichedWorkspaceItems = useMemo(() => {
+        const items = enrichWorkspaceItemsWithProjects(workspaceItems).map((item) =>
+            Object.prototype.hasOwnProperty.call(testFolderMoves, item.id)
+                ? { ...item, parentFolderId: testFolderMoves[item.id] }
+                : item
+        );
+        // This fixture is UI data only and is never sent to the backend.
+        return [TEST_FOLDER, ...items.filter((item) => item.id !== TEST_FOLDER_ID)];
+    }, [workspaceItems, enrichWorkspaceItemsWithProjects, testFolderMoves]);
 
     /**
      * Shared notification queue.
@@ -710,6 +728,14 @@ export default function AppLayout() {
         itemId: string,
         destinationFolderId: string | null
     ) {
+        // The fixture is a local destination; moves involving it must not call PMIS.
+        const sourceItem = enrichedWorkspaceItems.find((item) => item.id === itemId);
+        if (!sourceItem || itemId === TEST_FOLDER_ID) return;
+        if (destinationFolderId === TEST_FOLDER_ID || sourceItem.parentFolderId === TEST_FOLDER_ID ||
+            Object.prototype.hasOwnProperty.call(testFolderMoves, itemId)) {
+            setTestFolderMoves((current) => ({ ...current, [itemId]: destinationFolderId }));
+            return;
+        }
         setWorkspaceItems((currentItems) =>
             updateWorkspaceItem(currentItems, itemId, (item) => ({
                 ...item,
@@ -904,7 +930,6 @@ export default function AppLayout() {
                             setActiveWorkspaceCategory={setActiveWorkspaceCategory}
                             searchQuery={workspaceSearchQuery}
                             onChangeFolder={setCurrentFolderId}
-                            onPressCreateFolder={handlePressCreateFolder}
                             onPressUpload={handlePressUpload}
                             onArchiveItem={handleArchiveWorkspaceItem}
                             onMoveItemToTrash={handleMoveWorkspaceItemToTrash}

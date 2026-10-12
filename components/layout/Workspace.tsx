@@ -67,8 +67,8 @@ import WorkspaceEmptyState, {
 
 import { filterWorkspaceByCategory } from "../workspace/workspace.categories";
 import { mapWorkspaceItemToCard } from "../workspace/card.mapper";
-import type { Card } from "../workspace/Card";
-import { createCardActionRequest } from "../workspace/card.actions";
+import { Card } from "../workspace/Card";
+import { canInvokeCardAction, createCardActionRequest } from "../workspace/card.actions";
 import type { CardActionDispatcher } from "../workspace/card.actions";
 import { createWorkspacePresentation } from "../workspace/workspace.presentation.controller";
 import { workspaceCardPresentationRules } from "../workspace/workspace.presentation.config";
@@ -208,7 +208,6 @@ interface WorkspaceProps {
     onChangePage: (page: number) => void;
     onChangePageSize: (pageSize: number) => void;
     onChangeFolder: (folderId: string | null) => void;
-    onPressCreateFolder: () => void;
     onPressUpload: () => void;
     onArchiveItem: (itemId: string) => void;
     onMoveItemToTrash: (itemId: string) => void;
@@ -273,7 +272,6 @@ export default function Workspace({
     workspaceErrorMessage,
     searchQuery,
     onChangeFolder,
-    onPressCreateFolder,
     onPressUpload,
     onArchiveItem,
     onMoveItemToTrash,
@@ -439,7 +437,7 @@ export default function Workspace({
 
     function handleToggleWorkspaceItemSelection(itemId: string) {
         const card = presentationCardsById.get(itemId);
-        if (!card || card.disabled || (card.capabilities.length > 0 && !card.can("select"))) return;
+        if (!card || !canInvokeCardAction(card, "select", workspaceItemsById.has(itemId))) return;
         // Explicit presentation actions are handled by the host, never by PMIS fallback.
         if (card.capabilities.length > 0 && onCardAction) {
             void onCardAction({ card, request: createCardActionRequest(card, "select") });
@@ -464,7 +462,7 @@ export default function Workspace({
 
     function handlePressWorkspaceItem(itemId: string) {
         const card = presentationCardsById.get(itemId);
-        if (!card || card.disabled || (card.capabilities.length > 0 && !card.can("open"))) return;
+        if (!card || !canInvokeCardAction(card, "open", workspaceItemsById.has(itemId))) return;
         // An explicitly permitted action may be delegated to the host dispatcher.
         if (card.capabilities.length > 0 && onCardAction) {
             void onCardAction({ card, request: createCardActionRequest(card, "open") });
@@ -493,10 +491,6 @@ export default function Workspace({
 
     }
 
-
-    function handlePressEmptyStateCreateFolder() {
-        onPressCreateFolder();
-    }
 
     function handlePressEmptyStateUploadFile() {
         onPressUpload();
@@ -908,6 +902,12 @@ export default function Workspace({
     // The API already returns only the requested page; do not slice it again.
     const paginatedWorkspaceItems = visibleWorkspaceItems;
 
+    // The frontend-only test folder is adapted like other folder items so existing
+    // navigation, breadcrumbs, and move-destination UI work without special actions.
+    const orderedWorkspaceItems = [...paginatedWorkspaceItems].sort((a, b) =>
+        Number(b.id === "__presentation_test_folder__") - Number(a.id === "__presentation_test_folder__")
+    );
+
     // Compatibility integration: explicit presentation configuration at the UI boundary.
     // Navigation, folder filtering, and API pagination remain owned by the legacy flow
     // until their independent presentation contracts are integrated in later steps.
@@ -915,7 +915,7 @@ export default function Workspace({
         id: `workspace:${pageType}:${currentFolderId ?? "root"}`,
         environment: "workspace",
         level: 1,
-        cards: presentationCards ?? paginatedWorkspaceItems.map((item) => mapWorkspaceItemToCard(item, { level: 1, navigation: legacyWorkspaceCardNavigation(item, pageType) })),
+        cards: presentationCards ?? orderedWorkspaceItems.map((item) => mapWorkspaceItemToCard(item, { level: 1, navigation: legacyWorkspaceCardNavigation(item, pageType) })), 
         navigation: legacyWorkspaceNavigation(currentFolderId, pageContent.breadcrumbLabel, currentFolderPath, t("home")),
         pagination: { page: safeCurrentPage, pageSize: itemsPerPage, totalItems: workspaceTotal },
         ...workspaceCardPresentationRules,
@@ -932,15 +932,15 @@ export default function Workspace({
     const presentationCardsById = new Map(renderedCards.map((card) => [card.id, card]));
 
     const allPageWorkspaceItemsSelected =
-        renderedWorkspaceItems.some((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))) &&
-        renderedWorkspaceItems.filter((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))).every((item) =>
+        renderedWorkspaceItems.some((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)) &&
+        renderedWorkspaceItems.filter((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)).every((item) =>
             multiSelectedItemIds.includes(item.id)
         );
 
     function handleSelectAllPageWorkspaceItems() {
         setMultiSelectedItemIds((currentIds) => {
             const nextIds = new Set(currentIds);
-            renderedWorkspaceItems.filter((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))).forEach((item) => nextIds.add(item.id));
+            renderedWorkspaceItems.filter((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)).forEach((item) => nextIds.add(item.id));
             return Array.from(nextIds);
         });
         setPreviewItemId(null);
@@ -954,7 +954,7 @@ export default function Workspace({
     function handleInvertPageWorkspaceSelection() {
         setMultiSelectedItemIds((currentIds) => {
             const nextIds = new Set(currentIds);
-            renderedWorkspaceItems.filter((item) => !presentationCardsById.get(item.id)?.disabled && (presentationCardsById.get(item.id)?.capabilities.length === 0 || presentationCardsById.get(item.id)?.can("select"))).forEach((item) => {
+            renderedWorkspaceItems.filter((item) => canInvokeCardAction(presentationCardsById.get(item.id), "select", true)).forEach((item) => {
                 if (nextIds.has(item.id)) nextIds.delete(item.id);
                 else nextIds.add(item.id);
             });
@@ -2510,21 +2510,13 @@ export default function Workspace({
                                         : pageContent.emptyDescription
                             }
                             showHints={false}
-                            primaryActionLabel={
-                                shouldShowEmptyStateActions
-                                    ? "پوشه جدید"
-                                    : undefined
-                            }
+                            primaryActionLabel={undefined}
                             secondaryActionLabel={
                                 shouldShowEmptyStateActions
                                     ? "بارگذاری فایل"
                                     : undefined
                             }
-                            onPrimaryActionPress={
-                                shouldShowEmptyStateActions
-                                    ? handlePressEmptyStateCreateFolder
-                                    : undefined
-                            }
+                            onPrimaryActionPress={undefined}
                             onSecondaryActionPress={
                                 shouldShowEmptyStateActions
                                     ? handlePressEmptyStateUploadFile

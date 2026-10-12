@@ -58,7 +58,6 @@ interface ToolbarProps {
     activeAction: WorkspaceActionType | null;
     searchQuery: string;
     onChangeSearchQuery: (query: string) => void;
-    onPressCreateFolder: () => void;
     onDismissAction: () => void;
     onCreateFolder: (folderName: string) => void;
     onCreateFile: (file: WorkspacePickedFile) => void;
@@ -99,7 +98,6 @@ export default function Toolbar({
     activeAction,
     searchQuery,
     onChangeSearchQuery,
-    onPressCreateFolder,
     onDismissAction,
     onCreateFolder,
     onCreateFile,
@@ -737,37 +735,7 @@ export default function Toolbar({
                                 </Text>
                             </Pressable>
 
-                            <Pressable
-                                accessibilityRole="button"
-                                accessibilityLabel={t("createNewFolder")}
-                                onPress={onPressCreateFolder}
-                                disabled={isWorkspaceLoading}
-                                style={({ pressed }) => [
-                                    styles.actionSegmentButton,
-                                    styles.mobileMenuActionButton,
-                                    {
-                                        backgroundColor: colors.background,
-                                        borderColor: colors.border,
-                                    },
-                                    pressed && !isWorkspaceLoading && styles.pressedActionButton,
-                                ]}
-                            >
-                                <Feather
-                                    name="folder-plus"
-                                    size={16}
-                                    color={colors.text}
-                                />
-                                <Text
-                                    style={[
-                                        styles.actionSegmentSecondaryText,
-                                        {
-                                            color: colors.text,
-                                        },
-                                    ]}
-                                >
-                                    {t("newFolder")}
-                                </Text>
-                            </Pressable>
+                            {/* New Folder hidden while the persistent presentation test fixture is active. */}
                         </View>
 
                         {mobileUploadPanel}
@@ -882,41 +850,8 @@ export default function Toolbar({
                             </Text>
                         </Pressable>
 
-                        <View
-                            style={[
-                                styles.actionSegmentDivider,
-                                {
-                                    backgroundColor: colors.border,
-                                },
-                            ]}
-                        />
 
-                        <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={t("createNewFolder")}
-                            onPress={onPressCreateFolder}
-                            disabled={isWorkspaceLoading}
-                            style={({ pressed }) => [
-                                styles.actionSegmentButton,
-                                pressed && styles.pressedActionButton,
-                            ]}
-                        >
-                            <Feather
-                                name="folder-plus"
-                                size={16}
-                                color={colors.text}
-                            />
-                            <Text
-                                style={[
-                                    styles.actionSegmentSecondaryText,
-                                    {
-                                        color: colors.text,
-                                    },
-                                ]}
-                            >
-                                {t("newFolder")}
-                            </Text>
-                        </Pressable>
+                        {/* New Folder hidden while the persistent presentation test fixture is active. */}
                     </View>
 
                     {newFolderModal}
