@@ -1,610 +1,96 @@
-/**
- * ============================================================================
- * Workspace Item Card
- * ----------------------------------------------------------------------------
- * Displays a folder or file in card and list layouts.
- * Supports animated workspace multi-selection independently from item opening.
- * ============================================================================
- */
-
+/** Generic presentation-only card. Business entities and authorization remain outside the UI. */
+import { useState } from "react";
+import type { CSSProperties } from "react";
 import { Feather } from "../../web/icons";
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, KeyboardEvent } from "react";
-
-import {
-    Pressable,
-    Text,
-    View,
-} from "../../web/ui";
-
-import { spacing } from "../../theme";
+import { Pressable, Text, View } from "../../web/ui";
 import { useSettings } from "../../settings/SettingsContext";
 import { getDirectionalLayout } from "../../settings/direction";
-
-import type {
-    WorkspaceItem,
-    WorkspaceViewMode,
-} from "./workspace.types";
-
-import {
-    getWorkspaceFileExtension,
-    getWorkspaceItemLabel,
-    getWorkspaceItemUpdatedAtLabel,
-} from "./workspace.helpers";
-
-import Tooltip from "../common/Tooltip";
-
+import type { Card } from "./Card";
 import "./Card.css";
 import { cardStyles as styles } from "./CardStyle";
-import { mapWorkspaceItemToCard } from "./card.mapper";
-import type { Card } from "./Card";
 
-/**
- * ============================================================================
- * Types
- * ============================================================================
- */
-
-type FeatherIconName = keyof typeof Feather.glyphMap;
-
-/**
- * ============================================================================
- * Props
- * ============================================================================
- */
-
-interface WorkspaceItemCardProps {
-    /** A resolved Card is sufficient; legacy WorkspaceItem is optional. */
-    item?: WorkspaceItem;
-    card?: Card;
-    viewMode: WorkspaceViewMode;
-    isCompact: boolean;
-
-    /**
-     * Indicates that the card is active because its preview or another
-     * single-item interaction is open.
-     */
-    isSelected: boolean;
-
-    /**
-     * Indicates that the item belongs to the workspace multi-selection.
-     */
-    isMultiSelected: boolean;
-    /** Disable PMIS selection for presentation-only cards. */
-    allowSelection?: boolean;
-
-    onPress: (itemId: string) => void;
-    onToggleSelection: (itemId: string) => void;
-    onAdditionalAction?: (cardId: string, actionId: string) => void;
+type FeatherIconName = string;
+export interface WorkspaceItemCardProps {
+    card: Card;
+    viewMode: "grid" | "list";
+    isCompact?: boolean;
+    isSelected?: boolean;
+    isVisited?: boolean;
+    isMultiSelected?: boolean;
+    onAction: (cardId: string, actionId: string) => void;
 }
 
-/**
- * ============================================================================
- * Helpers
- * ============================================================================
- */
-
-function getItemIconName(card: Card): FeatherIconName {
-    if (card.icon && Object.prototype.hasOwnProperty.call(Feather.glyphMap, card.icon)) return card.icon as FeatherIconName;
-    return card.isFolder ? "folder" : "file-text";
+function iconName(value?: string): FeatherIconName {
+    return value?.trim() || "file";
 }
 
-/**
- * Shortens only the Workspace card label.
- *
- * Duplicate suffix detection is intentionally strict:
- * - It must be the final numeric parenthesized segment immediately before
- *   the extension, e.g. "(1).jpg", "(12).pdf".
- * - Other parentheses inside the filename are treated as normal filename text.
- *
- * Examples:
- *   report (draft) final.jpg      -> normal truncation
- *   report (draft) final (1).jpg  -> preserves "(1).jpg"
- */
-function getWorkspaceCardItemName(
-    card: Card,
-    maxLength = 26
-): string {
-    const itemName = card.name;
-
-    if (itemName.length <= maxLength) {
-        return itemName;
-    }
-
-    if (card.isFolder) {
-        return `${itemName.slice(
-            0,
-            Math.max(4, maxLength - 3)
-        )}...`;
-    }
-
-    const duplicateMatch =
-        itemName.match(/(\s*\(\d+\))(\.[^./\\]+)$/);
-
-    if (duplicateMatch) {
-        const duplicateSuffix = duplicateMatch[1];
-        const extension = duplicateMatch[2];
-        const preservedSuffix =
-            `${duplicateSuffix}${extension}`;
-
-        const baseName = itemName.slice(
-            0,
-            itemName.length - preservedSuffix.length
-        );
-
-        const availableBaseLength = Math.max(
-            4,
-            maxLength - preservedSuffix.length - 3
-        );
-
-        return `${baseName.slice(
-            0,
-            availableBaseLength
-        )}...${preservedSuffix}`;
-    }
-
-    const extensionMatch =
-        itemName.match(/(\.[^./\\]+)$/);
-
-    if (!extensionMatch) {
-        return `${itemName.slice(
-            0,
-            Math.max(4, maxLength - 3)
-        )}...`;
-    }
-
-    const extension = extensionMatch[1];
-
-    const baseName = itemName.slice(
-        0,
-        itemName.length - extension.length
-    );
-
-    const availableBaseLength = Math.max(
-        4,
-        maxLength - extension.length - 3
-    );
-
-    return `${baseName.slice(
-        0,
-        availableBaseLength
-    )}...${extension}`;
+function shortenName(name: string, maxLength = 26): string {
+    if (name.length <= maxLength) return name;
+    const suffix = name.match(/(\s*\(\d+\))?(\.[^./\\]+)$/)?.[0] ?? "";
+    const keep = Math.max(4, maxLength - suffix.length - 3);
+    return `${name.slice(0, keep)}...${suffix}`;
 }
 
-/**
- * ============================================================================
- * Component
- * ============================================================================
- */
-
-export default function WorkspaceItemCard({
-    item,
-    card: resolvedCard,
-    viewMode,
-    isCompact,
-    isSelected,
-    isMultiSelected,
-    allowSelection = true,
-    onPress,
-    onToggleSelection,
-    onAdditionalAction,
-}: WorkspaceItemCardProps) {
-    const { direction, language, t, theme } =
-        useSettings();
-
+export default function WorkspaceItemCard({ card, viewMode, isCompact = false, isSelected = false, isVisited = false, isMultiSelected = false, onAction }: WorkspaceItemCardProps) {
+    const { direction, theme } = useSettings();
+    const { isRtl } = getDirectionalLayout(direction);
     const colors = theme.colors;
-    const { isRtl } =
-        getDirectionalLayout(direction);
-
-    const [isHovered, setIsHovered] =
-        useState(false);
-
-    const [isPressed, setIsPressed] =
-        useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
-    const actionMenuCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const actionMenuTriggerRef = useRef<HTMLDivElement | null>(null);
+    const isListMode = viewMode === "list";
+    const canOpen = card.can("open");
+    const canSelect = card.can("select");
+    const extraActions = card.capabilities.filter((capability) => capability.id !== "open" && capability.id !== "select" && card.can(capability.id));
+    const selected = isSelected || isMultiSelected;
+    const visitedAccent = "#a78bfa";
+    const label = [card.extension, card.footer || card.size].filter(Boolean).join(" · ");
+    const cardColor = card.color || colors.primary;
+    const surfaceVariables = {
+        "--card-surface": colors.surface,
+        "--card-primary": cardColor,
+        "--card-border": colors.border,
+        "--card-depth": `color-mix(in srgb, ${cardColor} 28%, ${colors.border})`,
+        "--card-shadow": "rgba(0,0,0,0.18)",
+        "--card-selected-surface": `color-mix(in srgb, ${cardColor} 8%, ${colors.surface})`,
+    } as CSSProperties;
 
-    // Match the Workspace sort menu: keep the popup open while hovering over
-    // the trigger or popup, then close it 250 ms after leaving that region.
-    function clearActionMenuCloseTimer() {
-        if (actionMenuCloseTimerRef.current === null) return;
-        clearTimeout(actionMenuCloseTimerRef.current);
-        actionMenuCloseTimerRef.current = null;
-    }
-
-    function handleActionMenuPointerLeave() {
-        clearActionMenuCloseTimer();
-        actionMenuCloseTimerRef.current = setTimeout(() => {
-            setIsActionMenuOpen(false);
-            actionMenuCloseTimerRef.current = null;
-        }, 250);
-    }
-
-    useEffect(() => () => {
-        if (actionMenuCloseTimerRef.current !== null) clearTimeout(actionMenuCloseTimerRef.current);
-    }, []);
-
-    const isListMode =
-        viewMode === "list";
-
-    // The presentation Card is authoritative. Legacy callers may still supply only an item.
-    const card = resolvedCard ?? (item ? mapWorkspaceItemToCard(item) : null);
-    if (!card) return null;
-    const isDisabled = card.disabled;
-    const canOpen = !isDisabled && (card.capabilities.length === 0 || card.can("open"));
-    const canSelect = allowSelection && !isDisabled && (card.capabilities.length === 0 || card.can("select"));
-    const additionalActions = onAdditionalAction ? card.capabilities.filter((capability) => capability.id !== "open" && capability.id !== "select" && card.can(capability.id)) : [];
-
-    const isVisuallySelected =
-        isSelected || isMultiSelected;
-
-    const depthColor =
-        `color-mix(in srgb, ${colors.primary} 28%, ${colors.border})`;
-
-    const ambientShadow =
-        "rgba(0, 0, 0, 0.18)";
-
-    // PMIS metadata is an optional compatibility source, never a rendering prerequisite.
-    const itemTypeLabel = item
-        ? (card.isFolder ? getWorkspaceItemLabel(item, t) : (card.extension || item.extension || getWorkspaceFileExtension(card.name)).toUpperCase())
-        : (card.extension || card.type).toUpperCase();
-    const rawItemSizeLabel = item ? getWorkspaceItemUpdatedAtLabel(item, t, language) : (card.footer || card.size);
-    const itemSizeLabel = card.isFile && /^\d+(?:[.,]\d+)?$/.test(rawItemSizeLabel.trim())
-        ? `${rawItemSizeLabel} MB` : rawItemSizeLabel;
-    const itemMetaLabel = item
-        ? (card.isFolder ? itemSizeLabel : `${itemTypeLabel} · ${itemSizeLabel}`)
-        : [itemTypeLabel, itemSizeLabel].filter(Boolean).join(" · ");
-
-    const displayItemName = getWorkspaceCardItemName(card);
-
-    const selectionLabel =
-        isMultiSelected
-            ? direction === "rtl"
-                ? "لغو انتخاب"
-                : "Deselect"
-            : direction === "rtl"
-                ? "انتخاب"
-                : "Select";
-
-    const selectionAccessibilityLabel =
-        isMultiSelected
-            ? direction === "rtl"
-                ? `لغو انتخاب ${card.name}`
-                : `Deselect ${card.name}`
-            : direction === "rtl"
-                ? `انتخاب ${card.name}`
-                : `Select ${card.name}`;
-
+    if (!card.visible) return null;
     return (
-        <View
-            className={`${card.cssClassName} ${isListMode ? "card-list" : "card-grid"}${!isListMode && isCompact ? " card-compact" : ""}${isVisuallySelected ? " card-selected" : ""}${isHovered ? " card-hovered" : ""}${isPressed ? " card-pressed" : ""}${isDisabled ? " card-disabled" : ""}`}
-            onPointerEnter={() =>
-                setIsHovered(true)
-            }
-            onPointerLeave={() => {
-                setIsHovered(false);
-                setIsPressed(false);
-            }}
-            onPointerDown={() =>
-                setIsPressed(true)
-            }
-            onPointerUp={() =>
-                setIsPressed(false)
-            }
-            onPointerCancel={() =>
-                setIsPressed(false)
-            }
-            style={[
-                {
-                    "--card-surface": colors.surface,
-                    "--card-primary": colors.primary,
-                    "--card-border": colors.border,
-                    "--card-depth": depthColor,
-                    "--card-shadow": ambientShadow,
-                    "--card-selected-surface": `color-mix(in srgb, ${colors.primary} 8%, ${colors.surface})`,
-                } as CSSProperties,
-
-            ]}
-        >
-            {/*
-             * ====================================================================
-             * Card Action Cluster
-             * --------------------------------------------------------------------
-             * Selection is intentionally independent from opening the item.
-             * Clicking this control must never open the preview/folder.
-             * ====================================================================
-             */}
-
-            <View
-                style={[
-                    styles.cardActionCluster,
-
-                    isListMode &&
-                    styles.listCardActionCluster,
-
-                    {
-                        left: isRtl
-                            ? spacing.sm
-                            : "auto",
-
-                        right: isRtl
-                            ? "auto"
-                            : spacing.sm,
-                    },
-                ]}
-            >
-                {Boolean(item?.isPinned) && (
-                    <Tooltip
-                        label={t("unpinItem")}
-                    >
-                        <View
-                            accessibilityRole="img"
-                            accessibilityLabel={
-                                t("unpinItem")
-                            }
-                            style={[
-                                styles.pinnedIndicator,
-                                {
-                                    backgroundColor:
-                                        `color-mix(in srgb, ${colors.primary} 16%, ${colors.surface})`,
-
-                                    borderColor:
-                                        colors.primary,
-                                },
-                            ]}
-                        >
-                            <Feather
-                                name="pin"
-                                size={14}
-                                color={
-                                    colors.primary
-                                }
-                            />
-                        </View>
-                    </Tooltip>
-                )}
-
-                {canSelect && <Tooltip
-                    label={selectionLabel}
-                >
-                    <Pressable
-                        disabled={!canSelect}
-                        accessibilityRole="checkbox"
-                        accessibilityLabel={
-                            selectionAccessibilityLabel
-                        }
-                        accessibilityState={{
-                            checked:
-                                isMultiSelected,
-                        }}
-                        onPress={() =>
-                            onToggleSelection(
-                                card.id
-                            )
-                        }
-                        style={({ pressed }) => [
-                            styles.selectionButton,
-
-                            {
-                                backgroundColor:
-                                    isMultiSelected
-                                        ? colors.primary
-                                        : colors.background,
-
-                                borderColor:
-                                    isMultiSelected
-                                        ? colors.primary
-                                        : colors.border,
-
-                                transform:
-                                    pressed
-                                        ? "scale(0.9)"
-                                        : isMultiSelected
-                                            ? "scale(1.06)"
-                                            : "scale(1)",
-
-                                boxShadow:
-                                    isMultiSelected
-                                        ? `0 0 0 3px color-mix(in srgb, ${colors.primary} 14%, transparent)`
-                                        : "none",
-                            },
-                        ]}
-                    >
-                        <Feather
-                            name={
-                                isMultiSelected
-                                    ? "check"
-                                    : "square"
-                            }
-                            size={15}
-                            color={
-                                isMultiSelected
-                                    ? "#ffffff"
-                                    : colors.text
-                            }
-                        />
-                    </Pressable>
-                </Tooltip>}
-                {additionalActions.length > 0 && (
-                    <View onPointerEnter={clearActionMenuCloseTimer} onPointerLeave={handleActionMenuPointerLeave} onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => { if (event.key === "Escape" && isActionMenuOpen) { event.preventDefault(); event.stopPropagation(); clearActionMenuCloseTimer(); setIsActionMenuOpen(false); actionMenuTriggerRef.current?.querySelector("button")?.focus(); } }} style={{ position: "relative", zIndex: isActionMenuOpen ? 20 : 1 }}>
-                        <View ref={actionMenuTriggerRef}><Pressable accessibilityRole="button" accessibilityLabel={direction === "rtl" ? "اقدامات کارت" : "Card actions"} onPress={() => { clearActionMenuCloseTimer(); setIsActionMenuOpen((open) => !open); }} style={{ padding: 5, borderRadius: 6, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}>
+        <View className={`${card.cssClassName} ${isListMode ? "card-list" : "card-grid"}${!isListMode && isCompact ? " card-compact" : ""}${selected ? " card-selected" : ""}${isVisited ? " card-visited" : ""}${isHovered ? " card-hovered" : ""}${card.disabled ? " card-disabled" : ""}`}
+            style={{ ...surfaceVariables, ...(isVisited && !selected ? { borderColor: visitedAccent, borderBottomColor: visitedAccent } : {}), ...(isVisited && selected ? { outline: `2px solid ${visitedAccent}`, outlineOffset: -5 } : {}) }} onPointerEnter={() => setIsHovered(true)} onPointerLeave={() => { setIsHovered(false); setIsActionMenuOpen(false); }}>
+            {isVisited && <View aria-label="Previously opened" title="Previously opened" style={{ position: "absolute", bottom: 7, left: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: visitedAccent, zIndex: 2, pointerEvents: "none" }} />}
+            {(canSelect || extraActions.length > 0) && (
+                <View style={[styles.cardActionCluster, isListMode && styles.listCardActionCluster, { left: isRtl ? 8 : "auto", right: isRtl ? "auto" : 8 }]}>
+                    {canSelect && <Pressable accessibilityRole="checkbox" accessibilityLabel={isRtl ? "انتخاب" : "Select"} accessibilityState={{ checked: isMultiSelected }} onPress={() => onAction(card.id, "select")}
+                        style={[styles.selectionButton, { backgroundColor: isMultiSelected ? cardColor : colors.background, borderColor: isMultiSelected ? cardColor : colors.border }]}>
+                        <Feather name={isMultiSelected ? "check" : "square"} size={15} color={isMultiSelected ? "#ffffff" : colors.text} />
+                    </Pressable>}
+                    {extraActions.length > 0 && <View style={{ position: "relative", zIndex: isActionMenuOpen ? 20 : 1 }}>
+                        <Pressable accessibilityRole="button" accessibilityLabel={isRtl ? "اقدامات کارت" : "Card actions"} onPress={() => setIsActionMenuOpen((open) => !open)} style={{ padding: 5, borderRadius: 6, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border }}>
                             <Feather name="more-horizontal" size={16} color={colors.text} />
-                        </Pressable></View>
-                        {isActionMenuOpen && (
-                            <View style={{ position: "absolute", top: 30, [isRtl ? "left" : "right"]: 0, minWidth: 130, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 4, zIndex: 30, boxShadow: "0 4px 16px rgba(0,0,0,0.18)" }}>
-                                {additionalActions.map((action) => (
-                                    <Pressable key={action.id} accessibilityRole="button" accessibilityLabel={action.label || action.id} onPress={() => { clearActionMenuCloseTimer(); setIsActionMenuOpen(false); if (card.can(action.id)) onAdditionalAction?.(card.id, action.id); }} style={{ paddingHorizontal: 10, paddingVertical: 8 }}>
-                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                                            {action.icon === "eye" ? <Feather name="eye" size={14} color={colors.text} /> : action.icon && Object.prototype.hasOwnProperty.call(Feather.glyphMap, action.icon) ? <Feather name={action.icon as FeatherIconName} size={14} color={colors.text} /> : null}
-                                            <Text style={{ color: colors.text, fontSize: 12 }}>{action.label || action.id}</Text>
-                                        </View>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-                )}
-            </View>
-
-            {/*
-             * ====================================================================
-             * Card Content
-             * --------------------------------------------------------------------
-             * Opening remains independent from multi-selection.
-             * ====================================================================
-             */}
-
-            <Pressable
-                disabled={!canOpen}
-                accessibilityRole="button"
-                accessibilityLabel={
-                    `${t("openItem")} ${card.name}`
-                }
-                onPress={() =>
-                    onPress(card.id)
-                }
-                style={[
-                    styles.contentButton,
-
-                    isListMode &&
-                    styles.listContentButton,
-
-                    isListMode &&
-                    !isRtl &&
-                    styles.ltrListContentButton,
-
-                    {
-                        direction,
-                    },
-                ]}
-            >
-                <View
-                    style={[
-                        styles.iconMetaRow,
-
-                        isListMode &&
-                        styles.listIconMetaRow,
-
-                        isListMode &&
-                        !isRtl &&
-                        styles.ltrListIconMetaRow,
-                    ]}
-                >
-                    <View
-                        style={styles.itemIcon}
-                    >
-                        <Feather
-                            name={
-                                getItemIconName(
-                                    card
-                                )
-                            }
-                            size={24}
-                            color={
-                                colors.primary
-                            }
-                        />
-                    </View>
-
-                    {isListMode && (
-                        <View
-                            style={[
-                                styles.typePill,
-                                {
-                                    backgroundColor:
-                                        colors.background,
-
-                                    borderColor:
-                                        colors.border,
-                                },
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.typePillText,
-                                    {
-                                        color:
-                                            colors.primary,
-                                    },
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {item ? getWorkspaceItemLabel(item, t) : card.type}
-                            </Text>
-                        </View>
-                    )}
+                        </Pressable>
+                        {isActionMenuOpen && <View style={{ position: "absolute", top: 30, [isRtl ? "left" : "right"]: 0, minWidth: 140, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 4, zIndex: 30, boxShadow: "0 4px 16px rgba(0,0,0,0.18)" }}>
+                            {extraActions.map((action) => <Pressable key={action.id} accessibilityRole="button" accessibilityLabel={action.label || action.id} onPress={() => { setIsActionMenuOpen(false); onAction(card.id, action.id); }} style={{ paddingHorizontal: 10, paddingVertical: 8, borderRadius: 5, backgroundColor: action.id === "trash" || action.id === "delete" ? "rgba(220,38,38,0.12)" : "transparent" }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                                    <Feather name={iconName(action.icon || (action.id === "trash" || action.id === "delete" ? "trash-2" : undefined))} size={14} color={action.id === "trash" || action.id === "delete" ? "#ef4444" : colors.text} />
+                                    <Text style={{ color: action.id === "trash" || action.id === "delete" ? "#ef4444" : colors.text, fontSize: 12, fontWeight: action.id === "trash" || action.id === "delete" ? "600" : "400" }}>{action.label || action.id}</Text>
+                                </View>
+                            </Pressable>)}
+                        </View>}
+                    </View>}
                 </View>
-
-                <View
-                    style={[
-                        styles.textArea,
-
-                        isListMode &&
-                        styles.listTextArea,
-
-                        {
-                            direction,
-
-                            alignItems:
-                                isListMode &&
-                                    !isRtl
-                                    ? "stretch"
-                                    : "flex-start",
-                        },
-                    ]}
-                >
-                    <Text
-                        title={card.name}
-                        style={[
-                            styles.name,
-
-                            isListMode &&
-                            styles.listName,
-
-                            {
-                                color:
-                                    colors.text,
-
-                                textAlign:
-                                    isRtl
-                                        ? "right"
-                                        : "left",
-                            },
-                        ]}
-                        numberOfLines={1}
-                        dir="auto"
-                    >
-                        {isListMode
-                            ? card.name
-                            : displayItemName}
-                    </Text>
-
-                    <Text
-                        style={[
-                            styles.meta,
-
-                            isListMode &&
-                            !isRtl &&
-                            styles.ltrListMeta,
-
-                            {
-                                color:
-                                    colors.text,
-
-                                textAlign:
-                                    isRtl
-                                        ? "right"
-                                        : "left",
-
-                                borderColor:
-                                    colors.border,
-                            },
-                        ]}
-                        numberOfLines={1}
-                    >
-                        {itemMetaLabel}
-                    </Text>
+            )}
+            <Pressable disabled={!canOpen} accessibilityRole="button" accessibilityLabel={`${isRtl ? "باز کردن" : "Open"} ${card.name}`} onPress={() => onAction(card.id, "open")}
+                style={[styles.contentButton, isListMode && styles.listContentButton, isListMode && !isRtl && styles.ltrListContentButton, { direction }]}>
+                <View style={[styles.iconMetaRow, isListMode && styles.listIconMetaRow, isListMode && !isRtl && styles.ltrListIconMetaRow]}>
+                    <View style={styles.itemIcon}><Feather name={iconName(card.icon)} size={24} color={cardColor} /></View>
+                    {isListMode && <View style={[styles.typePill, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <Text style={[styles.typePillText, { color: cardColor }]} numberOfLines={1}>{card.type}</Text>
+                    </View>}
+                </View>
+                <View style={[styles.textArea, isListMode && styles.listTextArea, { direction, alignItems: isListMode && !isRtl ? "stretch" : "flex-start" }]}>
+                    <Text title={card.name} style={[styles.name, isListMode && styles.listName, { color: colors.text, textAlign: isRtl ? "right" : "left" }]} numberOfLines={1} dir="auto">{isListMode ? card.name : shortenName(card.name)}</Text>
+                    {!!label && <Text style={[styles.meta, isListMode && !isRtl && styles.ltrListMeta, { color: colors.text, textAlign: isRtl ? "right" : "left", borderColor: colors.border }]} numberOfLines={1}>{label}</Text>}
                 </View>
             </Pressable>
         </View>

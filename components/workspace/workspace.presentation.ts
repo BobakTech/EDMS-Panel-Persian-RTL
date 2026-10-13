@@ -42,6 +42,22 @@ export interface WorkspacePresentationPagination {
     totalItems: number;
 }
 
+/** Display choices are supplied by the application, never inferred from business records. */
+export interface WorkspacePresentationDisplay {
+    mode: "grid" | "list";
+    selectedCardIds?: string[];
+    visitedCardIds?: string[];
+}
+
+/** Configurable loading visuals. Defaults apply to Workspace presentations, not Dashboard. */
+export interface WorkspaceLoadingPreferences {
+    mode?: "skeleton" | "spinner" | "both";
+    skeletonCount?: number;
+    disableInteractions?: boolean;
+}
+
+export type WorkspaceLoadingOperation = "initial" | "navigation" | "search" | "sort" | "pagination" | "refresh";
+
 export interface WorkspacePresentation {
     id: WorkspacePresentationId;
     environment: WorkspaceEnvironment;
@@ -51,6 +67,9 @@ export interface WorkspacePresentation {
 
     /** Already resolved cards, in their intended display order. */
     cards: Card[];
+
+    /** Resolved display instructions for the generic Workspace renderer. */
+    display?: WorkspacePresentationDisplay;
 
     /** Navigation supplied by the presentation controller. */
     navigation: WorkspacePresentationNavigation;
@@ -64,6 +83,8 @@ export interface WorkspacePresentation {
     title?: string;
     subtitle?: string;
     loading?: boolean;
+    loadingOperation?: WorkspaceLoadingOperation | null;
+    loadingPreferences?: WorkspaceLoadingPreferences;
     error?: string | null;
     properties?: Record<string, unknown>;
 }

@@ -28,6 +28,8 @@ import SettingsPage from "./SettingsPage";
 import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import Workspace from "./Workspace";
+import type { WorkspaceActionRequest } from "./Workspace";
+import { createWorkspacePresentation } from "../workspace/workspace.presentation.controller";
 import DocumentPreviewPage from "./DocumentPreviewPage";
 
 import {
@@ -80,7 +82,7 @@ type AppPageType = ContentPageType | "settings";
 const PRESENTATION_TEST_CARDS = [
     new Card({ id: "__card_test_select__", name: "Test — Selectable", type: "file", level: 1, extension: "TEST", footer: "Selection only", capabilities: [{ id: "select" }] }),
     new Card({ id: "__card_test_navigate__", name: "Test — Navigation", type: "folder", level: 1, footer: "Navigation dispatch", capabilities: [{ id: "open" }], navigation: { target: "test-navigation", params: { source: "workspace" } } }),
-    new Card({ id: "__card_test_preview__", name: "Test — Preview", type: "file", level: 1, extension: "TEST", footer: "Preview dispatch", capabilities: [{ id: "open" }, { id: "preview", label: "Preview", icon: "eye" }, { id: "test-hidden", visible: false }, { id: "test-disabled", enabled: false }], navigation: { target: "test-preview" } }),
+    new Card({ id: "__card_test_preview__", name: "Test — Preview", type: "file", level: 1, extension: "TEST", footer: "Preview dispatch", capabilities: [{ id: "open" }, { id: "preview" }], navigation: { target: "test-preview" } }),
     new Card({ id: "__card_test_disabled__", name: "Test — Disabled", type: "file", level: 1, extension: "TEST", footer: "No actions", disabled: true, capabilities: [] }),
 ];
 
@@ -178,6 +180,7 @@ export default function AppLayout() {
     const [workspaceSortField, setWorkspaceSortField] = useState<WorkspaceSortField>("file_name");
     const [workspaceSortOrder, setWorkspaceSortOrder] = useState<WorkspaceSortOrder>(0);
     const [isWorkspaceLoading, setIsWorkspaceLoading] = useState(false);
+    const [workspaceLoadingOperation, setWorkspaceLoadingOperation] = useState<"initial" | "navigation" | "search" | "sort" | "pagination" | "refresh" | null>(null);
     const [workspaceApplyingAction, setWorkspaceApplyingAction] =
         useState<"search" | "sort" | null>(null);
     const [workspaceError, setWorkspaceError] = useState<string | null>(null);
@@ -278,17 +281,15 @@ export default function AppLayout() {
      * Removes a specific notification without affecting other active timers.
      */
     const [selectedTestCardIds, setSelectedTestCardIds] = useState<string[]>([]);
+    const [visitedCardIds, setVisitedCardIds] = useState<string[]>([]);
     const handlePresentationCardAction: CardActionDispatcher = ({ card, request }) => {
         if (!PRESENTATION_TEST_CARDS.some((fixture) => fixture.id === card.id) || !card.can(request.actionId)) return;
         if (request.actionId === "select") {
             setSelectedTestCardIds((ids) => ids.includes(card.id) ? ids.filter((id) => id !== card.id) : [...ids, card.id]);
             return;
         }
-        if (request.actionId === "preview") {
-            showAppToast({ type: "info", message: "Test preview capability dispatched (no PMIS operation)." });
-            return;
-        }
         if (request.actionId === "open") {
+            setVisitedCardIds([card.id]);
             const isPreview = request.navigation?.target === "test-preview";
             showAppToast({ type: "info", message: isPreview ? "Test preview action dispatched (no PMIS file opened)." : "Test navigation action dispatched (no PMIS route opened)." });
         }
@@ -376,6 +377,88 @@ export default function AppLayout() {
         workspaceCategoryItems,
         workspaceCategoryDefinitions,
     );
+
+    /** PMIS-to-presentation adapter. The Workspace renderer receives only generic Cards. */
+    const [workspaceViewMode, setWorkspaceViewMode] = useState<"grid" | "list">("grid");
+    const [selectedWorkspaceCardIdsByLocation, setSelectedWorkspaceCardIdsByLocation] = useState<Record<string, string[]>>({});
+    const workspaceSelectionKey = `${activeWorkspacePage}:${currentFolderId ?? "root"}`;
+    const selectedWorkspaceCardIds = selectedWorkspaceCardIdsByLocation[workspaceSelectionKey] ?? [];
+    const workspacePresentation = createWorkspacePresentation({
+        id: activeWorkspacePage,
+        environment: activeWorkspacePage,
+        level: currentFolderId ? 1 : 0,
+        cards: [
+            ...(activeWorkspacePage === "workspace" && currentFolderId === null && !workspaceSearchQuery.trim() && activeWorkspaceCategory === "all" ? PRESENTATION_TEST_CARDS : []),
+            ...filteredWorkspaceItems.filter((item) => {
+                if (item.status !== (activeWorkspacePage === "archive" ? "archived" : activeWorkspacePage === "trash" ? "trashed" : "active")) return false;
+                if (activeWorkspacePage === "workspace" && (item.parentFolderId ?? null) !== currentFolderId) return false;
+                if (activeWorkspaceCategory !== "all" && item.categoryId !== activeWorkspaceCategory) return false;
+                return true;
+            }).map((item) => new Card({
+                id: item.id, name: item.name, type: item.type,
+                level: currentFolderId ? 1 : 0, parentId: item.parentFolderId,
+                icon: item.type === "folder" ? "folder" : "file-text",
+                extension: item.extension, footer: item.sizeLabel || item.updatedAt,
+                childrenCount: item.childrenCount,
+                capabilities: [
+                    { id: "open", label: "Open" }, { id: "select", label: "Select" },
+                    ...(item.type === "file" ? [{ id: "preview", label: "Preview", icon: "eye" }] : []),
+                    { id: "archive", label: "Archive", icon: "archive" },
+                    { id: "trash", label: "Move to trash", icon: "trash-2" },
+                ],
+                properties: { isPinned: !!item.isPinned },
+            })),
+        ],
+        display: { mode: workspaceViewMode, selectedCardIds: [...selectedWorkspaceCardIds, ...selectedTestCardIds], visitedCardIds },
+        navigation: {
+            currentId: currentFolderId, parentId: null, canGoBack: currentFolderId !== null,
+            breadcrumbs: [{ id: "root", label: activeWorkspacePage, targetId: null },
+                ...(currentFolderId ? [{ id: currentFolderId, label: enrichedWorkspaceItems.find((item) => item.id === currentFolderId)?.name ?? currentFolderId, targetId: currentFolderId }] : [])],
+        },
+        pagination: { page: workspaceCurrentPage, pageSize: workspacePageSize, totalItems: workspaceTotal },
+        actions: [],
+        title: activeWorkspacePage,
+        loading: isWorkspaceLoading,
+        loadingOperation: workspaceLoadingOperation,
+        loadingPreferences: { mode: "both", skeletonCount: 8, disableInteractions: true },
+        error: workspaceError,
+    });
+
+    function handleWorkspacePresentationAction(request: WorkspaceActionRequest) {
+        const { actionId, cardId, targetId, value } = request;
+        if (actionId === "set-view-mode" && (value === "grid" || value === "list")) { setWorkspaceViewMode(value); return; }
+        if (actionId === "set-page" && typeof value === "number") { setWorkspaceCurrentPage(value); return; }
+        if (actionId === "set-page-size" && typeof value === "number") { setWorkspaceCurrentPage(1); setWorkspacePageSize(value); return; }
+        if (actionId === "navigate-back") { setCurrentFolderId(null); return; }
+        if (actionId === "navigate") { setCurrentFolderId(targetId === "root" ? null : targetId ?? null); return; }
+        if (actionId === "bulk-archive" || actionId === "bulk-trash") {
+            const operation = actionId === "bulk-archive" ? "archive" : "trash";
+            const selectedIds = [...new Set([...selectedWorkspaceCardIds, ...selectedTestCardIds])];
+            const eligibleIds = selectedIds.filter((id) => workspacePresentation.cards.some((card) => card.id === id && card.can(operation)) && enrichedWorkspaceItems.some((item) => item.id === id));
+            eligibleIds.forEach((id) => { if (operation === "archive") handleArchiveWorkspaceItem(id); else handleMoveWorkspaceItemToTrash(id); });
+            if (eligibleIds.length) setSelectedWorkspaceCardIdsByLocation((current) => ({ ...current, [workspaceSelectionKey]: (current[workspaceSelectionKey] ?? []).filter((id) => !eligibleIds.includes(id)) }));
+            return;
+        }
+        if (actionId === "clear-selection") {
+            setSelectedWorkspaceCardIdsByLocation((current) => ({ ...current, [workspaceSelectionKey]: [] }));
+            setSelectedTestCardIds([]);
+            return;
+        }
+        if (!cardId) return;
+        const card = workspacePresentation.cards.find((candidate) => candidate.id === cardId);
+        if (!card?.can(actionId)) return;
+        if (PRESENTATION_TEST_CARDS.some((fixture) => fixture.id === cardId)) {
+            handlePresentationCardAction({ card, request: { cardId, actionId, navigation: card.navigation } });
+            return;
+        }
+        const item = enrichedWorkspaceItems.find((candidate) => candidate.id === cardId);
+        if (!item) return;
+        if (actionId === "select") { setSelectedWorkspaceCardIdsByLocation((current) => { const ids = current[workspaceSelectionKey] ?? []; return { ...current, [workspaceSelectionKey]: ids.includes(cardId) ? ids.filter((id) => id !== cardId) : [...ids, cardId] }; }); return; }
+        if (actionId === "open") { setVisitedCardIds([cardId]); if (item.type === "folder") setCurrentFolderId(item.id); else handleOpenPreviewPage(item); return; }
+        if (actionId === "preview") { setVisitedCardIds([cardId]); handleOpenPreviewPage(item); return; }
+        if (actionId === "archive") { handleArchiveWorkspaceItem(item.id); return; }
+        if (actionId === "trash") { handleMoveWorkspaceItemToTrash(item.id); return; }
+    }
 
     const toolbarProps = {
         activeAction: activeWorkspaceAction,
@@ -483,10 +566,9 @@ export default function AppLayout() {
     useEffect(() => {
         let isCurrentRequest = true;
 
-        // Show the full-page loading UI only until the first request finishes.
-        if (!hasCompletedInitialWorkspaceLoad.current) {
-            setIsWorkspaceLoading(true);
-        }
+        // Loading is driven by actual data requests; no artificial delays for synchronous work.
+        setIsWorkspaceLoading(true);
+        setWorkspaceLoadingOperation(!hasCompletedInitialWorkspaceLoad.current ? "initial" : workspaceApplyingAction === "search" ? "search" : workspaceApplyingAction === "sort" ? "sort" : "refresh");
 
         setWorkspaceError(null);
 
@@ -524,6 +606,7 @@ export default function AppLayout() {
                     if (isCurrentRequest) {
                         hasCompletedInitialWorkspaceLoad.current = true;
                         setIsWorkspaceLoading(false);
+                        setWorkspaceLoadingOperation(null);
                         setWorkspaceApplyingAction(null);
                     }
                 });
@@ -927,53 +1010,7 @@ export default function AppLayout() {
                             }
                         />
                     ) : isWorkspacePage ? (
-                        <Workspace
-                            pageType={activeWorkspacePage}
-                            currentFolderId={currentFolderId}
-                            workspaceItems={filteredWorkspaceItems}
-                             additionalPresentationCards={activeWorkspacePage === "workspace" && currentFolderId === null && !workspaceSearchQuery.trim() && activeWorkspaceCategory === "all" ? PRESENTATION_TEST_CARDS : []}
-                             selectedPresentationCardIds={selectedTestCardIds}
-                             onCardAction={handlePresentationCardAction}
-                            workspaceTotal={workspaceTotal}
-                            currentPage={workspaceCurrentPage}
-                            itemsPerPage={workspacePageSize}
-                            onChangePage={setWorkspaceCurrentPage}
-                            onChangePageSize={(pageSize) => {
-                                setWorkspaceCurrentPage(1);
-                                setWorkspacePageSize(pageSize);
-                            }}
-                            sortField={workspaceSortField}
-                            sortOrder={workspaceSortOrder}
-                            onChangeSort={(sortField, sortOrder) => {
-                                setWorkspaceCurrentPage(1);
-                                setWorkspaceApplyingAction("sort");
-                                setWorkspaceSortField(sortField);
-                                setWorkspaceSortOrder(sortOrder);
-                            }}
-                            isLoadingWorkspaceItems={isWorkspaceLoading}
-                            isSearchApplying={workspaceApplyingAction === "search"}
-                            isSortApplying={workspaceApplyingAction === "sort"}
-                            workspaceErrorMessage={workspaceError}
-                            workspaceCategories={workspaceCategories}
-                            workspaceCategoryDefinitions={workspaceCategoryDefinitions}
-                            activeWorkspaceCategory={activeWorkspaceCategory}
-                            setActiveWorkspaceCategory={setActiveWorkspaceCategory}
-                            searchQuery={workspaceSearchQuery}
-                            onChangeFolder={setCurrentFolderId}
-                            onPressUpload={handlePressUpload}
-                            onArchiveItem={handleArchiveWorkspaceItem}
-                            onMoveItemToTrash={handleMoveWorkspaceItemToTrash}
-                            onRestoreItem={handleRestoreWorkspaceItem}
-                            onRenameItem={handleRenameWorkspaceItem}
-                            onUpdateItem={handleUpdateWorkspaceItem}
-                            onDeleteItem={handleDeleteWorkspaceItem}
-                            onMoveItem={handleMoveWorkspaceItem}
-                            onTogglePinnedItem={handleTogglePinnedWorkspaceItem}
-                            onOpenDashboard={() => setActiveWorkspacePage("dashboard")}
-                            onDropFiles={handleDropWorkspaceFiles}
-                            onOpenPreviewPage={handleOpenPreviewPage}
-                            onShowToast={showAppToast}
-                        />
+                        <Workspace presentation={workspacePresentation} onAction={handleWorkspacePresentationAction} />
                     ) : (
                         <ScrollView
                             style={styles.pageScroller}

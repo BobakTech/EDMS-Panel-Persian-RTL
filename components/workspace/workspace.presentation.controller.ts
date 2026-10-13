@@ -6,6 +6,9 @@ import type {
     WorkspacePresentationBreadcrumb,
     WorkspacePresentationNavigation,
     WorkspacePresentationPagination,
+    WorkspacePresentationDisplay,
+    WorkspaceLoadingPreferences,
+    WorkspaceLoadingOperation,
 } from "./workspace.presentation";
 
 /** All presentation hierarchy and configuration must be supplied explicitly. */
@@ -14,12 +17,15 @@ export interface WorkspacePresentationConfig {
     environment: string;
     level: number;
     cards: Card[];
+    display?: WorkspacePresentationDisplay;
     navigation: WorkspacePresentationNavigation;
     pagination: WorkspacePresentationPagination;
     actions?: WorkspacePresentationAction[];
     title?: string;
     subtitle?: string;
     loading?: boolean;
+    loadingOperation?: WorkspaceLoadingOperation | null;
+    loadingPreferences?: WorkspaceLoadingPreferences;
     error?: string | null;
     properties?: Record<string, unknown>;
     defaults?: Partial<CardData>;
@@ -79,6 +85,11 @@ export function createWorkspacePresentation(config: WorkspacePresentationConfig)
         environment: config.environment,
         level: config.level,
         cards,
+        display: config.display ? {
+            mode: config.display.mode,
+            selectedCardIds: config.display.selectedCardIds ? [...config.display.selectedCardIds] : undefined,
+            visitedCardIds: config.display.visitedCardIds ? [...config.display.visitedCardIds] : undefined,
+        } : undefined,
         navigation: {
             ...config.navigation,
             breadcrumbs: copyBreadcrumbs(config.navigation.breadcrumbs),
@@ -91,6 +102,8 @@ export function createWorkspacePresentation(config: WorkspacePresentationConfig)
         title: config.title,
         subtitle: config.subtitle,
         loading: config.loading ?? false,
+        loadingOperation: config.loadingOperation ?? null,
+        loadingPreferences: { mode: "both", skeletonCount: 8, disableInteractions: true, ...config.loadingPreferences },
         error: config.error ?? null,
         properties: { ...(config.properties ?? {}) },
     };
