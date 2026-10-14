@@ -103,7 +103,7 @@ const TEST_FOLDER: WorkspaceItem = {
  */
 
 export default function AppLayout() {
-    const { direction, theme } = useSettings();
+    const { direction, theme, t } = useSettings();
     const colors = theme.colors;
     const { isRtl } = getDirectionalLayout(direction);
 
@@ -291,7 +291,7 @@ export default function AppLayout() {
         if (request.actionId === "open") {
             setVisitedCardIds([card.id]);
             const isPreview = request.navigation?.target === "test-preview";
-            showAppToast({ type: "info", message: isPreview ? "Test preview action dispatched (no PMIS file opened)." : "Test navigation action dispatched (no PMIS route opened)." });
+            showAppToast({ type: "info", message: isRtl ? (isPreview ? "عملیات پیش‌نمایش آزمایشی اجرا شد." : "عملیات پیمایش آزمایشی اجرا شد.") : (isPreview ? "Test preview action dispatched (no PMIS file opened)." : "Test navigation action dispatched (no PMIS route opened).") });
         }
     };
 
@@ -401,10 +401,10 @@ export default function AppLayout() {
                 extension: item.extension, footer: item.sizeLabel || item.updatedAt,
                 childrenCount: item.childrenCount,
                 capabilities: [
-                    { id: "open", label: "Open" }, { id: "select", label: "Select" },
-                    ...(item.type === "file" ? [{ id: "preview", label: "Preview", icon: "eye" }] : []),
-                    { id: "archive", label: "Archive", icon: "archive" },
-                    { id: "trash", label: "Move to trash", icon: "trash-2" },
+                    { id: "open", label: t("openItem") }, { id: "select", label: t("selectItems") },
+                    ...(item.type === "file" ? [{ id: "preview", label: t("documentPreview"), icon: "eye" }] : []),
+                    { id: "archive", label: t("archive"), icon: "archive" },
+                    { id: "trash", label: t("moveToTrash"), icon: "trash-2" },
                 ],
                 properties: { isPinned: !!item.isPinned },
             })),
@@ -412,12 +412,12 @@ export default function AppLayout() {
         display: { mode: workspaceViewMode, selectedCardIds: [...selectedWorkspaceCardIds, ...selectedTestCardIds], visitedCardIds },
         navigation: {
             currentId: currentFolderId, parentId: null, canGoBack: currentFolderId !== null,
-            breadcrumbs: [{ id: "root", label: activeWorkspacePage, targetId: null },
+            breadcrumbs: [{ id: "root", label: t(activeWorkspacePage === "workspace" ? "workspace" : activeWorkspacePage === "archive" ? "archive" : "trash"), targetId: null },
                 ...(currentFolderId ? [{ id: currentFolderId, label: enrichedWorkspaceItems.find((item) => item.id === currentFolderId)?.name ?? currentFolderId, targetId: currentFolderId }] : [])],
         },
         pagination: { page: workspaceCurrentPage, pageSize: workspacePageSize, totalItems: workspaceTotal },
         actions: [],
-        title: activeWorkspacePage,
+        title: t(activeWorkspacePage === "workspace" ? "workspace" : activeWorkspacePage === "archive" ? "archive" : "trash"),
         loading: isWorkspaceLoading,
         loadingOperation: workspaceLoadingOperation,
         loadingPreferences: { mode: "both", skeletonCount: 8, disableInteractions: true },
@@ -592,7 +592,7 @@ export default function AppLayout() {
                     console.error("Failed to load workspace items:", error);
 
                     if (!hasCompletedInitialWorkspaceLoad.current) {
-                        setWorkspaceError("Workspace service unavailable.");
+                        setWorkspaceError(isRtl ? "سرویس فضای کاری در دسترس نیست." : "Workspace service unavailable.");
                     } else {
                         showAppToast({
                             type: "error",

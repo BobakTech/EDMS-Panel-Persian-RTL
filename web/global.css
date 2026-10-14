@@ -1,5 +1,14 @@
+/* Shared typography for the entire EDMS panel. */
+@font-face {
+    font-family: "IRANSans";
+    src: url("./fonts/IRANSans 400.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
 :root {
-    font-family: Tahoma, Arial, sans-serif;
+    font-family: "IRANSans", Tahoma, Arial, sans-serif;
     color: #17202a;
     background: #f4f6f8;
     font-synthesis: none;
@@ -34,7 +43,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
     font: inherit;
 }
 
@@ -166,21 +177,4 @@ iframe {
     .workspace-motion-panel {
         animation: none !important;
     }
-}
-
-/* Generic Workspace bulk actions: elevated controls and a restrained entrance. */
-@keyframes workspace-bulk-enter {
-    from { opacity: 0; transform: translateY(-7px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.workspace-bulk-toolbar { animation: workspace-bulk-enter 180ms ease-out both; }
-.workspace-bulk-action {
-    box-shadow: 0 3px 0 rgba(0,0,0,.25), 0 5px 12px rgba(0,0,0,.12);
-    transition: transform 130ms ease, box-shadow 130ms ease, filter 130ms ease;
-}
-.workspace-bulk-action:hover { filter: brightness(1.12); transform: translateY(-1px); }
-.workspace-bulk-action:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
-@media (prefers-reduced-motion: reduce) {
-    .workspace-bulk-toolbar { animation: none; }
-    .workspace-bulk-action { transition: none; }
 }
