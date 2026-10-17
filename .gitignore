@@ -45,3 +45,7 @@ yarn-error.*
 
 # custom rules
 ChatGPT Rules
+
+# Local deployment scripts (server-specific paths)
+/publish-dev.bat
+/publish-prod.bat
